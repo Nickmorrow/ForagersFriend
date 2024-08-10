@@ -1,0 +1,25 @@
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
+
+namespace ForagerSite.Models
+{
+    public class UserFind
+    {
+        [Key]
+        public Guid UsFId { get; set; }
+        public string UsfName { get; set; }
+        public Guid UsfUsrId { get; set; }
+        [ForeignKey("UsfUsrId")]
+        public User User { get; set; }
+        public DateTime UsfFindDate { get; set; }
+        public string UsfSpeciesName { get; set; }
+        public string UsfSpeciesType { get; set; }
+        public string UsfUseCategory { get; set; }
+        public string UsfFeatures { get; set; }
+        public string UsfLookAlikes { get; set; }
+        public string UsfHarvestMethod { get; set; }
+        public string UsfTastesLike { get; set; }
+        public string UsfDescription { get; set; }
+        public int? UsfAccuracyScore { get; set; }
+    }
+}
