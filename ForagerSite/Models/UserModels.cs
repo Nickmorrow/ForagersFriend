@@ -5,18 +5,29 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ForagerSite.Models
 {
+    public class UserViewModel
+    {
+        public User user { get; set; }
+        public UserSecurity userSecurity { get; set; }
+
+        public UserViewModel()
+        {
+            user = new User();
+            userSecurity = new UserSecurity();
+        }
+    }
     public class User
     {
         [Key]
         public Guid UsrId { get; set; }
-        public string UsrName { get; set; }
+        public string? UsrName { get; set; }
         public string UsrBio { get; set; }
         public string UsrEmail { get; set; }
         public int? UsrFindsNum { get; set; }
         public int? UsrExpScore { get; set; }
         public DateTime UsrJoinedDate { get; set; }
-        public string UsrCountry { get; set; }
-        public string UsrStateorProvince { get; set; }
+        public string? UsrCountry { get; set; }
+        public string? UsrStateorProvince { get; set; }
         public int? UsrZipCode { get; set; }
 
         public ICollection<UserSecurity> UserSecurities { get; set; }
@@ -30,8 +41,8 @@ namespace ForagerSite.Models
     {
         [Key]
         public Guid UssId { get; set; }
-        public Guid UsrId { get; set; }
-        [ForeignKey("UsrId")]
+        public Guid UssUsrId { get; set; }
+        [ForeignKey("UssUsrId")]
         public User User { get; set; }
         public string UssUsername { get; set; }
         public string UssPassword { get; set; }
@@ -43,8 +54,8 @@ namespace ForagerSite.Models
     {
         [Key]
         public Guid UsmId { get; set; }
-        public Guid UsrId { get; set; }
-        [ForeignKey("UsrId")]
+        public Guid UsmUsrId { get; set; }
+        [ForeignKey("UsmUsrId")]
         public User User { get; set; }
         public string UsmSubject { get; set; }
         public string UsmMessage { get; set; }
@@ -88,8 +99,8 @@ namespace ForagerSite.Models
     {
         [Key]
         public Guid UslId { get; set; }
-        public Guid UsfId { get; set; }
-        [ForeignKey("UsfId")]
+        public Guid UslUsfId { get; set; }
+        [ForeignKey("UslUsfId")]
         public UserFind UserFind { get; set; }
         public float UslLatitude { get; set; }
         public float UslLongitude { get; set; }
@@ -99,11 +110,11 @@ namespace ForagerSite.Models
     {
         [Key]
         public Guid UsiId { get; set; }
-        public Guid? UsrId { get; set; }
-        [ForeignKey("UsrId")]
+        public Guid? UsiUsrId { get; set; }
+        [ForeignKey("UsiUsrId")]
         public User User { get; set; }
-        public Guid? UsfId { get; set; }
-        [ForeignKey("UsfId")]
+        public Guid? UsiUsfId { get; set; }
+        [ForeignKey("UsiUsfId")]
         public UserFind UserFind { get; set; }
         public byte[] UsiImageData { get; set; }
     }
