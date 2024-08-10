@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35027.167
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ForagerSite", "ForagerSite\ForagerSite.csproj", "{264BD992-0EF9-491E-AB9B-C51C3D052F10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatabaseTesting", "DatabaseTesting\DatabaseTesting.csproj", "{720F8D26-DD17-449F-860B-A1F6B235440D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{264BD992-0EF9-491E-AB9B-C51C3D052F10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{264BD992-0EF9-491E-AB9B-C51C3D052F10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{264BD992-0EF9-491E-AB9B-C51C3D052F10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{264BD992-0EF9-491E-AB9B-C51C3D052F10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{720F8D26-DD17-449F-860B-A1F6B235440D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{720F8D26-DD17-449F-860B-A1F6B235440D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{720F8D26-DD17-449F-860B-A1F6B235440D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{720F8D26-DD17-449F-860B-A1F6B235440D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D83A6C0F-DB2F-4AD5-9F15-BA076953AAFA}
+	EndGlobalSection
+EndGlobal
