@@ -1,0 +1,39 @@
+﻿@page "/Registration"
+@using ForagerSite.Services;
+@using ForagerSite.Models;
+@inject UserService userService
+@rendermode InteractiveServer
+
+<PageTitle>Login</PageTitle>
+
+<h3>Login</h3>
+
+<div>
+    <div>
+        <EditForm Model="@userViewModel" OnValidSubmit="_HandleValidSubmit" FormName="userLogin">
+        <label for="UserNameInput">Username</label>
+        <InputText id="UserNameInput" @bind-Value="@userViewModel.userSecurity.UssUsername"></InputText>
+
+        <label for="PasswordInput">Password</label>
+        <InputText id="PasswordInput" @bind-Value="@userViewModel.userSecurity.UssPassword"></InputText>
+
+            <button type="submit" class="btn-primary">Add</button>    
+        </EditForm>
+    </div>
+    <div>
+        <a>Register</a>
+        <a>Forgot Username or Password?</a>
+    </div>
+</div>
+
+@code {
+
+
+    public UserViewModel userViewModel = new UserViewModel();
+
+    private void _HandleValidSubmit(EditContext editContext)
+    {
+        var newUser = (UserViewModel)editContext.Model;
+        newUser.userSecurity.UssLastLoginDate = DateTime.Now;       
+    }
+}

@@ -1,0 +1,51 @@
+﻿@page "/Registration"
+@using ForagerSite.Services;
+@using ForagerSite.Models;
+@inject UserService userService
+@rendermode InteractiveServer
+
+
+<PageTitle>Registration</PageTitle>
+
+<h3>Registration</h3>
+
+
+<EditForm Model="@userViewModel" OnValidSubmit="_HandleValidSubmit" FormName="userForm">
+    <label for="NameInput">Name</label>
+    <InputText id="NameInput" @bind-Value="@userViewModel.user.UsrName"></InputText>
+
+    <label for="BioInput">Bio</label>
+    <InputText id="BioInput" @bind-Value="@userViewModel.user.UsrBio"></InputText>
+
+    <label for="EmailInput">Email</label>
+    <InputText id="EmailInput" @bind-Value="@userViewModel.user.UsrEmail"></InputText>
+
+    <label for="CountryInput">Country</label>
+    <InputText id="CountryInput" @bind-Value="@userViewModel.user.UsrCountry"></InputText>
+
+    <label for="StateInput">State or Province</label>
+    <InputText id="StateInput" @bind-Value="@userViewModel.user.UsrStateorProvince"></InputText>
+
+    <label for="UserNameInput">Username</label>
+    <InputText id="UserNameInput" @bind-Value="@userViewModel.userSecurity.UssUsername"></InputText>
+
+    <label for="PasswordInput">Password</label>
+    <InputText id="PasswordInput" @bind-Value="@userViewModel.userSecurity.UssPassword"></InputText>
+
+    <button type="submit" class="btn-primary">Add</button>
+</EditForm>
+
+
+@code {
+
+    public UserViewModel userViewModel = new UserViewModel();
+
+    private void _HandleValidSubmit(EditContext editContext)
+    {
+        var newUser = (UserViewModel)editContext.Model;
+        newUser.user.UsrJoinedDate = DateTime.Now;
+        newUser.userSecurity.User = newUser.user;
+        userService.AddUser(newUser.user, newUser.userSecurity);
+        userViewModel = new UserViewModel();
+    }
+}

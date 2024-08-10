@@ -24,6 +24,11 @@ namespace ForagerSite.Services
             }
         }
 
+        public void UserLogin(User user, UserSecurity userSecurity)
+        {
+
+        }
+
 
     }
 }

@@ -19,4 +19,12 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Components\Pages\Inbox\" />
+    <Folder Include="Components\Pages\Map\" />
+    <Folder Include="Components\Pages\Finds\" />
+    <Folder Include="Components\Pages\Friends\" />
+    <Folder Include="Components\Pages\Profile\" />
+  </ItemGroup>
+
 </Project>
