@@ -34,8 +34,7 @@ namespace ForagerSite.Models
         public ICollection<UserFind> UserFinds { get; set; }
         public ICollection<UserImage> UserImages { get; set; }
         public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
-        public ICollection<UserFriend> UserFriends { get; set; }
-        public ICollection<UserFriend> FriendsOf { get; set; }
+
     }
 
     public class UserSecurity

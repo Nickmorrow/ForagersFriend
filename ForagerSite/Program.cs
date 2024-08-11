@@ -1,6 +1,7 @@
 using ForagerSite.Components;
 using ForagerSite.Data;
 using ForagerSite.Services;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,8 +19,12 @@ namespace ForagerSite
 
             builder.Services.AddDbContextFactory<ForagerDbContext>((DbContextOptionsBuilder options) =>
                 options.UseSqlServer(connectionString));
+
+            builder.Services.AddAuthorizationCore();           
+
             builder.Services.AddRazorComponents().AddInteractiveServerComponents();
             builder.Services.AddTransient<UserService>();
+
 
             var app = builder.Build();
 

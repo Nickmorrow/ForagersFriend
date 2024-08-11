@@ -1,9 +1,3 @@
 use ForagerDB
 
-CREATE TABLE UserFriends (    
-    UsfId UNIQUEIDENTIFIER NOT NULL DEFAULT NEWID(),
-    UsfUsrId UNIQUEIDENTIFIER NOT NULL,
-    CONSTRAINT PK_UserFriends PRIMARY KEY (UsfUsrId, UsfId),
-    CONSTRAINT FK_User FOREIGN KEY (UsfUsrId) REFERENCES Users(UsrId),
-    CONSTRAINT FK_Friend FOREIGN KEY (UsfId) REFERENCES Users(UsrId)
-);
+drop table userfriends 

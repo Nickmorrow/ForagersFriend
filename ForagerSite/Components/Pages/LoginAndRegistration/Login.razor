@@ -1,12 +1,10 @@
-﻿@page "/Login"
+﻿@page "/"
 @using ForagerSite.Services;
 @using ForagerSite.Models;
 @using Microsoft.AspNetCore.Components.Routing
 @inject UserService userService
 @rendermode InteractiveServer
 @inject NavigationManager navigationManager
-
-
 
 <PageTitle>Login</PageTitle>
 
@@ -15,30 +13,36 @@
 <div>
     <div>
         <EditForm Model="@userViewModel" OnValidSubmit="_HandleValidSubmit" FormName="userLogin">
-        <label for="UserNameInput">Username</label>
-        <InputText id="UserNameInput" @bind-Value="@userViewModel.userSecurity.UssUsername"></InputText>
+            <DataAnnotationsValidator />
+            <ValidationSummary />
 
-        <label for="PasswordInput">Password</label>
-        <InputText id="PasswordInput" @bind-Value="@userViewModel.userSecurity.UssPassword"></InputText>
+            <label for="UserNameInput">Username</label>
+            <InputText id="UserNameInput" @bind-Value="@userViewModel.userSecurity.UssUsername"></InputText>
+            <ValidationMessage For="@(() => userViewModel.userSecurity.UssUsername)" />
 
-            <button type="submit" class="btn-primary">Add</button>    
+            <label for="PasswordInput">Password</label>
+            <InputText id="PasswordInput" @bind-Value="@userViewModel.userSecurity.UssPassword" type="password"></InputText>
+            <ValidationMessage For="@(() => userViewModel.userSecurity.UssPassword)" />
+
+            <button type="submit" class="btn-primary">Login</button>    
         </EditForm>
     </div>
-    @if (_numOfAttempts != null && !_userAuthenticated)
+    @if (_errorMessage != null)
     {
-        <p>Username or password is incorrect</p>  
+        <p style="color: red;">@_errorMessage</p>
     }
 
     <div>
-        <NavLink href="/Register">Register</NavLink>
+        <NavLink href="/Registration">Register</NavLink>
         <NavLink href="/RecoverLoginInfo">Forgot Username or Password?</NavLink>
     </div>
 </div>
 
 @code {
-    private int? _numOfAttempts;
 
     private bool _userAuthenticated;
+
+    private string _errorMessage;
 
     public UserViewModel userViewModel = new UserViewModel();
 
@@ -58,7 +62,6 @@
 
     private void _HandleValidSubmit(EditContext editContext)
     {
-        _numOfAttempts++;
 
         var newUser = (UserViewModel)editContext.Model;
         _userAuthenticated = _UserAuthenticated(newUser);
@@ -67,11 +70,12 @@
         {
             newUser.userSecurity.UssLastLoginDate = DateTime.Now;
             userService.UpdateUserSecurity(newUser.userSecurity);
-            navigationManager.NavigateTo("/");
+            navigationManager.NavigateTo("/Home");
         }
         else
-        {           
-            StateHasChanged();
+        {
+            _errorMessage = "Username or password is incorrect";
+            //StateHasChanged();
         }
     }
 }

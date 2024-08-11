@@ -14,7 +14,6 @@ namespace ForagerSite.Data
         public DbSet<UserImage> UserImages { get; set; }
         public DbSet<UserFindsComment> UserFindsComments { get; set; }
         public DbSet<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
-
         public ForagerDbContext(DbContextOptions<ForagerDbContext> options)
             : base(options)
         {

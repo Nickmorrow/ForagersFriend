@@ -13,16 +13,6 @@ namespace ForagerSite.Services
         {
             _dbContextFactory = dbContextFactory;
         }
-
-        public void AddUser(User user, UserSecurity userSecurity)
-        {
-            using (var context = _dbContextFactory.CreateDbContext())
-            {
-                context.Add<User>(user);
-                context.Add<UserSecurity>(userSecurity);
-                context.SaveChanges();
-            }
-        }
         public UserViewModel AuthenticateUser(string username, string password)
         {
             using (var context = _dbContextFactory.CreateDbContext())
@@ -39,10 +29,25 @@ namespace ForagerSite.Services
                         userSecurity = userSecurity
                     };
                 }
-
                 return null;
             }
         }
+        public async Task<bool> UsernameExists(string username)
+        {
+            using (var context = _dbContextFactory.CreateDbContext())
+            {
+                return await context.UserSecurities.AnyAsync(us => us.UssUsername == username);
+            }
+        }
+
+        public async Task<bool> EmailExists(string email)
+        {
+            using (var context = _dbContextFactory.CreateDbContext())
+            {
+                return await context.Users.AnyAsync(u => u.UsrEmail == email);
+            }
+        }       
+        
         public void UpdateUserSecurity(UserSecurity userSecurity)
         {
             using (var context = _dbContextFactory.CreateDbContext())
@@ -51,7 +56,15 @@ namespace ForagerSite.Services
                 context.SaveChanges();
             }
         }
-
+        public void AddUser(User user, UserSecurity userSecurity)
+        {
+            using (var context = _dbContextFactory.CreateDbContext())
+            {
+                context.Add<User>(user);
+                context.Add<UserSecurity>(userSecurity);
+                context.SaveChanges();
+            }
+        }
 
     }
 }
