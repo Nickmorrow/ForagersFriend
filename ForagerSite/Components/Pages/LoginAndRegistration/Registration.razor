@@ -3,7 +3,7 @@
 @using ForagerSite.Models;
 @inject UserService userService
 @rendermode InteractiveServer
-
+@inject NavigationManager navigationManager
 
 <PageTitle>Registration</PageTitle>
 
@@ -47,5 +47,6 @@
         newUser.userSecurity.User = newUser.user;
         userService.AddUser(newUser.user, newUser.userSecurity);
         userViewModel = new UserViewModel();
+        navigationManager.NavigateTo("/Login");
     }
 }

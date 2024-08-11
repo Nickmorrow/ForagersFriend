@@ -23,10 +23,33 @@ namespace ForagerSite.Services
                 context.SaveChanges();
             }
         }
-
-        public void UserLogin(User user, UserSecurity userSecurity)
+        public UserViewModel AuthenticateUser(string username, string password)
         {
+            using (var context = _dbContextFactory.CreateDbContext())
+            {
+                var userSecurity = context.UserSecurities
+                    .Include(us => us.User)
+                    .FirstOrDefault(us => us.UssUsername == username && us.UssPassword == password);
 
+                if (userSecurity != null)
+                {
+                    return new UserViewModel
+                    {
+                        user = userSecurity.User,
+                        userSecurity = userSecurity
+                    };
+                }
+
+                return null;
+            }
+        }
+        public void UpdateUserSecurity(UserSecurity userSecurity)
+        {
+            using (var context = _dbContextFactory.CreateDbContext())
+            {
+                context.UserSecurities.Update(userSecurity);
+                context.SaveChanges();
+            }
         }
 
 

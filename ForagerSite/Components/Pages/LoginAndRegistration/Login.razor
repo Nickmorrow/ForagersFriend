@@ -1,8 +1,12 @@
-﻿@page "/Registration"
+﻿@page "/Login"
 @using ForagerSite.Services;
 @using ForagerSite.Models;
+@using Microsoft.AspNetCore.Components.Routing
 @inject UserService userService
 @rendermode InteractiveServer
+@inject NavigationManager navigationManager
+
+
 
 <PageTitle>Login</PageTitle>
 
@@ -20,20 +24,54 @@
             <button type="submit" class="btn-primary">Add</button>    
         </EditForm>
     </div>
+    @if (_numOfAttempts != null && !_userAuthenticated)
+    {
+        <p>Username or password is incorrect</p>  
+    }
+
     <div>
-        <a>Register</a>
-        <a>Forgot Username or Password?</a>
+        <NavLink href="/Register">Register</NavLink>
+        <NavLink href="/RecoverLoginInfo">Forgot Username or Password?</NavLink>
     </div>
 </div>
 
 @code {
+    private int? _numOfAttempts;
 
+    private bool _userAuthenticated;
 
     public UserViewModel userViewModel = new UserViewModel();
 
+    private bool _UserAuthenticated(UserViewModel userViewModel)
+    {
+        var authenticatedUser = userService.AuthenticateUser(userViewModel.userSecurity.UssUsername, userViewModel.userSecurity.UssPassword);
+
+        if (authenticatedUser != null)
+        {
+            userViewModel.user = authenticatedUser.user;
+            userViewModel.userSecurity = authenticatedUser.userSecurity;
+            return true;
+        }
+
+        return false;
+    }
+
     private void _HandleValidSubmit(EditContext editContext)
     {
+        _numOfAttempts++;
+
         var newUser = (UserViewModel)editContext.Model;
-        newUser.userSecurity.UssLastLoginDate = DateTime.Now;       
+        _userAuthenticated = _UserAuthenticated(newUser);
+
+        if (_userAuthenticated)
+        {
+            newUser.userSecurity.UssLastLoginDate = DateTime.Now;
+            userService.UpdateUserSecurity(newUser.userSecurity);
+            navigationManager.NavigateTo("/");
+        }
+        else
+        {           
+            StateHasChanged();
+        }
     }
 }
