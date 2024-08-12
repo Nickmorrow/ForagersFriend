@@ -1,9 +1,9 @@
-﻿using ForagerSite.Data;
-using ForagerSite.Models;
+﻿using ForagerWebSite.Data;
+using ForagerWebSite.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 
-namespace ForagerSite.Services
+namespace ForagerWebSite.Services
 {
     public class UserService 
     {

@@ -1,0 +1,45 @@
+﻿@page "/RecoverLoginInfo"
+@using ForagerWebSite.Services;
+@using ForagerWebSite.Models;
+@using Microsoft.AspNetCore.Components.Routing
+@inject UserService userService
+@rendermode InteractiveServer
+@inject NavigationManager navigationManager
+
+<PageTitle>RecoverLoginInfo</PageTitle>
+
+<h3>Recover Password</h3>
+
+<div>
+
+    <div>
+        <label for="email">Enter your email address:</label>
+        <input type="email" @bind="email" required />
+        <button @onclick="Submit">Recover Password</button>
+    </div>
+    @if (message != null)
+    {
+        <p>@_message</p>
+    }
+
+</div>
+
+@code {
+
+    private string email;
+    private string message;
+
+    private async Task Submit()
+    {
+        var response = await Http.PostAsJsonAsync("api/recover-password", new { email });
+        if (response.IsSuccessStatusCode)
+        {
+            message = "Password recovery email sent.";
+        }
+        else
+        {
+            message = "Error sending recovery email.";
+        }
+    }
+
+}

@@ -1,14 +1,12 @@
-using ForagerSite.Services;
-using ForagerSite.Components;
-using ForagerSite.Data;
-using ForagerSite.Services;
+using ForagerWebsite.Components;
+using ForagerWebSite.Data;
+using ForagerWebSite.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-
-namespace ForagerSite
+namespace FoaragerWebsite
 {
     public class Program
     {
@@ -21,9 +19,11 @@ namespace ForagerSite
             builder.Services.AddDbContextFactory<ForagerDbContext>((DbContextOptionsBuilder options) =>
                 options.UseSqlServer(connectionString));
 
+            // Add services to the container.
+            builder.Services.AddRazorComponents()
+                .AddInteractiveServerComponents();
             builder.Services.AddAuthorizationCore();
             builder.Services.AddControllers();
-            builder.Services.AddRazorComponents().AddInteractiveServerComponents();
             builder.Services.AddTransient<UserService>();
             builder.Services.AddTransient<EmailService>();
             builder.Services.AddTransient<PasswordResetService>();
@@ -48,6 +48,5 @@ namespace ForagerSite
 
             app.Run();
         }
-
     }
 }
