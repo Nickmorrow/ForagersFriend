@@ -3,10 +3,7 @@
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-
-		<!--<DebugType>pdbonly</DebugType>-->
-		
+		<ImplicitUsings>enable</ImplicitUsings>		
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -17,16 +14,7 @@
 	  <WarningLevel>0</WarningLevel>
 	</PropertyGroup>
 
-	<!--<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-		<WarningLevel>0</WarningLevel>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-		<WarningLevel>0</WarningLevel>
-	</PropertyGroup>-->
-
 	<ItemGroup>
-		<PackageReference Include="Fluent.Infrastructure" Version="2.0.0-beta-01" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.7" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.7">
 			<PrivateAssets>all</PrivateAssets>

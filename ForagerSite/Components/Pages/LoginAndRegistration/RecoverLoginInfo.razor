@@ -5,6 +5,7 @@
 @inject UserService userService
 @rendermode InteractiveServer
 @inject NavigationManager navigationManager
+@inject HttpClient Http
 
 <PageTitle>RecoverLoginInfo</PageTitle>
 
@@ -17,7 +18,7 @@
         <input type="email" @bind="email" required />
         <button @onclick="Submit">Recover Password</button>
     </div>
-    @if (message != null)
+    @if (_message != null)
     {
         <p>@_message</p>
     }
@@ -27,18 +28,18 @@
 @code {
 
     private string email;
-    private string message;
+    private string _message;
 
     private async Task Submit()
     {
         var response = await Http.PostAsJsonAsync("api/recover-password", new { email });
         if (response.IsSuccessStatusCode)
         {
-            message = "Password recovery email sent.";
+            _message = "Password recovery email sent.";
         }
         else
         {
-            message = "Error sending recovery email.";
+            _message = "Error sending recovery email.";
         }
     }
 

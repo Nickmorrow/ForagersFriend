@@ -16,8 +16,8 @@ UsrZipCode int null
 
 CREATE TABLE UserSecurity (
     UssId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    UsrId UNIQUEIDENTIFIER,
-	CONSTRAINT FK_UserSecurity_Users FOREIGN KEY (UsrId) REFERENCES Users(UsrId),
+    UssUsrId UNIQUEIDENTIFIER,
+	CONSTRAINT FK_UserSecurity_Users FOREIGN KEY (UssUsrId) REFERENCES Users(UsrId),
     UssUsername NVARCHAR(20),
     UssPassword NVARCHAR(20),
     UssLastLoginDate DATETIME null,
@@ -26,12 +26,12 @@ CREATE TABLE UserSecurity (
 
 CREATE TABLE UserMessages (
     UsmId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    UsrId UNIQUEIDENTIFIER,
+    UsmUsrId UNIQUEIDENTIFIER,
     UsmSubject NVARCHAR(50),
     UsmMessage NVARCHAR(MAX),
     UsmSendDate DATETIME,
     UsmReceivedDate DATETIME null,
-    CONSTRAINT FK_UserMessages_Users FOREIGN KEY (UsrId) REFERENCES Users(UsrId)
+    CONSTRAINT FK_UserMessages_Users FOREIGN KEY (UsmUsrId) REFERENCES Users(UsrId)
 );
 
 
@@ -64,20 +64,20 @@ CREATE TABLE UserFinds (
 
 CREATE TABLE UserFindLocation (
     UslId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    UsfId UNIQUEIDENTIFIER,
+    UslUsfId UNIQUEIDENTIFIER,
     UslLatitude FLOAT,
     UslLongitude FLOAT,
-    CONSTRAINT FK_UserFindLocation_UserFinds FOREIGN KEY (UsfId) REFERENCES UserFinds(UsfId)
+    CONSTRAINT FK_UserFindLocation_UserFinds FOREIGN KEY (UslUsfId) REFERENCES UserFinds(UsfId)
 );
  
 
 CREATE TABLE UserImages (
     UsiId UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-    UsrId UNIQUEIDENTIFIER null,
-    UsfId UNIQUEIDENTIFIER null,
+    UsiUsrId UNIQUEIDENTIFIER null,
+    UsiUsfId UNIQUEIDENTIFIER null,
     UsiImageData VARBINARY(MAX),
-    CONSTRAINT FK_UserImages_Users FOREIGN KEY (UsrId) REFERENCES Users(UsrId),
-    CONSTRAINT FK_UserImages_UserFinds FOREIGN KEY (UsfId) REFERENCES UserFinds(UsfId)
+    CONSTRAINT FK_UserImages_Users FOREIGN KEY (UsiUsrId) REFERENCES Users(UsrId),
+    CONSTRAINT FK_UserImages_UserFinds FOREIGN KEY (UsiUsfId) REFERENCES UserFinds(UsfId)
 );
 
 

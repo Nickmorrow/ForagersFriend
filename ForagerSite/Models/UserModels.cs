@@ -20,7 +20,7 @@ namespace ForagerSite.Models
         [Key]
         public Guid UsrId { get; set; }
         public string? UsrName { get; set; }
-        public string UsrBio { get; set; }
+        public string? UsrBio { get; set; }
         public string UsrEmail { get; set; }
         public int? UsrFindsNum { get; set; }
         public int? UsrExpScore { get; set; }

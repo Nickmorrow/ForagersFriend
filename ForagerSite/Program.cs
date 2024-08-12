@@ -25,8 +25,8 @@ namespace ForagerSite
             builder.Services.AddControllers();
             builder.Services.AddRazorComponents().AddInteractiveServerComponents();
             builder.Services.AddTransient<UserService>();
-            builder.Services.AddTransient<EmailService>();
-            builder.Services.AddTransient<PasswordResetService>();
+            //builder.Services.AddTransient<EmailService>();
+            //builder.Services.AddTransient<PasswordResetService>();
 
             var app = builder.Build();
 
