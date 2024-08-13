@@ -1,10 +1,11 @@
-﻿@page "/"
+﻿@page "/Login"
 @using ForagerSite.Services;
 @using ForagerSite.Models;
 @using Microsoft.AspNetCore.Components.Routing
 @inject UserService userService
 @rendermode InteractiveServer
 @inject NavigationManager navigationManager
+@inject UserStateService userStateService
 
 <PageTitle>Login</PageTitle>
 
@@ -70,7 +71,8 @@
         {
             newUser.userSecurity.UssLastLoginDate = DateTime.Now;
             userService.UpdateUserSecurity(newUser.userSecurity);
-            navigationManager.NavigateTo("/Home");
+            userStateService.SetUserState(true, newUser);
+            navigationManager.NavigateTo("/", true);
         }
         else
         {

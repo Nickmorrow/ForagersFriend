@@ -15,6 +15,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Content Remove="wwwroot\js\googlemap.js" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <_ContentIncludedByDefault Remove="wwwroot\js\googlemap.js" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.7" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.7">
 			<PrivateAssets>all</PrivateAssets>
@@ -32,6 +40,10 @@
 	  <Folder Include="Components\Pages\Friends\" />
 	  <Folder Include="Components\Pages\Inbox\" />
 	  <Folder Include="Components\Pages\Profile\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="wwwroot\js\googlemap.js" />
 	</ItemGroup>
 
 	<ItemGroup>

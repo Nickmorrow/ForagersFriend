@@ -1,28 +1,28 @@
-﻿@page "/Home"
+﻿@page "/"
 @using ForagerSite.Services;
 @using ForagerSite.Models;
-@inject UserService userService
-@inject NavigationManager navigationManager
 @rendermode InteractiveServer
-
+@inject NavigationManager navigationManager
+@inject UserService userService
 @inject IJSRuntime JSRuntime
+@inject UserStateService userStateService
 
 
 
-
-<div id="map" style="height: 500px; width: 100%;"></div>
+@if (userStateService.IsAuthenticated)
+{
+    <p>Welcome, @userStateService.CurrentUser.user.UsrName</p>
+    <ForagerSite.Components.Map.Map/>
+}
+else
+{
+    <ForagerSite.Components.Pages.LoginAndRegistration.Login />
+}
 
 @code {
-    private async Task InitializeMap()
-    {
-        await JSRuntime.InvokeVoidAsync("initializeMap");
-    }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await InitializeMap();
-        }
-    }
+
+
+
+
 }
