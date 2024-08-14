@@ -1,5 +1,11 @@
 ﻿@page "/map"
+
+@using ForagerSite.Services
+@using ForagerSite.Models
+@rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
+@inject UserStateService userStateService
+@inject UserService userService
 
 <div id="map" style="height: 500px; width: 100%;"></div>
 
@@ -16,5 +22,92 @@
             await InitializeMap();
         }
     }
+
+    // [JSInvokable]
+    // public static async Task SaveFind(UserFind findModel, UserFindLocation findLocation, UserStateService userStateService, UserService userService)
+    // {
+    //     // Assuming userStateService is static or passed somehow
+    //     var user = userStateService.CurrentUser.user;
+    //     if (user != null)
+    //     {
+    //         var userFind = new UserFind
+    //             {
+    //                 UsfName = findModel.UsfName,
+    //                 UsfUsrId = user.UsrId,
+    //                 UsfFindDate = DateTime.Now,
+    //                 UsfSpeciesName = findModel.UsfSpeciesName,
+    //                 UsfSpeciesType = findModel.UsfSpeciesType,
+    //                 UsfUseCategory = findModel.UsfUseCategory,
+    //                 UsfFeatures = findModel.UsfFeatures,
+    //                 UsfLookAlikes = findModel.UsfLookAlikes,
+    //                 UsfHarvestMethod = findModel.UsfHarvestMethod,
+    //                 UsfTastesLike = findModel.UsfTastesLike,
+    //                 UsfDescription = findModel.UsfDescription
+    //             };
+            
+    //         var userFindLocation = new UserFindLocation
+    //             {
+    //                 UslUsfId = userFind.UsFId,
+    //                 UslLatitude = findLocation.UslLatitude,
+    //                 UslLongitude = findLocation.UslLongitude
+    //             };
+
+    //         await userService.AddUserFind(userFind, userFindLocation);
+    //     }
+    // }
+    [JSInvokable]
+    public static async Task SaveFind(
+           string Name,
+           string SpeciesName,
+           string SpeciesType,
+           string UseCategory,
+           string Features,
+           string Lookalikes,
+           string HarvestMethod,
+           string TastesLike,
+           string Description,
+           float Latitude,
+           float Longitude)
+    {
+        
+        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
+        var userService = ServiceLocator.ServiceProvider.GetService<UserService>();
+
+        if (userStateService == null || userService == null)
+        {
+            throw new InvalidOperationException("Services are not available.");
+        }
+
+        var user = userStateService.CurrentUser.user;
+
+        if (user != null)
+        {
+            var userFind = new UserFind
+                {
+                    UsfName = Name,
+                    UsfUsrId = user.UsrId,
+                    UsfFindDate = DateTime.Now,
+                    UsfSpeciesName = SpeciesName,
+                    UsfSpeciesType = SpeciesType,
+                    UsfUseCategory = UseCategory,
+                    UsfFeatures = Features,
+                    UsfLookAlikes = Lookalikes,
+                    UsfHarvestMethod = HarvestMethod,
+                    UsfTastesLike = TastesLike,
+                    UsfDescription = Description
+                };
+
+            var userFindLocation = new UserFindLocation
+                {
+                    UslUsfId = userFind.UsFId,
+                    UslLatitude = Latitude,
+                    UslLongitude = Longitude
+                };
+
+            await userService.AddUserFind(userFind, userFindLocation);
+        }
+    }
+
 }
+
 

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 
+
 namespace ForagerSite
 {
     public class Program
@@ -23,13 +24,21 @@ namespace ForagerSite
 
             builder.Services.AddAuthorizationCore();
             builder.Services.AddControllers();
-            builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+            builder.Services.AddRazorComponents().
+                AddInteractiveServerComponents()
+                .AddCircuitOptions(options =>
+            {
+                options.DetailedErrors = true;
+            }); ;
             builder.Services.AddTransient<UserService>();
             builder.Services.AddSingleton<UserStateService>();
+            
             //builder.Services.AddTransient<EmailService>();
             //builder.Services.AddTransient<PasswordResetService>();
 
             var app = builder.Build();
+
+
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
@@ -46,6 +55,8 @@ namespace ForagerSite
 
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode();
+
+            ServiceLocator.ServiceProvider = app.Services;
 
             app.Run();
         }

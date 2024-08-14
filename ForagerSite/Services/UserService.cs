@@ -66,5 +66,26 @@ namespace ForagerSite.Services
             }
         }
 
+        public async Task AddUserFind(UserFind userFind, UserFindLocation userFindLocation)
+        {
+            try
+            {
+                using var context = _dbContextFactory.CreateDbContext();
+
+                context.UserFinds.Add(userFind);
+                await context.SaveChangesAsync();
+
+                userFindLocation.UslUsfId = userFind.UsFId;
+
+                context.UserFindLocations.Add(userFindLocation);
+                await context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {              
+                Console.WriteLine($"An error occurred while saving user find: {ex.Message}");
+                throw; 
+            }
+        }
+
     }
 }
