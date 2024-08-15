@@ -10,9 +10,12 @@
 <div id="map" style="height: 500px; width: 100%;"></div>
 
 @code {
-    private async Task InitializeMap()
+    private List<UserFindWithLocation> userFindsWithLocations;
+
+    protected override async Task OnInitializedAsync()
     {
-        await JSRuntime.InvokeVoidAsync("initializeMap");
+        // Fetch data from the service
+        userFindsWithLocations = await userService.GetAllUserFindsWithLocationsAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -20,11 +23,48 @@
         if (firstRender)
         {
             await InitializeMap();
+            await LoadMarkers();
         }
     }
 
+    private async Task InitializeMap()
+    {
+        await JSRuntime.InvokeVoidAsync("initializeMap");
+    }
+
+    private async Task LoadMarkers()
+    {
+        if (userFindsWithLocations != null)
+        {
+            foreach (var item in userFindsWithLocations)
+            {
+                var find = item.UserFind;
+                var location = item.UserFindLocation;
+
+                await JSRuntime.InvokeVoidAsync("addMarker",
+                    location.UslLatitude,
+                    location.UslLongitude,
+                    find.UsfName,
+                    find.UsfSpeciesName,
+                    find.UsfSpeciesType,
+                    find.UsfUseCategory,
+                    find.UsfFeatures,
+                    find.UsfLookAlikes,
+                    find.UsfHarvestMethod,
+                    find.UsfTastesLike,
+                    find.UsfDescription);
+            }
+        }
+    }
+
+    public class SaveFindResult
+    {
+        public Guid UserFindId { get; set; }
+        public Guid UserFindLocationId { get; set; }
+    }
+
     [JSInvokable]
-    public static async Task SaveFind(
+    public static async Task<SaveFindResult> SaveFind(
            string Name,
            string SpeciesName,
            string SpeciesType,
@@ -73,11 +113,21 @@
                 };
 
             await userService.AddUserFind(userFind, userFindLocation);
+
+            return new SaveFindResult
+                {
+                    UserFindId = userFind.UsFId,
+                    UserFindLocationId = userFindLocation.UslId
+                };
         }
+
+        throw new InvalidOperationException("User is not authenticated.");
     }
 
     [JSInvokable]
     public static async Task EditFind(
+        Guid userFindId,
+        Guid userFindLocationId,
         string Name,
         string SpeciesName,
         string SpeciesType,
@@ -99,6 +149,7 @@
         {
             var userFind = new UserFind
                 {
+                    UsFId = userFindId,
                     UsfName = Name,
                     UsfUsrId = user.UsrId,                    
                     UsfSpeciesName = SpeciesName,
@@ -113,6 +164,8 @@
 
             var userFindLocation = new UserFindLocation
                 {
+                    UslId = userFindLocationId,
+                    UslUsfId = userFindId,
                     UslLatitude = Latitude,
                     UslLongitude = Longitude
                 };
@@ -121,14 +174,14 @@
         }
     }
 
-    [JSInvokable]
-    public static string GetCurrentUsername()
-    {
-        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-        var userService = ServiceLocator.ServiceProvider.GetService<UserService>();
+    // [JSInvokable]
+    // public static string GetCurrentUsername()
+    // {
+    //     var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
+    //     var userService = ServiceLocator.ServiceProvider.GetService<UserService>();
 
-        return userStateService.CurrentUser.user?.UsrName;
-    }
+    //     return userStateService.CurrentUser.user?.UsrName;
+    // }
 
 }
 

@@ -10,7 +10,7 @@ namespace ForagerSite.Models
         public Guid UslUsfId { get; set; }
         [ForeignKey("UslUsfId")]
         public UserFind UserFind { get; set; }
-        public float UslLatitude { get; set; }
-        public float UslLongitude { get; set; }
+        public double UslLatitude { get; set; } //changed to double from float
+        public double UslLongitude { get; set; }
     }
 }
