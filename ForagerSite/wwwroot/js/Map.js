@@ -1,43 +1,15 @@
 ﻿
-//var markers = {};
-
-//window.initializeMap = function () {
-//    var map = L.map('map').setView([51.505, -0.09], 13);
-//    //alert('initializeMap called');
-//    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-//        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-//    }).addTo(map);
-
-//    //map.on('click', function (e) {
-//    //    var newMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
-
-    
-
-//    map.on('click', function (e) {
-//        var tempId = 'temp-' + Date.now(); // Temporary ID until saved in the database
-//        var newMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
-
-//        markers[tempId] = {
-//            marker: newMarker,
-//            lat: e.latlng.lat,
-//            lng: e.latlng.lng
-//        };
 var markers = {};
-
-// Initialize the map
-export function initializeMap() {
-    // Create the map and set the initial view
-    window.map = L.map('map').setView([51.505, -0.09], 13);
-
-    // Add tile layer to the map
+window.initializeMap = function () {
+    var map = L.map('map').setView([51.505, -0.09], 13);
+    //alert('initializeMap called');
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(window.map);
+    }).addTo(map);
 
-    // Event handler for adding new markers
-    window.map.on('click', function (e) {
-        var tempId = 'temp-' + Date.now(); // Temporary ID until saved in the database
-        var newMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
+    map.on('click', function (e) {
+        var tempId = 'temp-' + Date.now(); 
+        var newMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
 
         markers[tempId] = {
             marker: newMarker,
@@ -80,27 +52,7 @@ export function initializeMap() {
 
     });
 }
-//*************************************************
-// Add a marker to the map
-export function addMarker(lat, lng, name, speciesName, speciesType, useCategory, features, lookalikes, harvestMethod, tastesLike, description) {
-    // Create and add the marker
-    var marker = L.marker([lat, lng]).addTo(window.map);
 
-    // Create the popup content
-    var popupContent = `<p><strong>Name:</strong> ${name}</p>
-                        <p><strong>Species Name:</strong> ${speciesName}</p>
-                        <p><strong>Species Type:</strong> ${speciesType}</p>
-                        <p><strong>Use Category:</strong> ${useCategory}</p>
-                        <p><strong>Distinguishing Features:</strong> ${features}</p>
-                        <p><strong>Dangerous Lookalikes:</strong> ${lookalikes}</p>
-                        <p><strong>Harvest Method:</strong> ${harvestMethod}</p>
-                        <p><strong>Tastes Like:</strong> ${tastesLike}</p>
-                        <p><strong>Notes:</strong> ${description}</p>`;
-
-    // Bind the popup content to the marker
-    marker.bindPopup(popupContent);
-}
-///****************************************************** 
 window.saveFind = function (tempId, lat, lng) {
     var form = document.getElementById(`UserFindForm_${tempId}`);
     if (!form) {
@@ -165,7 +117,7 @@ window.saveFind = function (tempId, lat, lng) {
     }).catch((error) => {
         console.error('Error saving find:', error);
     });
-    
+
 }
 
 

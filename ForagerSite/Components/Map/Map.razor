@@ -6,16 +6,14 @@
 @inject IJSRuntime JSRuntime
 @inject UserStateService userStateService
 @inject UserService userService
+@inject UserFindService userFindService
 
 <div id="map" style="height: 500px; width: 100%;"></div>
 
 @code {
-    private List<UserFindWithLocation> userFindsWithLocations;
-
-    protected override async Task OnInitializedAsync()
+    private async Task InitializeMap()
     {
-        // Fetch data from the service
-        userFindsWithLocations = await userService.GetAllUserFindsWithLocationsAsync();
+        await JSRuntime.InvokeVoidAsync("initializeMap");
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -23,39 +21,8 @@
         if (firstRender)
         {
             await InitializeMap();
-            await LoadMarkers();
         }
-    }
-
-    private async Task InitializeMap()
-    {
-        await JSRuntime.InvokeVoidAsync("initializeMap");
-    }
-
-    private async Task LoadMarkers()
-    {
-        if (userFindsWithLocations != null)
-        {
-            foreach (var item in userFindsWithLocations)
-            {
-                var find = item.UserFind;
-                var location = item.UserFindLocation;
-
-                await JSRuntime.InvokeVoidAsync("addMarker",
-                    location.UslLatitude,
-                    location.UslLongitude,
-                    find.UsfName,
-                    find.UsfSpeciesName,
-                    find.UsfSpeciesType,
-                    find.UsfUseCategory,
-                    find.UsfFeatures,
-                    find.UsfLookAlikes,
-                    find.UsfHarvestMethod,
-                    find.UsfTastesLike,
-                    find.UsfDescription);
-            }
-        }
-    }
+    }  
 
     public class SaveFindResult
     {
@@ -79,9 +46,9 @@
     {
         
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-        var userService = ServiceLocator.ServiceProvider.GetService<UserService>();
+        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
 
-        if (userStateService == null || userService == null)
+        if (userStateService == null || userFindService == null)
         {
             throw new InvalidOperationException("Services are not available.");
         }
@@ -112,7 +79,7 @@
                     UslLongitude = Longitude
                 };
 
-            await userService.AddUserFind(userFind, userFindLocation);
+            await userFindService.AddUserFind(userFind, userFindLocation);
 
             return new SaveFindResult
                 {
@@ -141,7 +108,7 @@
         float Longitude)
     {
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-        var userService = ServiceLocator.ServiceProvider.GetService<UserService>();
+        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
 
         var user = userStateService.CurrentUser.user;
 
@@ -170,7 +137,7 @@
                     UslLongitude = Longitude
                 };
 
-            await userService.UpdateUserFind(userFind, userFindLocation);
+            await userFindService.UpdateUserFind(userFind, userFindLocation);
         }
     }
 

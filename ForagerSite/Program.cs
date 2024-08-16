@@ -31,6 +31,7 @@ namespace ForagerSite
                 options.DetailedErrors = true;
             }); ;
             builder.Services.AddTransient<UserService>();
+            builder.Services.AddTransient<UserFindService>();
             builder.Services.AddSingleton<UserStateService>();
             
             //builder.Services.AddTransient<EmailService>();
