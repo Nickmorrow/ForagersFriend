@@ -11,18 +11,38 @@
 <div id="map" style="height: 500px; width: 100%;"></div>
 
 @code {
-    private async Task InitializeMap()
-    {
-        await JSRuntime.InvokeVoidAsync("initializeMap");
-    }
+    // private async Task InitializeMap()
+    // {
+    //     await JSRuntime.InvokeVoidAsync("initializeMap");
+    // }
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         await InitializeMap();
+    //     }
+    // }  
+
+    private List<UserFindLocation> userFindLocations;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await InitializeMap();
+            var user = userStateService.CurrentUser.user;
+            if (user != null)
+            {
+                userFindLocations = await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
+                await InitializeMap(userFindLocations);
+            }
         }
-    }  
+    }
+
+    private async Task InitializeMap(List<UserFindLocation> userFindLocations)
+    {
+        await JSRuntime.InvokeVoidAsync("initializeMap", userFindLocations);
+    }
 
     public class SaveFindResult
     {

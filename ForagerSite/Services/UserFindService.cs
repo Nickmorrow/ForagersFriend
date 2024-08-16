@@ -13,6 +13,15 @@ namespace ForagerSite.Services
         {
             _dbContextFactory = dbContextFactory;
         }
+
+        public async Task<List<UserFindLocation>> GetUserFindsAndLocationsAsync(Guid userId)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+            return await context.UserFindLocations
+                .Include(ufl => ufl.UserFind)
+                .Where(ufl => ufl.UserFind.UsfUsrId == userId)
+                .ToListAsync();
+        }
         public async Task AddUserFind(UserFind userFind, UserFindLocation userFindLocation)
         {
             try

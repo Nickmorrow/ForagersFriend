@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ForagerSite.Models
 {
+
     public class UserFindLocation
     {
         [Key]
