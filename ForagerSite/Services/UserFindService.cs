@@ -14,6 +14,48 @@ namespace ForagerSite.Services
             _dbContextFactory = dbContextFactory;
         }
 
+        public async Task<List<UserFindsViewModel>> GetUserFindsViewModels()
+        {           
+            using var context = _dbContextFactory.CreateDbContext();
+
+            var userViewModelsList = new List<UserFindsViewModel>();
+            var userFindsViewModel = new UserFindsViewModel();
+            
+            foreach (var user in context.Users)
+            {
+                userFindsViewModel.user = user;
+                userFindsViewModel.userSecurity = context.UserSecurities.FirstOrDefault(us => us.UssUsrId == userFindsViewModel.user.UsrId);
+
+                userFindsViewModel.userFinds = context.UserFinds.Where(uf => uf.UsfUsrId == userFindsViewModel.user.UsrId).ToList();
+                foreach (UserFind find in userFindsViewModel.userFinds)
+                {
+                    UserFindLocation userFindLocation = new UserFindLocation();
+                    userFindLocation = context.UserFindLocations.FirstOrDefault(uf => uf.UslUsfId == find.UsfId);
+;                   userFindsViewModel.userFindLocations.Add(userFindLocation); 
+                        
+                    userFindsViewModel.userImages = context.UserImages.Where(usi => usi.UsiUsfId == find.UsfId).ToList();
+                    userFindsViewModel.userFindsCommentXrefs = context.UserFindsCommentXrefs.Where(usx => usx.UcxUsfId == find.UsfId).ToList();
+
+                    foreach (UserFindsCommentXref usx in userFindsViewModel.userFindsCommentXrefs)
+                    {
+                        userFindsViewModel.userFindsComments = context.UserFindsComments.Where(usc => usc.UscId == usx.UcxUscId).ToList();
+                        userFindsViewModel.CommentUsers = context.Users.Where(cu => cu.UsrId == usx.UcxUsrId).ToList();
+
+                        foreach (User usr in userFindsViewModel.CommentUsers)
+                        {
+                            UserSecurity commentUserSecurity = new UserSecurity();
+                            commentUserSecurity = context.UserSecurities.FirstOrDefault(cus => cus.UssUsrId == usr.UsrId);
+                            userFindsViewModel.CommentUserSecurities.Add(commentUserSecurity);
+                        }
+                               
+                    }
+                }               
+
+                userViewModelsList.Add(userFindsViewModel);
+            }
+
+            return userViewModelsList;
+        }
         public async Task<List<UserFindLocation>> GetUserFindsAndLocationsAsync(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -26,7 +68,7 @@ namespace ForagerSite.Services
         public async Task<UserFind> GetFindById(Guid findId)
         {
             using var context = _dbContextFactory.CreateDbContext();
-            return await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
+            return await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsfId == findId);
         }
 
         public async Task CreateFind(
@@ -67,7 +109,7 @@ namespace ForagerSite.Services
             {
                 UslLatitude = lat,
                 UslLongitude = lng,
-                UslUsfId = userFind.UsFId
+                UslUsfId = userFind.UsfId
             };
 
             context.UserFindLocations.Add(userFindLocation);
@@ -91,7 +133,7 @@ namespace ForagerSite.Services
         {
             using var context = _dbContextFactory.CreateDbContext();
 
-            var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
+            var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsfId == findId);
             if (userFind == null)
             {
                 throw new Exception("User find not found");
@@ -121,14 +163,14 @@ namespace ForagerSite.Services
             context.UserFindLocations.Update(userFindLocation);
             await context.SaveChangesAsync();
 
-            //return (userFind.UsFId, userFindLocation.UslId);
+            //return (userFind.UsfId, userFindLocation.UslId);
         }
 
         public async Task DeleteFind(Guid findId)
         {
             using var context = _dbContextFactory.CreateDbContext();
-            var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
-            var userFindLocation = await context.UserFindLocations.FirstOrDefaultAsync(ufl => ufl.UslUsfId == userFind.UsFId);
+            var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsfId == findId);
+            var userFindLocation = await context.UserFindLocations.FirstOrDefaultAsync(ufl => ufl.UslUsfId == userFind.UsfId);
             
             if (userFind != null)
             {

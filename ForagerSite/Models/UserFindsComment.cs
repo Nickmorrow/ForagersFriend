@@ -22,5 +22,8 @@ namespace ForagerSite.Models
         public Guid UcxUscId { get; set; }
         [ForeignKey("UcxUscId")]
         public UserFindsComment UserFindsComment { get; set; }
+        public Guid UcxUsfId { get; set; }
+        [ForeignKey("UcxUsfId")]
+        public UserFindsComment UserFinds { get; set; }
     }
 }

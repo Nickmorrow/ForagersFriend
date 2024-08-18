@@ -3,17 +3,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ForagerSite.Models
 {
-
-    public class UserFindWithLocation
-    {
-        public UserFind UserFind { get; set; }
-        public UserFindLocation UserFindLocation { get; set; }
-    }
-
     public class UserFind
     {
         [Key]
-        public Guid UsFId { get; set; }
+        public Guid UsfId { get; set; }
         public string UsfName { get; set; }
         public Guid UsfUsrId { get; set; }
         [ForeignKey("UsfUsrId")]

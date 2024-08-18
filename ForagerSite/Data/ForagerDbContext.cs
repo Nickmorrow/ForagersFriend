@@ -27,7 +27,7 @@ namespace ForagerSite.Data
             modelBuilder.Entity<UserSecurity>().ToTable("UserSecurity");
             modelBuilder.Entity<UserMessage>().ToTable("UserMessages");
             modelBuilder.Entity<UserMessageXref>().ToTable("UserMessagesXref");
-            modelBuilder.Entity<UserFind>().ToTable("UserFinds");
+            modelBuilder.Entity<UserFind>().ToTable("userFinds");
             modelBuilder.Entity<UserFindLocation>().ToTable("UserFindLocation");
             modelBuilder.Entity<UserImage>().ToTable("UserImages");
             modelBuilder.Entity<UserFindsComment>().ToTable("UserFindsComments");

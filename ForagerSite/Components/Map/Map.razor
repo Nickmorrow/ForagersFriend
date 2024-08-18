@@ -16,35 +16,26 @@
 
     private List<UserFindLocation> userFindLocations;
 
+    private List<UserFindsViewModel> userFindsViewModels;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             var user = userStateService.CurrentUser.user;
+           
             if (user != null)
             {
+
                 userFindLocations = await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
                 await InitializeMap(userFindLocations);
             }
         }
     }
 
-    private async Task InitializeMap(List<UserFindLocation> userFindLocations)
+    private async Task InitializeMap(List<UserFindLocation> findLocations)
     {
-        await JSRuntime.InvokeVoidAsync("initializeMap", userFindLocations);
-    }
-
-    [JSInvokable]
-    public static async Task<List<UserFindLocation>> GetUserFindsAndLocations()
-    {
-
-        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-
-        var user = userStateService.CurrentUser.user;
-
-        return await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);     
-
+        await JSRuntime.InvokeVoidAsync("initializeMap", findLocations );
     }
 
     [JSInvokable]

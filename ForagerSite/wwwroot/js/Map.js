@@ -3,11 +3,11 @@
 window.map = null;
 
 var markers = {};
-window.initializeMap = function (userFindLocations) {
+window.initializeMap = function (findLocations) {
 
     if (window.map) {
         console.log('Map already initialized, updating markers.');
-        updateMarkers(userFindLocations);
+        updateMarkers(findLocations);
         return;
     }
 
@@ -17,7 +17,7 @@ window.initializeMap = function (userFindLocations) {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(window.map);
 
-    updateMarkers(userFindLocations);
+    updateMarkers(findLocations);
     window.map.on('click', function (e) {
         var tempId = 'temp-' + Date.now();
         var newMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
@@ -75,9 +75,9 @@ function updateMarkers(userFindLocations) {
     // Add new markers
     userFindLocations.forEach(location => {
         var marker = L.marker([location.uslLatitude, location.uslLongitude]).addTo(window.map);
-        var findId = location.userFind.usFId;
+        var findId = location.userFind.usfId;
 
-        var popupContent = `<p><strong>Name:</strong> ${location.userFind.usfName}</p>
+        var popupContent = `<p><strong>Name:</strong> ${location.userFind.usfName}</p>                            
                             <p><strong>Species Name:</strong> ${location.userFind.usfSpeciesName}</p>
                             <p><strong>Species Type:</strong> ${location.userFind.usfSpeciesType}</p>
                             <p><strong>Use Category:</strong> ${location.userFind.usfUseCategory}</p>
