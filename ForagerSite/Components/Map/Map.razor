@@ -11,18 +11,8 @@
 <div id="map" style="height: 500px; width: 100%;"></div>
 
 @code {
-    // private async Task InitializeMap()
-    // {
-    //     await JSRuntime.InvokeVoidAsync("initializeMap");
-    // }
 
-    // protected override async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         await InitializeMap();
-    //     }
-    // }  
+    private static Map _instance;
 
     private List<UserFindLocation> userFindLocations;
 
@@ -44,131 +34,169 @@
         await JSRuntime.InvokeVoidAsync("initializeMap", userFindLocations);
     }
 
-    public class SaveFindResult
-    {
-        public Guid UserFindId { get; set; }
-        public Guid UserFindLocationId { get; set; }
-    }
-
     [JSInvokable]
-    public static async Task<SaveFindResult> SaveFind(
-           string Name,
-           string SpeciesName,
-           string SpeciesType,
-           string UseCategory,
-           string Features,
-           string Lookalikes,
-           string HarvestMethod,
-           string TastesLike,
-           string Description,
-           float Latitude,
-           float Longitude)
+    public static async Task<List<UserFindLocation>> GetUserFindsAndLocations()
     {
-        
-        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
 
-        if (userStateService == null || userFindService == null)
-        {
-            throw new InvalidOperationException("Services are not available.");
-        }
+        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
 
         var user = userStateService.CurrentUser.user;
 
-        if (user != null)
-        {
-            var userFind = new UserFind
-                {
-                    UsfName = Name,
-                    UsfUsrId = user.UsrId,
-                    UsfFindDate = DateTime.Now,
-                    UsfSpeciesName = SpeciesName,
-                    UsfSpeciesType = SpeciesType,
-                    UsfUseCategory = UseCategory,
-                    UsfFeatures = Features,
-                    UsfLookAlikes = Lookalikes,
-                    UsfHarvestMethod = HarvestMethod,
-                    UsfTastesLike = TastesLike,
-                    UsfDescription = Description
-                };
+        return await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);     
 
-            var userFindLocation = new UserFindLocation
-                {
-                    UslUsfId = userFind.UsFId,
-                    UslLatitude = Latitude,
-                    UslLongitude = Longitude
-                };
-
-            await userFindService.AddUserFind(userFind, userFindLocation);
-
-            return new SaveFindResult
-                {
-                    UserFindId = userFind.UsFId,
-                    UserFindLocationId = userFindLocation.UslId
-                };
-        }
-
-        throw new InvalidOperationException("User is not authenticated.");
     }
 
     [JSInvokable]
-    public static async Task EditFind(
-        Guid userFindId,
-        Guid userFindLocationId,
-        string Name,
-        string SpeciesName,
-        string SpeciesType,
-        string UseCategory,
-        string Features,
-        string Lookalikes,
-        string HarvestMethod,
-        string TastesLike,
-        string Description,
-        float Latitude,
-        float Longitude)
+    public static async Task<UserFind> GetFindById(string findId)
+    {
+        if (string.IsNullOrEmpty(findId) || !Guid.TryParse(findId, out var guidId))
+        {
+            throw new ArgumentException($"Invalid GUID format, Received findId: {findId}");
+        }
+
+        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+        return await userFindService.GetFindById(guidId);
+    }
+
+    [JSInvokable]
+    public static async Task<List<UserFindLocation>> CreateFind(
+    string name,
+    string speciesName,
+    string speciesType,
+    string useCategory,
+    string features,
+    string lookalikes,
+    string harvestMethod,
+    string tastesLike,
+    string description,
+    double lat,
+    double lng)
     {
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
 
         var user = userStateService.CurrentUser.user;
 
-        if (user != null)
-        {
-            var userFind = new UserFind
-                {
-                    UsFId = userFindId,
-                    UsfName = Name,
-                    UsfUsrId = user.UsrId,                    
-                    UsfSpeciesName = SpeciesName,
-                    UsfSpeciesType = SpeciesType,
-                    UsfUseCategory = UseCategory,
-                    UsfFeatures = Features,
-                    UsfLookAlikes = Lookalikes,
-                    UsfHarvestMethod = HarvestMethod,
-                    UsfTastesLike = TastesLike,
-                    UsfDescription = Description
-                };
+        Guid userId = user.UsrId;
 
-            var userFindLocation = new UserFindLocation
-                {
-                    UslId = userFindLocationId,
-                    UslUsfId = userFindId,
-                    UslLatitude = Latitude,
-                    UslLongitude = Longitude
-                };
+        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+        await userFindService.CreateFind(
+            userId,
+            name,
+            speciesName,
+            speciesType,
+            useCategory,
+            features,
+            lookalikes,
+            harvestMethod,
+            tastesLike,
+            description,
+            lat,
+            lng
+        );              
 
-            await userFindService.UpdateUserFind(userFind, userFindLocation);
-        }
+        return await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
     }
+
+    [JSInvokable]
+    public static async Task<List<UserFindLocation>> UpdateFind(
+        Guid findId,
+        string name,
+        string speciesName,
+        string speciesType,
+        string useCategory,
+        string features,
+        string lookalikes,
+        string harvestMethod,
+        string tastesLike,
+        string description,
+        double lat,
+        double lng)
+    {
+        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();       
+        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+        var user = userStateService.CurrentUser.user;
+
+        await userFindService.UpdateFind(
+            findId,
+            name,
+            speciesName,
+            speciesType,
+            useCategory,
+            features,
+            lookalikes,
+            harvestMethod,
+            tastesLike,
+            description,
+            lat,
+            lng
+        );
+        return await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
+    }
+
 
     // [JSInvokable]
-    // public static string GetCurrentUsername()
+    // public static async Task<SaveFindResult> SaveFind(
+    //        string Name,
+    //        string SpeciesName,
+    //        string SpeciesType,
+    //        string UseCategory,
+    //        string Features,
+    //        string Lookalikes,
+    //        string HarvestMethod,
+    //        string TastesLike,
+    //        string Description,
+    //        float Latitude,
+    //        float Longitude)
     // {
+        
     //     var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-    //     var userService = ServiceLocator.ServiceProvider.GetService<UserService>();
+    //     var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
 
-    //     return userStateService.CurrentUser.user?.UsrName;
+    //     if (userStateService == null || userFindService == null)
+    //     {
+    //         throw new InvalidOperationException("Services are not available.");
+    //     }
+
+    //     var user = userStateService.CurrentUser.user;
+
+    //     if (user != null)
+    //     {
+    //         var userFind = new UserFind
+    //             {
+    //                 UsfName = Name,
+    //                 UsfUsrId = user.UsrId,
+    //                 UsfFindDate = DateTime.Now,
+    //                 UsfSpeciesName = SpeciesName,
+    //                 UsfSpeciesType = SpeciesType,
+    //                 UsfUseCategory = UseCategory,
+    //                 UsfFeatures = Features,
+    //                 UsfLookAlikes = Lookalikes,
+    //                 UsfHarvestMethod = HarvestMethod,
+    //                 UsfTastesLike = TastesLike,
+    //                 UsfDescription = Description
+    //             };
+
+    //         var userFindLocation = new UserFindLocation
+    //             {
+    //                 UslUsfId = userFind.UsFId,
+    //                 UslLatitude = Latitude,
+    //                 UslLongitude = Longitude
+    //             };
+
+    //         await userFindService.AddUserFind(userFind, userFindLocation);
+
+    //         return new SaveFindResult
+    //             {
+    //                 UserFindId = userFind.UsFId,
+    //                 UserFindLocationId = userFindLocation.UslId
+    //             };
+    //     }
+
+    //     throw new InvalidOperationException("User is not authenticated.");
     // }
+
+
 
 }
 

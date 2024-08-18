@@ -53,35 +53,47 @@
 //    });
 //}
 
-var markers = {};
+window.map = null;
 
+var markers = {};
 window.initializeMap = function (userFindLocations) {
-    var map = L.map('map').setView([51.505, -0.09], 13);
+
+    if (window.map) {
+        console.log('Map already initialized, updating markers.');
+        updateMarkers(userFindLocations);
+        return;
+    }
+
+    window.map = L.map('map').setView([51.505, -0.09], 13);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
+    }).addTo(window.map);
 
-    userFindLocations.forEach(location => {
-        var marker = L.marker([location.uslLatitude, location.uslLongitude]).addTo(map);
-        var popupContent = `<p><strong>Name:</strong> ${location.userFind.usfName}</p>
-                            <p><strong>Species Name:</strong> ${location.userFind.usfSpeciesName}</p>
-                            <p><strong>Species Type:</strong> ${location.userFind.usfSpeciesType}</p>
-                            <p><strong>Use Category:</strong> ${location.userFind.usfUseCategory}</p>
-                            <p><strong>Distinguishing Features:</strong> ${location.userFind.usfFeatures}</p>
-                            <p><strong>Dangerous Lookalikes:</strong> ${location.userFind.usfLookAlikes}</p>
-                            <p><strong>Harvest Method:</strong> ${location.userFind.usfHarvestMethod}</p>
-                            <p><strong>Tastes Like:</strong> ${location.userFind.usfTastesLike}</p>
-                            <p><strong>Notes:</strong> ${location.userFind.usfDescription}</p>
-                            <button type="button" onclick="editFind(${location.uslLatitude}, ${location.uslLongitude}, this)">Edit</button>`;
+    updateMarkers(userFindLocations);
 
-        marker.bindPopup(popupContent);
-        markers[location.uslId] = { marker: marker, lat: location.uslLatitude, lng: location.uslLongitude };
-    });
+    //userFindLocations.forEach(location => {
+    //    var marker = L.marker([location.uslLatitude, location.uslLongitude]).addTo(map);
+    //    var findId = location.userFind.usFId;
 
-    map.on('click', function (e) {
+    //    var popupContent = `<p><strong>Name:</strong> ${location.userFind.usfName}</p>
+    //                        <p><strong>Species Name:</strong> ${location.userFind.usfSpeciesName}</p>
+    //                        <p><strong>Species Type:</strong> ${location.userFind.usfSpeciesType}</p>
+    //                        <p><strong>Use Category:</strong> ${location.userFind.usfUseCategory}</p>
+    //                        <p><strong>Distinguishing Features:</strong> ${location.userFind.usfFeatures}</p>
+    //                        <p><strong>Dangerous Lookalikes:</strong> ${location.userFind.usfLookAlikes}</p>
+    //                        <p><strong>Harvest Method:</strong> ${location.userFind.usfHarvestMethod}</p>
+    //                        <p><strong>Tastes Like:</strong> ${location.userFind.usfTastesLike}</p>
+    //                        <p><strong>Notes:</strong> ${location.userFind.usfDescription}</p>
+    //                        <button type="button" onclick="updateFind('${findId}')">Edit</button>`;
+
+    //    marker.bindPopup(popupContent);
+    //    markers[findId] = { marker: marker, lat: location.uslLatitude, lng: location.uslLongitude };
+    //});
+
+    window.map.on('click', function (e) {
         var tempId = 'temp-' + Date.now();
-        var newMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+        var newMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
 
         markers[tempId] = {
             marker: newMarker,
@@ -117,14 +129,129 @@ window.initializeMap = function (userFindLocations) {
                                 <label for="description">Notes:</label>
                                 <input type="text" id="UsfDescription" name="description"><br>
 
-                                <button type="button" onclick="saveFind('${tempId}', ${e.latlng.lat}, ${e.latlng.lng})">Save</button>
+                                <button type="button" onclick="createFind('${tempId}', ${e.latlng.lat}, ${e.latlng.lng})">Save</button>
                             </form>`;
 
         newMarker.bindPopup(popupContent).openPopup();
     });
 }
 
-window.saveFind = function (tempId, lat, lng) {
+function updateMarkers(userFindLocations) {
+    // Clear existing markers
+    for (var key in markers) {
+        if (markers.hasOwnProperty(key)) {
+            markers[key].marker.remove();
+        }
+    }
+    markers = {}; // Reset markers object
+
+    // Add new markers
+    userFindLocations.forEach(location => {
+        var marker = L.marker([location.uslLatitude, location.uslLongitude]).addTo(window.map);
+        var findId = location.userFind.usFId;
+
+        var popupContent = `<p><strong>Name:</strong> ${location.userFind.usfName}</p>
+                            <p><strong>Species Name:</strong> ${location.userFind.usfSpeciesName}</p>
+                            <p><strong>Species Type:</strong> ${location.userFind.usfSpeciesType}</p>
+                            <p><strong>Use Category:</strong> ${location.userFind.usfUseCategory}</p>
+                            <p><strong>Distinguishing Features:</strong> ${location.userFind.usfFeatures}</p>
+                            <p><strong>Dangerous Lookalikes:</strong> ${location.userFind.usfLookAlikes}</p>
+                            <p><strong>Harvest Method:</strong> ${location.userFind.usfHarvestMethod}</p>
+                            <p><strong>Tastes Like:</strong> ${location.userFind.usfTastesLike}</p>
+                            <p><strong>Notes:</strong> ${location.userFind.usfDescription}</p>
+                            <button type="button" onclick="updateFind('${findId}')">Edit</button>`;
+        marker.bindPopup(popupContent);
+        markers[findId] = { marker: marker, lat: location.uslLatitude, lng: location.uslLongitude };
+    });
+}
+
+window.updateFind = function (findId) {   
+
+    // Ensure the findId is defined and valid before calling the .NET method
+    if (!findId) {
+        console.error('Invalid findId:', findId);
+        return;
+    }
+
+    DotNet.invokeMethodAsync('ForagerSite', 'GetFindById', findId) 
+        .then(find => {
+
+            var markerData = markers[findId];
+            if (!markerData) {
+                console.error('Marker not found for findId:', findId);
+                return;
+            }
+
+            var popupContent = `<form id="UserFindForm_${findId}">
+                                    <label for="findName">Name:</label>
+                                    <input type="text" id="UsfName" name="findName" value="${find.usfName || ''}"><br>
+                                    <label for="speciesName">Species Name:</label>
+                                    <input type="text" id="UsfSpeciesName" name="speciesName" value="${find.usfSpeciesName || ''}"><br>
+                                    <label for="speciesType">Species Type:</label>
+                                    <input type="text" id="UsfSpeciesType" name="speciesType" value="${find.usfSpeciesType || ''}"><br>
+                                    <label for="useCategory">Use Category:</label>
+                                    <input type="text" id="UsfUseCategory" name="useCategory" value="${find.usfUseCategory || ''}"><br>
+                                    <label for="features">Distinguishing Features:</label>
+                                    <input type="text" id="UsfFeatures" name="features" value="${find.usfFeatures || ''}"><br>
+                                    <label for="lookalikes">Dangerous Lookalikes:</label>
+                                    <input type="text" id="UsfLookAlikes" name="lookalikes" value="${find.usfLookAlikes || ''}"><br>
+                                    <label for="harvestMethod">Harvest Method:</label>
+                                    <input type="text" id="UsfHarvestMethod" name="harvestMethod" value="${find.usfHarvestMethod || ''}"><br>
+                                    <label for="tastesLike">Tastes Like:</label>
+                                    <input type="text" id="UsfTastesLike" name="tastesLike" value="${find.usfTastesLike || ''}"><br>
+                                    <label for="description">Notes:</label>
+                                    <input type="text" id="UsfDescription" name="description" value="${find.usfDescription || ''}"><br>
+                                    <button type="button" onclick="submitUpdatedFind('${findId}', ${markerData.lat}, ${markerData.lng})">Save</button>
+                                </form>`;
+
+            // Update the popup content and open it on the map
+            var marker = markers[findId].marker;
+            marker.getPopup().setContent(popupContent).openOn(marker._map);
+        })
+        .catch(error => {
+            console.error('Error updating find:', error);
+        });
+}
+
+window.submitUpdatedFind = function (findId, lat, lng) {
+    var form = document.getElementById(`UserFindForm_${findId}`);
+    if (!form) {
+        console.error('Form element not found!');
+        return;
+    }
+
+    var findName = form.UsfName.value;
+    var speciesName = form.UsfSpeciesName.value;
+    var speciesType = form.UsfSpeciesType.value;
+    var useCategory = form.UsfUseCategory.value;
+    var features = form.UsfFeatures.value;
+    var lookalikes = form.UsfLookAlikes.value;
+    var harvestMethod = form.UsfHarvestMethod.value;
+    var tastesLike = form.UsfTastesLike.value;
+    var description = form.UsfDescription.value;
+
+    DotNet.invokeMethodAsync('ForagerSite', 'UpdateFind',
+        findId,
+        findName,
+        speciesName,
+        speciesType,
+        useCategory,
+        features,
+        lookalikes,
+        harvestMethod,
+        tastesLike,
+        description,
+        lat,
+        lng
+    ).then(userFindLocations => {
+        console.log('Find saved successfully!');
+        initializeMap(userFindLocations); // Refresh the map markers after saving
+    }).catch((error) => {
+        console.error('Error saving find:', error);
+    });   
+}
+
+window.createFind = function (tempId, lat, lng) {
     var form = document.getElementById(`UserFindForm_${tempId}`);
     if (!form) {
         console.error('Form element not found!');
@@ -141,7 +268,7 @@ window.saveFind = function (tempId, lat, lng) {
     var tastesLike = form.UsfTastesLike.value;
     var description = form.UsfDescription.value;
 
-    DotNet.invokeMethodAsync('ForagerSite', 'SaveFind',
+    DotNet.invokeMethodAsync('ForagerSite', 'CreateFind',
         findName,
         speciesName,
         speciesType,
@@ -153,52 +280,12 @@ window.saveFind = function (tempId, lat, lng) {
         description,
         lat,
         lng
-    ).then(result => {
-
-        var { userFindId, userFindLocationId } = result;
-
+    ).then(userFindLocations => {
         console.log('Find saved successfully!');
-
-        if (typeof markers === 'undefined') {
-            console.error('Markers is not defined!');
-            return;
-        }
-
-        var markerData = markers[tempId];
-        delete markers[tempId];
-        markers[userFindLocationId] = markerData;
-
-        var popupContent = `<p><strong>Name:</strong> ${findName}</p>
-                            <p><strong>Species Name:</strong> ${speciesName}</p>
-                            <p><strong>Species Type:</strong> ${speciesType}</p>
-                            <p><strong>Use Category:</strong> ${useCategory}</p>
-                            <p><strong>Distinguishing Features:</strong> ${features}</p>
-                            <p><strong>Dangerous Lookalikes:</strong> ${lookalikes}</p>
-                            <p><strong>Harvest Method:</strong> ${harvestMethod}</p>
-                            <p><strong>Tastes Like:</strong> ${tastesLike}</p>
-                            <p><strong>Notes:</strong> ${description}</p>
-                            <button type="button" onclick="editFind(${lat}, ${lng}, this)">Edit</button>`;
-
-        var marker = markers[userFindLocationId].marker;
-
-        marker.getPopup().setContent(popupContent);
-
-        //marker.setPopupContent(popupContent);
-
+        initializeMap(userFindLocations); // Refresh the map markers after saving
     }).catch((error) => {
         console.error('Error saving find:', error);
     });
-
-}
-
-
-
-
-
-
-
-
-
-
+}    
 
 
