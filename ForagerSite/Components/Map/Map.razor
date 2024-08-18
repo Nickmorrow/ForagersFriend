@@ -134,67 +134,17 @@
         return await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
     }
 
+    [JSInvokable]
+    public static async Task<List<UserFindLocation>> DeleteFind(Guid findId)
+    {
+        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
+        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+        var user = userStateService.CurrentUser.user;
 
-    // [JSInvokable]
-    // public static async Task<SaveFindResult> SaveFind(
-    //        string Name,
-    //        string SpeciesName,
-    //        string SpeciesType,
-    //        string UseCategory,
-    //        string Features,
-    //        string Lookalikes,
-    //        string HarvestMethod,
-    //        string TastesLike,
-    //        string Description,
-    //        float Latitude,
-    //        float Longitude)
-    // {
-        
-    //     var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-    //     var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+        await userFindService.DeleteFind(findId);
+        return await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
+    }
 
-    //     if (userStateService == null || userFindService == null)
-    //     {
-    //         throw new InvalidOperationException("Services are not available.");
-    //     }
-
-    //     var user = userStateService.CurrentUser.user;
-
-    //     if (user != null)
-    //     {
-    //         var userFind = new UserFind
-    //             {
-    //                 UsfName = Name,
-    //                 UsfUsrId = user.UsrId,
-    //                 UsfFindDate = DateTime.Now,
-    //                 UsfSpeciesName = SpeciesName,
-    //                 UsfSpeciesType = SpeciesType,
-    //                 UsfUseCategory = UseCategory,
-    //                 UsfFeatures = Features,
-    //                 UsfLookAlikes = Lookalikes,
-    //                 UsfHarvestMethod = HarvestMethod,
-    //                 UsfTastesLike = TastesLike,
-    //                 UsfDescription = Description
-    //             };
-
-    //         var userFindLocation = new UserFindLocation
-    //             {
-    //                 UslUsfId = userFind.UsFId,
-    //                 UslLatitude = Latitude,
-    //                 UslLongitude = Longitude
-    //             };
-
-    //         await userFindService.AddUserFind(userFind, userFindLocation);
-
-    //         return new SaveFindResult
-    //             {
-    //                 UserFindId = userFind.UsFId,
-    //                 UserFindLocationId = userFindLocation.UslId
-    //             };
-    //     }
-
-    //     throw new InvalidOperationException("User is not authenticated.");
-    // }
 
 
 
