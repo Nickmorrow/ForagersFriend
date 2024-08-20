@@ -10,6 +10,8 @@ namespace ForagerSite.Models
         public string UscComment { get; set; }
         public int? UscCommentScore { get; set; }
         public DateTime UscCommentDate { get; set; }
+        //public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
+
     }
 
     public class UserFindsCommentXref
@@ -24,6 +26,7 @@ namespace ForagerSite.Models
         public UserFindsComment UserFindsComment { get; set; }
         public Guid UcxUsfId { get; set; }
         [ForeignKey("UcxUsfId")]
-        public UserFindsComment UserFinds { get; set; }
+        public UserFind UserFind { get; set; }
+
     }
 }

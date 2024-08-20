@@ -23,19 +23,18 @@
         if (firstRender)
         {
             var user = userStateService.CurrentUser.user;
-           
+
             if (user != null)
             {
-
-                userFindLocations = await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
-                await InitializeMap(userFindLocations);
+                userFindsViewModels = await userFindService.GetCurrentUserFindsViewModel(user.UsrId);
+                await InitializeMap(userFindsViewModels);
             }
         }
     }
-
-    private async Task InitializeMap(List<UserFindLocation> findLocations)
+    
+    private async Task InitializeMap(List<UserFindsViewModel> userFindsViewModels)
     {
-        await JSRuntime.InvokeVoidAsync("initializeMap", findLocations );
+        await JSRuntime.InvokeVoidAsync("initializeMap", userFindsViewModels);
     }
 
     [JSInvokable]
@@ -51,7 +50,7 @@
     }
 
     [JSInvokable]
-    public static async Task<List<UserFindLocation>> CreateFind(
+    public static async Task<List<UserFindsViewModel>> CreateFind(
     string name,
     string speciesName,
     string speciesType,
@@ -86,11 +85,11 @@
             lng
         );              
 
-        return await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
+        return await userFindService.GetCurrentUserFindsViewModel(user.UsrId);
     }
 
     [JSInvokable]
-    public static async Task<List<UserFindLocation>> UpdateFind(
+    public static async Task<List<UserFindsViewModel>> UpdateFind(
         Guid findId,
         string name,
         string speciesName,
@@ -122,18 +121,18 @@
             lat,
             lng
         );
-        return await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
+        return await userFindService.GetCurrentUserFindsViewModel(user.UsrId);
     }
 
     [JSInvokable]
-    public static async Task<List<UserFindLocation>> DeleteFind(Guid findId)
+    public static async Task<List<UserFindsViewModel>> DeleteFind(Guid findId)
     {
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
         var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
         var user = userStateService.CurrentUser.user;
 
         await userFindService.DeleteFind(findId);
-        return await userFindService.GetUserFindsAndLocationsAsync(user.UsrId);
+        return await userFindService.GetCurrentUserFindsViewModel(user.UsrId);
     }
 
 

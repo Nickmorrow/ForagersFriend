@@ -6,7 +6,7 @@ namespace ForagerSite.Models
     public class UserFind
     {
         [Key]
-        public Guid UsfId { get; set; }
+        public Guid UsFId { get; set; }
         public string UsfName { get; set; }
         public Guid UsfUsrId { get; set; }
         [ForeignKey("UsfUsrId")]
@@ -21,5 +21,8 @@ namespace ForagerSite.Models
         public string UsfTastesLike { get; set; }
         public string UsfDescription { get; set; }
         public int? UsfAccuracyScore { get; set; }
+        //public UserFindLocation UserFindLocation { get; set; }
+        //public ICollection<UserImage> UserImages { get; set; }
+        //public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
     }
 }

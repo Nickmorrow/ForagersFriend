@@ -28,12 +28,11 @@ namespace ForagerSite.Models
         public string? UsrCountry { get; set; }
         public string? UsrStateorProvince { get; set; }
         public int? UsrZipCode { get; set; }
-
-        public ICollection<UserSecurity> UserSecurities { get; set; }
-        public ICollection<UserMessage> UserMessages { get; set; }
-        public ICollection<UserFind> UserFinds { get; set; }
-        public ICollection<UserImage> UserImages { get; set; }
-        public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
+        //public UserSecurity UserSecurity { get; set; }
+        //public ICollection<UserMessage> UserMessages { get; set; }
+        //public ICollection<UserFind> UserFinds { get; set; }
+        //public ICollection<UserImage> UserImages { get; set; }
+        //public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
 
     }
 
