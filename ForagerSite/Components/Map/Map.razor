@@ -78,7 +78,7 @@
             _userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
             var json = JsonConvert.SerializeObject(_userFindsViewModels, settings);
 
-            await JSRuntime.InvokeVoidAsync("initializeMap", json);
+            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString());
         }
 
     }
@@ -87,6 +87,8 @@
     {
         _allUserFilter = true;
         _currentUserFilter = false;
+
+        var user = userStateService.CurrentUser.user;
 
         var settings = new JsonSerializerSettings
             {
@@ -98,7 +100,7 @@
 
         var json = JsonConvert.SerializeObject(_userFindsViewModels, settings);
 
-        await JSRuntime.InvokeVoidAsync("initializeMap", json);
+        await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString());
     }
 
 
