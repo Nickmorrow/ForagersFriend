@@ -10,7 +10,7 @@ namespace ForagerSite.Models
         public string UscComment { get; set; }
         public int? UscCommentScore { get; set; }
         public DateTime UscCommentDate { get; set; }
-        //public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
+        public UserFindsCommentXref UserFindsCommentXref { get; set; }
 
     }
 

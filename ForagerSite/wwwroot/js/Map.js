@@ -92,11 +92,13 @@ var markers = {};
 //        markers[findId] = { marker: marker, lat: location.uslLatitude, lng: location.uslLongitude };
 //    });
 //}
-window.initializeMap = function (userFindsViewModels) {
+window.initializeMap = function (json, currentUserId) {
 
+    let userFindsViewModels = JSON.parse(json);
+    
     if (window.map) {
         console.log('Map already initialized, updating markers.');
-        updateMarkers(userFindsViewModels);
+        updateMarkers(userFindsViewModels, currentUserId);
         return;
     }
 
@@ -106,7 +108,7 @@ window.initializeMap = function (userFindsViewModels) {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(window.map);
 
-    updateMarkers(userFindsViewModels);
+    updateMarkers(userFindsViewModels, currentUserId);
     window.map.on('click', function (e) {
         var tempId = 'temp-' + Date.now();
         var newMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
@@ -152,46 +154,61 @@ window.initializeMap = function (userFindsViewModels) {
     });
 }
 
-function updateMarkers(userFindsViewModels) {
-    // Clear existing markers
-    for (var key in markers) {
-        if (markers.hasOwnProperty(key)) {
-            markers[key].marker.remove();
-        }
-    }
+function updateMarkers(userFindsViewModels, currentUserId) {
+    Object.keys(markers).forEach(key => {
+        markers[key].marker.remove();
+    });
     markers = {}; 
 
-    userFindsViewModels.forEach(viewModel => { 
+    userFindsViewModels.forEach(viewModel => {
+        viewModel.userFindLocations.forEach(location => {           
 
-            viewModel.userFindLocations.forEach(location => {
+            if (location.UslLatitude !== undefined && location.UslLongitude !== undefined) {
+                var lat = parseFloat(location.UslLatitude);
+                var lng = parseFloat(location.UslLongitude);
 
-            var marker = L.marker([location.uslLatitude, location.uslLongitude]).addTo(window.map);
-            var find = viewModel.userFinds.find(find => find.usFId === location.userFind.usFId); 
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    var marker = L.marker([lat, lng]).addTo(window.map);
+                    var find = viewModel.userFinds.find(find => find.UsFId === location.UslUsfId);
 
-            if (find) {
-                var findId = find.usFId;
+                    if (find && find.UsFId) {
+                        var findId = find.UsFId;
 
-                var popupContent = `<p><strong>Name:</strong> ${find.usfName}</p> 
-                                <p><strong>Discovered by:</strong> ${viewModel.userSecurity.ussUsername}</p>
-                                <p><strong>Species Name:</strong> ${find.usfSpeciesName}</p>
-                                <p><strong>Species Type:</strong> ${find.usfSpeciesType}</p>
-                                <p><strong>Use Category:</strong> ${find.usfUseCategory}</p>
-                                <p><strong>Distinguishing Features:</strong> ${find.usfFeatures}</p>
-                                <p><strong>Dangerous Lookalikes:</strong> ${find.usfLookAlikes}</p>
-                                <p><strong>Harvest Method:</strong> ${find.usfHarvestMethod}</p>
-                                <p><strong>Tastes Like:</strong> ${find.usfTastesLike}</p>
-                                <p><strong>Notes:</strong> ${find.usfDescription}</p>
-                                <button type="button" onclick="updateFind('${findId}')">Edit</button>
-                                <button type="button" onclick="deleteFind('${findId}')">Delete</button>`;
-                marker.bindPopup(popupContent);
-                markers[findId] = { marker: marker, lat: location.uslLatitude, lng: location.uslLongitude };
+                        var popupContent = `<p><strong>Name:</strong> ${find.UsfName}</p> 
+                        <p><strong>Discovered by:</strong> ${viewModel.userSecurity.UssUsername}</p>
+                        <p><strong>Species Name:</strong> ${find.UsfSpeciesName}</p>
+                        <p><strong>Species Type:</strong> ${find.UsfSpeciesType}</p>
+                        <p><strong>Use Category:</strong> ${find.UsfUseCategory}</p>
+                        <p><strong>Distinguishing Features:</strong> ${find.UsfFeatures}</p>
+                        <p><strong>Dangerous Lookalikes:</strong> ${find.UsfLookAlikes}</p>
+                        <p><strong>Harvest Method:</strong> ${find.UsfHarvestMethod}</p>
+                        <p><strong>Tastes Like:</strong> ${find.UsfTastesLike}</p>
+                        <p><strong>Notes:</strong> ${find.UsfDescription}</p>`;                       
+
+                        if (viewModel.user.UsrId === currentUserId) {
+                            popupContent += `<button type="button" onclick="updateFind('${findId}')">Edit</button>
+                                             <button type="button" onclick="deleteFind('${findId}')">Delete</button>`;
+                        }
+
+                        marker.bindPopup(popupContent);
+                        markers[findId] = { marker: marker, lat: lat, lng: lng };
+                    } else {
+                        console.error("Find or UsFId is undefined:", find, location);
+                    }
+                } else {
+                    console.error("Latitude or Longitude is not a valid number:", location.UslLatitude, location.UslLongitude);
+                }
+            } else {
+                console.error("Latitude or Longitude is undefined:", location);
             }
         });
     });
+
+
+
 }
 window.updateFind = function (findId) {   
 
-    // Ensure the findId is defined and valid before calling the .NET method
     if (!findId) {
         console.error('Invalid findId:', findId);
         return;
@@ -228,8 +245,7 @@ window.updateFind = function (findId) {
                                     <button type="button" onclick="submitUpdatedFind('${findId}', ${markerData.lat}, ${markerData.lng})">Save</button>
                                 </form>`;
 
-            // Update the popup content and open it on the map
-            var marker = markers[findId].marker;
+            const marker = markers[findId].marker;
             marker.getPopup().setContent(popupContent).openOn(marker._map);
         })
         .catch(error => {
@@ -238,90 +254,86 @@ window.updateFind = function (findId) {
 }
 
 window.submitUpdatedFind = function (findId, lat, lng) {
-    var form = document.getElementById(`UserFindForm_${findId}`);
+
+    const form = document.getElementById(`UserFindForm_${findId}`);
     if (!form) {
-        console.error('Form element not found!');
+        console.error('Form not found for findId:', findId);
         return;
     }
 
-    var findName = form.UsfName.value;
-    var speciesName = form.UsfSpeciesName.value;
-    var speciesType = form.UsfSpeciesType.value;
-    var useCategory = form.UsfUseCategory.value;
-    var features = form.UsfFeatures.value;
-    var lookalikes = form.UsfLookAlikes.value;
-    var harvestMethod = form.UsfHarvestMethod.value;
-    var tastesLike = form.UsfTastesLike.value;
-    var description = form.UsfDescription.value;
+    const formData = new FormData(form);
 
     DotNet.invokeMethodAsync('ForagerSite', 'UpdateFind',
-        findId,
-        findName,
-        speciesName,
-        speciesType,
-        useCategory,
-        features,
-        lookalikes,
-        harvestMethod,
-        tastesLike,
-        description,
+        findId, // GUID
+        formData.get('findName'),
+        formData.get('speciesName'),
+        formData.get('speciesType'),
+        formData.get('useCategory'),
+        formData.get('features'),
+        formData.get('lookalikes'),
+        formData.get('harvestMethod'),
+        formData.get('tastesLike'),
+        formData.get('description'),
         lat,
         lng
     ).then(userFindsViewModels => {
-        console.log('Find saved successfully!');
-        initializeMap(userFindsViewModels); // Refresh the map markers after saving
-    }).catch((error) => {
-        console.error('Error saving find:', error);
-    });   
+        console.log('Find updated successfully');
+        initializeMap(userFindsViewModels);
+    }).catch(error => {
+        console.error('Error updating find:', error);
+    });
 }
 
+
+
 window.createFind = function (tempId, lat, lng) {
-    var form = document.getElementById(`UserFindForm_${tempId}`);
-    if (!form) {
-        console.error('Form element not found!');
+    if (!tempId) {
+        console.error('Invalid tempId:', tempId);
         return;
     }
 
-    var findName = form.UsfName.value;
-    var speciesName = form.UsfSpeciesName.value;
-    var speciesType = form.UsfSpeciesType.value;
-    var useCategory = form.UsfUseCategory.value;
-    var features = form.UsfFeatures.value;
-    var lookalikes = form.UsfLookAlikes.value;
-    var harvestMethod = form.UsfHarvestMethod.value;
-    var tastesLike = form.UsfTastesLike.value;
-    var description = form.UsfDescription.value;
+    const form = document.getElementById(`UserFindForm_${tempId}`);
+    if (!form) {
+        console.error('Form not found for tempId:', tempId);
+        return;
+    }
+
+    const formData = new FormData(form);
 
     DotNet.invokeMethodAsync('ForagerSite', 'CreateFind',
-        findName,
-        speciesName,
-        speciesType,
-        useCategory,
-        features,
-        lookalikes,
-        harvestMethod,
-        tastesLike,
-        description,
+        formData.get('findName'),
+        formData.get('speciesName'),
+        formData.get('speciesType'),
+        formData.get('useCategory'),
+        formData.get('features'),
+        formData.get('lookalikes'),
+        formData.get('harvestMethod'),
+        formData.get('tastesLike'),
+        formData.get('description'),
         lat,
-        lng
-    ).then(userFindsViewModels => {
-        console.log('Find saved successfully!');
-        initializeMap(userFindsViewModels); // Refresh the map markers after saving
-    }).catch((error) => {
-        console.error('Error saving find:', error);
-    });
-}    
+        lng).then(userFindsViewModels => {
+            console.log('Find created successfully');
+            initializeMap(userFindsViewModels);
+        }).catch(error => {
+            console.error('Error creating find:', error);
+        });            
+}
+   
 
 window.deleteFind = function (findId) {
-    if (confirm('Are you sure you want to delete this find?')) {
-        DotNet.invokeMethodAsync('ForagerSite', 'DeleteFind', findId)
-            .then(userFindsViewModels => {
-                console.log('Find deleted successfully!');
-                initializeMap(userFindsViewModels); // Refresh the map markers after deletion
-            })
-            .catch((error) => {
-                console.error('Error deleting find:', error);
-            });
+    if (!findId) {
+        console.error('Invalid findId:', findId);
+        return;
     }
-};
+
+    DotNet.invokeMethodAsync('ForagerSite', 'DeleteFind', findId)
+        .then(userFindsViewModels => {
+            console.log('Find deleted successfully');
+            initializeMap(userFindsViewModels);
+        }).catch(error => {
+            console.error('Error deleting find:', error);
+        });
+
+        
+}
 

@@ -1,6 +1,7 @@
 ﻿
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace ForagerSite.Models
 {
@@ -27,12 +28,10 @@ namespace ForagerSite.Models
         public DateTime UsrJoinedDate { get; set; }
         public string? UsrCountry { get; set; }
         public string? UsrStateorProvince { get; set; }
-        public int? UsrZipCode { get; set; }
-        //public UserSecurity UserSecurity { get; set; }
-        //public ICollection<UserMessage> UserMessages { get; set; }
-        //public ICollection<UserFind> UserFinds { get; set; }
-        //public ICollection<UserImage> UserImages { get; set; }
-        //public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
+        public int? UsrZipCode { get; set; }       
+        public UserSecurity UserSecurity { get; set; }
+        public ICollection<UserFind> UserFinds { get; set; }
+        public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
 
     }
 
