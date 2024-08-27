@@ -14,9 +14,9 @@
 <div id="map" style="height: 500px; width: 100%;"></div>
 
 <div id="filters">
-    <button size="100px" id="get-all-finds" class="bg-primary" @onclick="_GetAllFinds"></button>
-    <button id="get-my-finds" class="bg-primary" @onclick="_GetMyFinds"></button>
-    <button id="get-friends-finds" class="bg-primary"></button>
+    <button size="100px" id="get-all-finds" class="btn-primary" @onclick="_GetAllFinds"></button>
+    <button id="get-my-finds" class="btn-primary" @onclick="_GetMyFinds"></button>
+    <button id="get-friends-finds" class="btn-primary"></button>
 </div>
 
 @code {
@@ -27,11 +27,39 @@
 
     private List<UserFindsViewModel> _userFindsViewModels;
 
-    private bool _currentUserFilter;
+    public bool currentUserFilter = true;
 
-    private bool _allUserFilter;
+    public bool allUserFilter;
 
-    private bool _friendUserFilter;
+    public bool friendUserFilter;
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         var user = userStateService.CurrentUser.user;
+
+    //         if (user != null)
+    //         {
+    //             var settings = new JsonSerializerSettings
+    //                 {
+    //                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+    //                     Formatting = Formatting.Indented
+    //                 };
+
+    //             _userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+    //             var json = JsonConvert.SerializeObject(_userFindsViewModels, settings);
+
+    //             await _InitializeMap(json, user.UsrId);
+    //         }
+    //     }
+    // }
+
+    // private async Task _InitializeMap(string json, Guid currentUserId)
+    // {
+    //     Console.WriteLine(json);
+    //     await JSRuntime.InvokeVoidAsync("initializeMap", json, currentUserId.ToString());
+    // }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -41,32 +69,24 @@
 
             if (user != null)
             {
-                var settings = new JsonSerializerSettings
+                _userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+                var json = JsonConvert.SerializeObject(_userFindsViewModels, new JsonSerializerSettings
                     {
                         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                         Formatting = Formatting.Indented
-                    };
+                    });
 
-                _userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
-                var json = JsonConvert.SerializeObject(_userFindsViewModels, settings);
-
-                await _InitializeMap(json, user.UsrId);
+                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString());
             }
         }
-    }
-
-    private async Task _InitializeMap(string json, Guid currentUserId)
-    {
-        Console.WriteLine(json);
-        await JSRuntime.InvokeVoidAsync("initializeMap", json, currentUserId.ToString());
     }
 
     private async Task _GetMyFinds()
     {
         var user = userStateService.CurrentUser.user;
 
-        _currentUserFilter = true;
-        _allUserFilter = false;
+        currentUserFilter = true;
+        allUserFilter = false;
 
         var settings = new JsonSerializerSettings
             {
@@ -85,8 +105,8 @@
 
     private async Task _GetAllFinds()
     {
-        _allUserFilter = true;
-        _currentUserFilter = false;
+        allUserFilter = true;
+        currentUserFilter = false;
 
         var user = userStateService.CurrentUser.user;
 
@@ -162,42 +182,6 @@
         return JsonConvert.SerializeObject(updatedViewModels, settings);
     }
 
-    // [JSInvokable]
-    // public static async Task<List<UserFindsViewModel>> UpdateFind(
-    //     Guid findId,
-    //     string name,
-    //     string speciesName,
-    //     string speciesType,
-    //     string useCategory,
-    //     string features,
-    //     string lookalikes,
-    //     string harvestMethod,
-    //     string tastesLike,
-    //     string description,
-    //     double lat,
-    //     double lng)
-    // {
-    //     var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();       
-    //     var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-    //     var user = userStateService.CurrentUser.user;
-
-    //     await userFindService.UpdateFind(
-    //         findId,
-    //         name,
-    //         speciesName,
-    //         speciesType,
-    //         useCategory,
-    //         features,
-    //         lookalikes,
-    //         harvestMethod,
-    //         tastesLike,
-    //         description,
-    //         lat,
-    //         lng
-    //     );
-    //     return await userFindService.GetUserFindsViewModels(user.UsrId);
-    // }
-
     [JSInvokable]
     public static async Task<string> UpdateFind(
     string findId, 
@@ -234,6 +218,7 @@
                 lat,
                 lng
             );
+           
             var updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
 
             var settings = new JsonSerializerSettings

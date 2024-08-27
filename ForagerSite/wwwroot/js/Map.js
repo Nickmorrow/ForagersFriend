@@ -2,75 +2,169 @@
 
 window.map = null;
 var markers = {};
-var tempMarker = null; 
-window.initializeMap = function (json, currentUserId) {
+var tempMarker = null;
+var userMarker = null;
 
+//window.initializeMap = function (json, currentUserId) {
+
+//    let userFindsViewModels = JSON.parse(json);
+
+//    if (window.map) {
+//        console.log('Map already initialized, updating markers.');
+//        updateMarkers(userFindsViewModels, currentUserId);
+//        return;
+//    }
+
+//    window.map = L.map('map').setView([51.505, -0.09], 13);
+
+//    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+//        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+//    }).addTo(window.map);
+
+//    updateMarkers(userFindsViewModels, currentUserId);
+//    window.map.on('click', function (e) {
+
+//        if (tempMarker) {
+//            window.map.removeLayer(tempMarker);
+//            tempMarker = null;
+//        }
+
+//        var tempId = 'temp-' + Date.now();
+//        tempMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
+
+//        var popupContent = `<form id="UserFindForm_${tempId}">
+//                                <label for="findName">Name:</label>
+//                                <input type="text" id="UsfName" name="findName"><br>
+
+//                                <label for="speciesName">Species Name:</label>
+//                                <input type="text" id="UsfSpeciesName" name="speciesName"><br>
+
+//                                <label for="speciesType">Species Type:</label>
+//                                <input type="text" id="UsfSpeciesType" name="speciesType"><br>
+
+//                                <label for="useCategory">Use Category:</label>
+//                                <input type="text" id="UsfUseCategory" name="useCategory"><br>
+
+//                                <label for="features">Distinguishing Features:</label>
+//                                <input type="text" id="UsfFeatures" name="features"><br>
+
+//                                <label for="lookalikes">Dangerous Lookalikes:</label>
+//                                <input type="text" id="UsfLookAlikes" name="lookalikes"><br>
+
+//                                <label for="harvestMethod">Harvest Method:</label>
+//                                <input type="text" id="UsfHarvestMethod" name="harvestMethod"><br>
+
+//                                <label for="tastesLike">Tastes Like:</label>
+//                                <input type="text" id="UsfTastesLike" name="tastesLike"><br>
+
+//                                <label for="description">Notes:</label>
+//                                <input type="text" id="UsfDescription" name="description"><br>
+
+//                                <button type="button" onclick="createFind('${tempId}', ${e.latlng.lat}, ${e.latlng.lng},'${currentUserId}')">Save</button>
+//                            </form>`;
+
+//        //newMarker.bindPopup(popupContent).openPopup();
+//        tempMarker.bindPopup(popupContent);
+//        tempMarker.openPopup();
+
+//        tempMarker.on('popupclose', function () {
+//            map.removeLayer(tempMarker);
+//            tempMarker = null;
+//        });
+//    });
+//}
+
+window.initializeMap = function (json, currentUserId) {
     let userFindsViewModels = JSON.parse(json);
-    
+
     if (window.map) {
         console.log('Map already initialized, updating markers.');
         updateMarkers(userFindsViewModels, currentUserId);
         return;
     }
 
-    window.map = L.map('map').setView([51.505, -0.09], 13);
+    // Default location if no user location is available
+    const defaultLatLng = [51.505, -0.09];
+    let latLng = defaultLatLng;
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(window.map);
-
-    updateMarkers(userFindsViewModels, currentUserId);
-    window.map.on('click', function (e) {
-
-        if (tempMarker) {
-            window.map.removeLayer(tempMarker); 
-            tempMarker = null;
-        }
-
-        var tempId = 'temp-' + Date.now();
-        tempMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
-
-        var popupContent = `<form id="UserFindForm_${tempId}">
-                                <label for="findName">Name:</label>
-                                <input type="text" id="UsfName" name="findName"><br>
-
-                                <label for="speciesName">Species Name:</label>
-                                <input type="text" id="UsfSpeciesName" name="speciesName"><br>
-
-                                <label for="speciesType">Species Type:</label>
-                                <input type="text" id="UsfSpeciesType" name="speciesType"><br>
-
-                                <label for="useCategory">Use Category:</label>
-                                <input type="text" id="UsfUseCategory" name="useCategory"><br>
-
-                                <label for="features">Distinguishing Features:</label>
-                                <input type="text" id="UsfFeatures" name="features"><br>
-
-                                <label for="lookalikes">Dangerous Lookalikes:</label>
-                                <input type="text" id="UsfLookAlikes" name="lookalikes"><br>
-
-                                <label for="harvestMethod">Harvest Method:</label>
-                                <input type="text" id="UsfHarvestMethod" name="harvestMethod"><br>
-
-                                <label for="tastesLike">Tastes Like:</label>
-                                <input type="text" id="UsfTastesLike" name="tastesLike"><br>
-
-                                <label for="description">Notes:</label>
-                                <input type="text" id="UsfDescription" name="description"><br>
-
-                                <button type="button" onclick="createFind('${tempId}', ${e.latlng.lat}, ${e.latlng.lng},'${currentUserId}')">Save</button>
-                            </form>`;
-
-        //newMarker.bindPopup(popupContent).openPopup();
-        tempMarker.bindPopup(popupContent);
-        tempMarker.openPopup(); 
-
-        tempMarker.on('popupclose', function () {
-            map.removeLayer(tempMarker);
-            tempMarker = null;
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+            latLng = [position.coords.latitude, position.coords.longitude];
+            initMap(latLng);
+        }, function (error) {
+            console.error("Error obtaining location: ", error);
+            initMap(defaultLatLng);
         });
-    });
+    } else {
+        console.error("Geolocation is not supported by this browser.");
+        initMap(defaultLatLng);
+    }
+
+    function initMap(latLng) {
+        window.map = L.map('map').setView(latLng, 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(window.map);
+
+        L.marker(latLng)
+            .addTo(window.map)
+            .bindPopup("<b>Your Location</b>")
+            .openPopup();
+
+        updateMarkers(userFindsViewModels, currentUserId);
+
+        window.map.on('click', function (e) {
+            if (window.tempMarker) {
+                window.map.removeLayer(window.tempMarker);
+                window.tempMarker = null;
+            }
+
+            let tempId = 'temp-' + Date.now();
+            window.tempMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
+
+                    var popupContent = `<form id="UserFindForm_${tempId}">
+                                            <label for="findName">Name:</label>
+                                            <input type="text" id="UsfName" name="findName"><br>
+
+                                            <label for="speciesName">Species Name:</label>
+                                            <input type="text" id="UsfSpeciesName" name="speciesName"><br>
+
+                                            <label for="speciesType">Species Type:</label>
+                                            <input type="text" id="UsfSpeciesType" name="speciesType"><br>
+
+                                            <label for="useCategory">Use Category:</label>
+                                            <input type="text" id="UsfUseCategory" name="useCategory"><br>
+
+                                            <label for="features">Distinguishing Features:</label>
+                                            <input type="text" id="UsfFeatures" name="features"><br>
+
+                                            <label for="lookalikes">Dangerous Lookalikes:</label>
+                                            <input type="text" id="UsfLookAlikes" name="lookalikes"><br>
+
+                                            <label for="harvestMethod">Harvest Method:</label>
+                                            <input type="text" id="UsfHarvestMethod" name="harvestMethod"><br>
+
+                                            <label for="tastesLike">Tastes Like:</label>
+                                            <input type="text" id="UsfTastesLike" name="tastesLike"><br>
+
+                                            <label for="description">Notes:</label>
+                                            <input type="text" id="UsfDescription" name="description"><br>
+
+                                            <button type="button" onclick="createFind('${tempId}', ${e.latlng.lat}, ${e.latlng.lng},'${currentUserId}')">Save</button>
+                                        </form>`;
+
+            window.tempMarker.bindPopup(popupContent);
+            window.tempMarker.openPopup();
+
+            window.tempMarker.on('popupclose', function () {
+                window.map.removeLayer(window.tempMarker);
+                window.tempMarker = null;
+            });
+        });
+    }
 }
+
 
 function updateMarkers(userFindsViewModels, currentUserId) {
     Object.keys(markers).forEach(key => {
