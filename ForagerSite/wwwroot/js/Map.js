@@ -5,81 +5,12 @@ var markers = {};
 var tempMarker = null;
 var userMarker = null;
 
-//window.initializeMap = function (json, currentUserId) {
-
-//    let userFindsViewModels = JSON.parse(json);
-
-//    if (window.map) {
-//        console.log('Map already initialized, updating markers.');
-//        updateMarkers(userFindsViewModels, currentUserId);
-//        return;
-//    }
-
-//    window.map = L.map('map').setView([51.505, -0.09], 13);
-
-//    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-//        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-//    }).addTo(window.map);
-
-//    updateMarkers(userFindsViewModels, currentUserId);
-//    window.map.on('click', function (e) {
-
-//        if (tempMarker) {
-//            window.map.removeLayer(tempMarker);
-//            tempMarker = null;
-//        }
-
-//        var tempId = 'temp-' + Date.now();
-//        tempMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
-
-//        var popupContent = `<form id="UserFindForm_${tempId}">
-//                                <label for="findName">Name:</label>
-//                                <input type="text" id="UsfName" name="findName"><br>
-
-//                                <label for="speciesName">Species Name:</label>
-//                                <input type="text" id="UsfSpeciesName" name="speciesName"><br>
-
-//                                <label for="speciesType">Species Type:</label>
-//                                <input type="text" id="UsfSpeciesType" name="speciesType"><br>
-
-//                                <label for="useCategory">Use Category:</label>
-//                                <input type="text" id="UsfUseCategory" name="useCategory"><br>
-
-//                                <label for="features">Distinguishing Features:</label>
-//                                <input type="text" id="UsfFeatures" name="features"><br>
-
-//                                <label for="lookalikes">Dangerous Lookalikes:</label>
-//                                <input type="text" id="UsfLookAlikes" name="lookalikes"><br>
-
-//                                <label for="harvestMethod">Harvest Method:</label>
-//                                <input type="text" id="UsfHarvestMethod" name="harvestMethod"><br>
-
-//                                <label for="tastesLike">Tastes Like:</label>
-//                                <input type="text" id="UsfTastesLike" name="tastesLike"><br>
-
-//                                <label for="description">Notes:</label>
-//                                <input type="text" id="UsfDescription" name="description"><br>
-
-//                                <button type="button" onclick="createFind('${tempId}', ${e.latlng.lat}, ${e.latlng.lng},'${currentUserId}')">Save</button>
-//                            </form>`;
-
-//        //newMarker.bindPopup(popupContent).openPopup();
-//        tempMarker.bindPopup(popupContent);
-//        tempMarker.openPopup();
-
-//        tempMarker.on('popupclose', function () {
-//            map.removeLayer(tempMarker);
-//            tempMarker = null;
-//        });
-//    });
-//}
-
-window.initializeMap = function (json, currentUserId) {
+window.initializeMap = function (json, currentUserId, mapFilter) {
     let userFindsViewModels = JSON.parse(json);
 
     if (window.map) {
         console.log('Map already initialized, updating markers.');
-        updateMarkers(userFindsViewModels, currentUserId);
+        updateMarkers(userFindsViewModels, currentUserId, mapFilter);
         return;
     }
 
@@ -112,18 +43,23 @@ window.initializeMap = function (json, currentUserId) {
             .bindPopup("<b>Your Location</b>")
             .openPopup();
 
-        updateMarkers(userFindsViewModels, currentUserId);
+        updateMarkers(userFindsViewModels, currentUserId, mapFilter);
+     
+    }
+}
 
-        window.map.on('click', function (e) {
-            if (window.tempMarker) {
-                window.map.removeLayer(window.tempMarker);
-                window.tempMarker = null;
-            }
+function updateMarkers(userFindsViewModels, currentUserId, mapFilter) {
 
-            let tempId = 'temp-' + Date.now();
-            window.tempMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
+    window.map.on('click', function (e) {
+        if (window.tempMarker) {
+            window.map.removeLayer(window.tempMarker);
+            window.tempMarker = null;
+        }
 
-                    var popupContent = `<form id="UserFindForm_${tempId}">
+        let tempId = 'temp-' + Date.now();
+        window.tempMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
+
+        var popupContent = `<form id="UserFindForm_${tempId}">
                                             <label for="findName">Name:</label>
                                             <input type="text" id="UsfName" name="findName"><br>
 
@@ -151,22 +87,18 @@ window.initializeMap = function (json, currentUserId) {
                                             <label for="description">Notes:</label>
                                             <input type="text" id="UsfDescription" name="description"><br>
 
-                                            <button type="button" onclick="createFind('${tempId}', ${e.latlng.lat}, ${e.latlng.lng},'${currentUserId}')">Save</button>
+                                            <button type="button" onclick="createFind('${tempId}', ${e.latlng.lat}, ${e.latlng.lng},'${currentUserId}','${mapFilter}')">Save</button>
                                         </form>`;
 
-            window.tempMarker.bindPopup(popupContent);
-            window.tempMarker.openPopup();
+        window.tempMarker.bindPopup(popupContent);
+        window.tempMarker.openPopup();
 
-            window.tempMarker.on('popupclose', function () {
-                window.map.removeLayer(window.tempMarker);
-                window.tempMarker = null;
-            });
+        window.tempMarker.on('popupclose', function () {
+            window.map.removeLayer(window.tempMarker);
+            window.tempMarker = null;
         });
-    }
-}
+    });
 
-
-function updateMarkers(userFindsViewModels, currentUserId) {
     Object.keys(markers).forEach(key => {
         markers[key].marker.remove();
     });
@@ -199,8 +131,8 @@ function updateMarkers(userFindsViewModels, currentUserId) {
                         <p><strong>Notes:</strong> ${find.UsfDescription}</p>`;                       
 
                         if (viewModel.user.UsrId === currentUserId) {
-                            popupContent += `<button type="button" onclick="updateFind('${findId}','${currentUserId}')">Edit</button>
-                                             <button type="button" onclick="deleteFind('${findId}','${currentUserId}')">Delete</button>`;
+                            popupContent += `<button type="button" onclick="updateFind('${findId}','${currentUserId}','${mapFilter}')">Edit</button>
+                                             <button type="button" onclick="deleteFind('${findId}','${currentUserId}','${mapFilter}')">Delete</button>`;
                         }
                         console.log("viewmodel id:", viewModel.user.UsrId, "currentUserId :", currentUserId)
 
@@ -217,11 +149,8 @@ function updateMarkers(userFindsViewModels, currentUserId) {
             }
         });
     });
-
-
-
 }
-window.updateFind = function (findId, currentUserId) {   
+window.updateFind = function (findId, currentUserId, mapFilter) {   
 
     if (!findId) {
         console.error('Invalid findId:', findId);
@@ -256,7 +185,7 @@ window.updateFind = function (findId, currentUserId) {
                                     <input type="text" id="UsfTastesLike" name="tastesLike" value="${find.usfTastesLike || ''}"><br>
                                     <label for="description">Notes:</label>
                                     <input type="text" id="UsfDescription" name="description" value="${find.usfDescription || ''}"><br>
-                                    <button type="button" onclick="submitUpdatedFind('${findId}', ${markerData.lat}, ${markerData.lng}, '${currentUserId}')">Save</button>
+                                    <button type="button" onclick="submitUpdatedFind('${findId}', ${markerData.lat}, ${markerData.lng}, '${currentUserId}','${mapFilter}')">Save</button>
                                 </form>`;
 
             const marker = markers[findId].marker;
@@ -271,7 +200,7 @@ window.updateFind = function (findId, currentUserId) {
         });
 }
 
-window.submitUpdatedFind = function (findId, lat, lng, currentUserId) {
+window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter) {
 
     const form = document.getElementById(`UserFindForm_${findId}`);
     if (!form) {
@@ -293,10 +222,11 @@ window.submitUpdatedFind = function (findId, lat, lng, currentUserId) {
         formData.get('tastesLike'),
         formData.get('description'),
         lat,
-        lng
+        lng,
+        mapFilter
     ).then(userFindsViewModels => {
         console.log('Find updated successfully');
-        initializeMap(userFindsViewModels, currentUserId);
+        initializeMap(userFindsViewModels, currentUserId, mapFilter);
         //updateMarkers(userFindsViewModels, currentUserId);
     }).catch(error => {
         console.error('Error updating find:', error);
@@ -305,7 +235,9 @@ window.submitUpdatedFind = function (findId, lat, lng, currentUserId) {
 
 
 
-window.createFind = function (tempId, lat, lng, currentUserId) {
+window.createFind = function (tempId, lat, lng, currentUserId, mapFilter) {
+
+    console.log('mapfilter:',mapFilter);
 
     if (tempMarker) {
         tempMarker.closePopup();  
@@ -336,9 +268,11 @@ window.createFind = function (tempId, lat, lng, currentUserId) {
         formData.get('tastesLike'),
         formData.get('description'),
         lat,
-        lng).then(userFindsViewModels => {
+        lng,
+        mapFilter
+    ).then(userFindsViewModels => {
             console.log('Find created successfully');
-            initializeMap(userFindsViewModels, currentUserId);
+            initializeMap(userFindsViewModels, currentUserId, mapFilter);
             //updateMarkers(userFindsViewModels, currentUserId);
         }).catch(error => {
             console.error('Error creating find:', error);
@@ -346,16 +280,16 @@ window.createFind = function (tempId, lat, lng, currentUserId) {
 }
    
 
-window.deleteFind = function (findId, currentUserId) {
+window.deleteFind = function (findId, currentUserId, mapFilter) {
     if (!findId) {
         console.error('Invalid findId:', findId);
         return;
     }
 
-    DotNet.invokeMethodAsync('ForagerSite', 'DeleteFind', findId)
+    DotNet.invokeMethodAsync('ForagerSite', 'DeleteFind', findId, mapFilter)
         .then(userFindsViewModels => {
             console.log('Find deleted successfully');
-            initializeMap(userFindsViewModels, currentUserId);
+            initializeMap(userFindsViewModels, currentUserId, mapFilter);
             //updateMarkers(userFindsViewModels, currentUserId);
         }).catch(error => {
             console.error('Error deleting find:', error);

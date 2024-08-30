@@ -33,6 +33,13 @@
 
     public bool friendUserFilter;
 
+    static readonly List<string> MapFilters = new List<string>
+    {
+        "UserOnly", "AllUsers", "FriendUsers"
+    };
+
+    public string mapFilter { get; set; } = MapFilters[0];
+
     // protected override async Task OnAfterRenderAsync(bool firstRender)
     // {
     //     if (firstRender)
@@ -76,7 +83,7 @@
                         Formatting = Formatting.Indented
                     });
 
-                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString());
+                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
             }
         }
     }
@@ -85,8 +92,9 @@
     {
         var user = userStateService.CurrentUser.user;
 
-        currentUserFilter = true;
-        allUserFilter = false;
+        // currentUserFilter = true;
+        // allUserFilter = false;
+        mapFilter = MapFilters[0];
 
         var settings = new JsonSerializerSettings
             {
@@ -98,15 +106,16 @@
             _userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
             var json = JsonConvert.SerializeObject(_userFindsViewModels, settings);
 
-            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString());
+            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
         }
 
     }
 
     private async Task _GetAllFinds()
     {
-        allUserFilter = true;
-        currentUserFilter = false;
+        // allUserFilter = true;
+        // currentUserFilter = false;
+        mapFilter = MapFilters[1];
 
         var user = userStateService.CurrentUser.user;
 
@@ -120,7 +129,7 @@
 
         var json = JsonConvert.SerializeObject(_userFindsViewModels, settings);
 
-        await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString());
+        await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
     }
 
 
@@ -148,7 +157,8 @@
     string tastesLike,
     string description,
     double lat,
-    double lng)
+    double lng,
+    string mapFilter)
     {
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
 
@@ -170,9 +180,19 @@
             description,
             lat,
             lng
-        );              
+        );
 
-        var updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+        var updatedViewModels = new List<UserFindsViewModel>();
+
+        if (mapFilter == "UserOnly")
+        {
+            updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+        }
+        if (mapFilter == "AllUsers")
+        {
+            updatedViewModels = await userFindService.GetUserFindsViewModels();
+        }
+
 
         var settings = new JsonSerializerSettings
             {
@@ -195,7 +215,8 @@
     string tastesLike,
     string description,
     double lat,
-    double lng)
+    double lng,
+    string mapFilter)
     {
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
         var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
@@ -219,7 +240,16 @@
                 lng
             );
            
-            var updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+            var updatedViewModels = new List<UserFindsViewModel>();
+
+            if (mapFilter == "UserOnly")
+            {
+                updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+            }
+            if (mapFilter == "AllUsers")
+            {
+                updatedViewModels = await userFindService.GetUserFindsViewModels();
+            }
 
             var settings = new JsonSerializerSettings
                 {
@@ -236,7 +266,7 @@
 
 
     [JSInvokable]
-    public static async Task<string> DeleteFind(string findId)
+    public static async Task<string> DeleteFind(string findId, string mapFilter)
     {
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
         var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
@@ -247,7 +277,16 @@
         if (Guid.TryParse(findId, out findGuid))
             await userFindService.DeleteFind(findGuid);                              
 
-        var updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+        var updatedViewModels = new List<UserFindsViewModel>();
+
+        if (mapFilter == "UserOnly")
+        {
+            updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+        }
+        if (mapFilter == "AllUsers")
+        {
+            updatedViewModels = await userFindService.GetUserFindsViewModels();
+        }
 
         var settings = new JsonSerializerSettings
             {
