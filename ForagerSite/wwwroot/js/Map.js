@@ -15,7 +15,6 @@ window.initializeMap = function (json, currentUserId, mapFilter) {
         return;
     }
 
-    // Default location if no user location is available
     const defaultLatLng = [51.505, -0.09];
     let latLng = defaultLatLng;
 
@@ -86,6 +85,8 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter) 
     });
     markers = {};
 
+    const templateHtml = document.getElementById('find-popup-template').innerHTML;
+
     userFindsViewModels.forEach(viewModel => {
 
         viewModel.userFindLocations.forEach(location => {
@@ -101,22 +102,22 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter) 
                     if (find && find.UsFId) {
                         var findId = find.UsFId;
 
-                        var popupContent = `<p><strong>Name:</strong> ${find.UsfName}</p> 
-                        <p><strong>Discovered by:</strong> ${viewModel.userSecurity.UssUsername}</p>
-                        <p><strong>Species Name:</strong> ${find.UsfSpeciesName}</p>
-                        <p><strong>Species Type:</strong> ${find.UsfSpeciesType}</p>
-                        <p><strong>Use Category:</strong> ${find.UsfUseCategory}</p>
-                        <p><strong>Distinguishing Features:</strong> ${find.UsfFeatures}</p>
-                        <p><strong>Dangerous Lookalikes:</strong> ${find.UsfLookAlikes}</p>
-                        <p><strong>Harvest Method:</strong> ${find.UsfHarvestMethod}</p>
-                        <p><strong>Tastes Like:</strong> ${find.UsfTastesLike}</p>
-                        <p><strong>Notes:</strong> ${find.UsfDescription}</p>`;
+                        var popupContent = templateHtml
+                            .replace('{UsfName}', find.UsfName || '')
+                            .replace('{UssUsername}', viewModel.userSecurity.UssUsername || '')
+                            .replace('{UsfSpeciesName}', find.UsfSpeciesName || '')
+                            .replace('{UsfSpeciesType}', find.UsfSpeciesType || '')
+                            .replace('{UsfUseCategory}', find.UsfUseCategory || '')
+                            .replace('{UsfFeatures}', find.UsfFeatures || '')
+                            .replace('{UsfLookAlikes}', find.UsfLookAlikes || '')
+                            .replace('{UsfHarvestMethod}', find.UsfHarvestMethod || '')
+                            .replace('{UsfTastesLike}', find.UsfTastesLike || '')
+                            .replace('{UsfDescription}', find.UsfDescription || '');
 
                         if (viewModel.user.UsrId === currentUserId) {
-                            popupContent += `<button type="button" onclick="updateFind('${findId}','${currentUserId}','${mapFilter}')">Edit</button>
-                                             <button type="button" onclick="deleteFind('${findId}','${currentUserId}','${mapFilter}')">Delete</button>`;
+                            popupContent = popupContent.replace('class="edit-button"', `onclick="updateFind('${findId}', '${currentUserId}', '${mapFilter}')"`)
+                                .replace('class="delete-button"', `onclick="deleteFind('${findId}', '${currentUserId}', '${mapFilter}')"`);
                         }
-                        console.log("viewmodel id:", viewModel.user.UsrId, "currentUserId :", currentUserId)
 
                         marker.bindPopup(popupContent);
                         markers[findId] = { marker: marker, lat: lat, lng: lng, originalPopupContent: popupContent };
@@ -153,14 +154,13 @@ window.updateFind = function (findId, currentUserId, mapFilter) {
                 
 
             setTimeout(() => {
-                // Log the entire document to verify if the form was added correctly
+
                 console.log('Document HTML:', document.documentElement.innerHTML);
 
                 const form = document.querySelector(`#UpdateFindForm_${findId}`);
                 if (form) {
                     console.log('Form found:', form);
 
-                    // Populate the form fields with the provided data
                     form.querySelector('#UsfName').value = find.usfName || '';
                     form.querySelector('#UsfSpeciesName').value = find.usfSpeciesName || '';
                     form.querySelector('#UsfSpeciesType').value = find.usfSpeciesType || '';
@@ -176,7 +176,6 @@ window.updateFind = function (findId, currentUserId, mapFilter) {
                     if (saveButton) {
                         console.log('Save button found:', saveButton);
 
-                        // Add the click event listener to the save button
                         saveButton.addEventListener('click', () => {
                             console.log('Save button clicked');
                             submitUpdatedFind(findId, markerData.lat, markerData.lng, currentUserId, mapFilter);
@@ -188,33 +187,10 @@ window.updateFind = function (findId, currentUserId, mapFilter) {
                     console.error('Form not found for ID:', `UpdateFindForm_${findId}`);
                 }
             }, 10);
-                /*.replace(/updateButton/g, `submitUpdatedFind('${findId}', ${markerData.lat}, ${markerData.lng}, '${currentUserId}', '${mapFilter}')`);*/
-            //var popupContent = `<form id="UserFindForm_${findId}">
-            //                        <label for="findName">Name:</label>
-            //                        <input type="text" id="UsfName" name="findName" value="${find.usfName || ''}"><br>
-            //                        <label for="speciesName">Species Name:</label>
-            //                        <input type="text" id="UsfSpeciesName" name="speciesName" value="${find.usfSpeciesName || ''}"><br>
-            //                        <label for="speciesType">Species Type:</label>
-            //                        <input type="text" id="UsfSpeciesType" name="speciesType" value="${find.usfSpeciesType || ''}"><br>
-            //                        <label for="useCategory">Use Category:</label>
-            //                        <input type="text" id="UsfUseCategory" name="useCategory" value="${find.usfUseCategory || ''}"><br>
-            //                        <label for="features">Distinguishing Features:</label>
-            //                        <input type="text" id="UsfFeatures" name="features" value="${find.usfFeatures || ''}"><br>
-            //                        <label for="lookalikes">Dangerous Lookalikes:</label>
-            //                        <input type="text" id="UsfLookAlikes" name="lookalikes" value="${find.usfLookAlikes || ''}"><br>
-            //                        <label for="harvestMethod">Harvest Method:</label>
-            //                        <input type="text" id="UsfHarvestMethod" name="harvestMethod" value="${find.usfHarvestMethod || ''}"><br>
-            //                        <label for="tastesLike">Tastes Like:</label>
-            //                        <input type="text" id="UsfTastesLike" name="tastesLike" value="${find.usfTastesLike || ''}"><br>
-            //                        <label for="description">Notes:</label>
-            //                        <input type="text" id="UsfDescription" name="description" value="${find.usfDescription || ''}"><br>
-            //                        <button type="button" onclick="submitUpdatedFind('${findId}', ${markerData.lat}, ${markerData.lng}, '${currentUserId}','${mapFilter}')">Save</button>
-            //                    </form>`;
 
             const marker = markers[findId].marker;
             marker.getPopup().setContent(popupContent).openOn(marker._map);
             marker.once('popupclose', function () {
-                // Restore the original popup content if the edit popup is closed without saving
                 marker.setPopupContent(markerData.originalPopupContent).openPopup();
             });
         })
