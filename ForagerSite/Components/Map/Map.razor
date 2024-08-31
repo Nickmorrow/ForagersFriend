@@ -28,7 +28,8 @@
         <label for="speciesName">Species Name:</label>
         <input type="text" id="UsfSpeciesName" name="speciesName"><br>
 
-        <select id="UsfSpeciesType" name="speciesType" multiple="multiple">
+        <label for="speciesType">Species Type:</label>
+        <select id="UsfSpeciesType" class="dropdown-item"name="speciesType" >
             <option value="tree">Tree</option>
             <option value="mushroom">Mushroom</option>
             <option value="fruit">Fruit</option>
@@ -36,7 +37,11 @@
         </select>
 
         <label for="useCategory">Use Category:</label>
-        <input type="text" id="UsfUseCategory" name="useCategory"><br>
+        <select id="UsfUseCategory" class="dropdown-item" name="useCategory">
+            <option value="medicinal">Medicinal</option>
+            <option value="gourmet">Gourmet</option>
+            <option value="crafting">Crafting</option>
+        </select>
 
         <label for="features">Distinguishing Features:</label>
         <input type="text" id="UsfFeatures" name="features"><br>
@@ -66,10 +71,19 @@
         <input type="text" id="UsfSpeciesName" name="speciesName" value=""><br>
 
         <label for="speciesType">Species Type:</label>
-        <input type="text" id="UsfSpeciesType" name="speciesType" value=""><br>
+        <select id="UsfSpeciesType" class="dropdown-item" name="speciesType">
+            <option value="tree">Tree</option>
+            <option value="mushroom">Mushroom</option>
+            <option value="fruit">Fruit</option>
+            <option value="herb">Herb</option>
+        </select>
 
         <label for="useCategory">Use Category:</label>
-        <input type="text" id="UsfUseCategory" name="useCategory" value=""><br>
+        <select id="UsfUseCategory" class="dropdown-item" name="useCategory">
+            <option value="medicinal">Medicinal</option>
+            <option value="gourmet">Gourmet</option>
+            <option value="crafting">Crafting</option>
+        </select>
 
         <label for="features">Distinguishing Features:</label>
         <input type="text" id="UsfFeatures" name="features" value=""><br>
