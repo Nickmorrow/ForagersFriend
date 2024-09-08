@@ -13,6 +13,6 @@ namespace ForagerSite.Models
         public Guid? UsiUsfId { get; set; }
         [ForeignKey("UsiUsfId")]
         public UserFind UserFind { get; set; }
-        public byte[] UsiImageData { get; set; }
+        public string UsiImageData { get; set; }
     }
 }

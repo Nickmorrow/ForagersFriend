@@ -7,8 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-
-
 namespace ForagerSite
 {
     public class Program
@@ -27,19 +25,17 @@ namespace ForagerSite
             builder.Services.AddRazorComponents().
                 AddInteractiveServerComponents()
                 .AddCircuitOptions(options =>
-            {
-                options.DetailedErrors = true;
-            }); ;
+                {
+                    options.DetailedErrors = true;
+                }); 
             builder.Services.AddTransient<UserService>();
             builder.Services.AddTransient<UserFindService>();
             builder.Services.AddSingleton<UserStateService>();
-            
+
             //builder.Services.AddTransient<EmailService>();
             //builder.Services.AddTransient<PasswordResetService>();
 
             var app = builder.Build();
-
-
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
@@ -50,8 +46,13 @@ namespace ForagerSite
             }
 
             app.UseHttpsRedirection();
-
             app.UseStaticFiles();
+
+            app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization(); // Make sure this is included if you're using authorization            
+            app.MapControllers();
+           
             app.UseAntiforgery();
 
             app.MapRazorComponents<App>()

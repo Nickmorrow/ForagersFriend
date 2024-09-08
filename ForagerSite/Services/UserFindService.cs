@@ -14,55 +14,6 @@ namespace ForagerSite.Services
             _dbContextFactory = dbContextFactory;
         }
 
-        //public async Task<List<UserFindsViewModel>> GetUserFindsViewModels(Guid userId)
-        //{
-        //    using var context = _dbContextFactory.CreateDbContext();
-
-        //    var userViewModelsList = new List<UserFindsViewModel>();
-        //    var userFindsViewModel = new UserFindsViewModel
-        //    {
-        //        user = new User(),
-        //        userSecurity = new UserSecurity(),
-        //        userFindLocations = new List<UserFindLocation>(),
-        //        userImages = new List<UserImage>(),
-        //        userFindsCommentXrefs = new List<UserFindsCommentXref>(),
-        //        userFindsComments = new List<UserFindsComment>(),
-        //        CommentUsers = new List<User>(),
-        //        CommentUserSecurities = new List<UserSecurity>()
-        //    };
-
-        //    userFindsViewModel.user = context.Users.FirstOrDefault(ufv => ufv.UsrId == userId);
-        //    userFindsViewModel.userSecurity = context.UserSecurities.FirstOrDefault(us => us.UssUsrId == userFindsViewModel.user.UsrId);
-
-        //    userFindsViewModel.userFinds = context.UserFinds.Where(uf => uf.UsfUsrId == userFindsViewModel.user.UsrId).ToList();
-
-        //    foreach (UserFind find in userFindsViewModel.userFinds)
-        //    {
-        //        UserFindLocation userFindLocation = new UserFindLocation();
-        //        userFindLocation = context.UserFindLocations.FirstOrDefault(uf => uf.UslUsfId == find.UsFId);
-        //        userFindsViewModel.userFindLocations.Add(userFindLocation);
-
-        //        userFindsViewModel.userImages.AddRange(context.UserImages.Where(usi => usi.UsiUsfId == find.UsFId));
-        //        userFindsViewModel.userFindsCommentXrefs.AddRange(context.UserFindsCommentXrefs.Where(usx => usx.UcxUsfId == find.UsFId));
-
-        //        foreach (UserFindsCommentXref usx in userFindsViewModel.userFindsCommentXrefs)
-        //        {
-        //            userFindsViewModel.userFindsComments.AddRange(context.UserFindsComments.Where(usc => usc.UscId == usx.UcxUscId));
-        //            userFindsViewModel.CommentUsers.AddRange(context.Users.Where(cu => cu.UsrId == usx.UcxUsrId));
-
-        //            foreach (User usr in userFindsViewModel.CommentUsers)
-        //            {
-        //                var commentUserSecurity = context.UserSecurities.FirstOrDefault(cus => cus.UssUsrId == usr.UsrId);
-        //                userFindsViewModel.CommentUserSecurities.Add(commentUserSecurity);
-        //            }
-
-        //        }
-        //    }
-
-        //    return new List<UserFindsViewModel> { userFindsViewModel };
-
-        //}
-
         public async Task<List<UserFindsViewModel>> GetUserFindsViewModels(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -123,7 +74,6 @@ namespace ForagerSite.Services
             return new List<UserFindsViewModel> { userViewModel };
         }
 
-
         public async Task<List<UserFindsViewModel>> GetUserFindsViewModels()
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -178,60 +128,6 @@ namespace ForagerSite.Services
 
             return userViewModelsList;
         }
-
-
-        //public async Task<List<UserFindsViewModel>> GetUserFindsViewModels()
-        //{
-        //    using var context = _dbContextFactory.CreateDbContext();
-
-        //    var userViewModelsList = new List<UserFindsViewModel>();
-
-        //    foreach (var user in context.Users)
-        //    {
-        //        var userFindsViewModel = new UserFindsViewModel
-        //        {
-        //            user = new User(),
-        //            userSecurity = new UserSecurity(),
-        //            userFindLocations = new List<UserFindLocation>(),
-        //            userImages = new List<UserImage>(),
-        //            userFindsCommentXrefs = new List<UserFindsCommentXref>(),
-        //            userFindsComments = new List<UserFindsComment>(),
-        //            CommentUsers = new List<User>(),
-        //            CommentUserSecurities = new List<UserSecurity>()
-        //        };
-
-        //        userFindsViewModel.user = user;
-        //        userFindsViewModel.userSecurity = context.UserSecurities.FirstOrDefault(us => us.UssUsrId == userFindsViewModel.user.UsrId);
-
-        //        userFindsViewModel.userFinds = context.UserFinds.Where(uf => uf.UsfUsrId == userFindsViewModel.user.UsrId).ToList();
-
-        //        foreach (UserFind find in userFindsViewModel.userFinds)
-        //        {
-        //            UserFindLocation userFindLocation = new UserFindLocation();
-        //            userFindLocation = context.UserFindLocations.FirstOrDefault(uf => uf.UslUsfId == find.UsFId);
-        //            userFindsViewModel.userFindLocations.Add(userFindLocation);
-
-        //            userFindsViewModel.userImages.AddRange(context.UserImages.Where(usi => usi.UsiUsfId == find.UsFId));
-        //            userFindsViewModel.userFindsCommentXrefs.AddRange(context.UserFindsCommentXrefs.Where(usx => usx.UcxUsfId == find.UsFId));
-
-        //            foreach (UserFindsCommentXref usx in userFindsViewModel.userFindsCommentXrefs)
-        //            {
-        //                userFindsViewModel.userFindsComments.AddRange(context.UserFindsComments.Where(usc => usc.UscId == usx.UcxUscId));
-        //                userFindsViewModel.CommentUsers.AddRange(context.Users.Where(cu => cu.UsrId == usx.UcxUsrId));
-
-        //                foreach (User usr in userFindsViewModel.CommentUsers)
-        //                {
-        //                    var commentUserSecurity = context.UserSecurities.FirstOrDefault(cus => cus.UssUsrId == usr.UsrId);
-        //                    userFindsViewModel.CommentUserSecurities.Add(commentUserSecurity);
-        //                }
-
-        //            }
-        //        }
-        //        userViewModelsList.Add(userFindsViewModel);
-        //    }
-        //    return userViewModelsList;
-
-        //}
 
         public async Task<List<UserFindsViewModel>> GetAllUserFindsViewModels()
         {           
@@ -302,7 +198,8 @@ namespace ForagerSite.Services
         string tastesLike,
         string description,
         double lat,
-        double lng)
+        double lng,
+        List<string> uploadedFileUrls)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -333,6 +230,19 @@ namespace ForagerSite.Services
 
             context.UserFindLocations.Add(userFindLocation);
             await context.SaveChangesAsync();
+
+            foreach (var image in uploadedFileUrls)
+            {
+                var userImage = new UserImage
+                {
+                    UsiUsrId = userId,
+                    UsiUsfId = userFind.UsFId,
+                    UsiImageData = image
+                };
+
+                context.UserImages.Add(userImage);
+                await context.SaveChangesAsync();
+            }
 
         }
 

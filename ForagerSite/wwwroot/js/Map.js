@@ -5,13 +5,13 @@ var markers = {};
 var tempMarker = null;
 var userMarker = null;
 
-window.initializeMap = function (json, currentUserId, mapFilter) {
+window.initializeMap = function (json, currentUserId, mapFilter, userName) {
 
     let userFindsViewModels = JSON.parse(json);
 
     if (window.map) {
         console.log('Map already initialized, updating markers.');
-        updateMarkers(userFindsViewModels, currentUserId, mapFilter);
+        updateMarkers(userFindsViewModels, currentUserId, mapFilter, userName);
         return;
     }
 
@@ -43,12 +43,12 @@ window.initializeMap = function (json, currentUserId, mapFilter) {
             .bindPopup("<b>Your Location</b>")
             .openPopup();
 
-        updateMarkers(userFindsViewModels, currentUserId, mapFilter);
+        updateMarkers(userFindsViewModels, currentUserId, mapFilter, userName);
 
     }
 }
 
-window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter) {
+window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, userName) {
 
     window.map.on('click', function (e) {
         if (window.tempMarker) {
@@ -66,7 +66,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter) 
             const saveButton = document.querySelector(`#UserFindForm_${tempId} #saveButton`);
             if (saveButton) {
                 saveButton.addEventListener('click', () => {
-                    createFind(tempId, e.latlng.lat, e.latlng.lng, currentUserId, mapFilter);
+                    createFind(tempId, e.latlng.lat, e.latlng.lng, currentUserId, mapFilter, userName);
                 });
             }
         }, 10);
@@ -134,7 +134,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter) 
     });
 }
 
-window.updateFind = function (findId, currentUserId, mapFilter) {
+window.updateFind = function (findId, currentUserId, mapFilter, userName) {
 
     if (!findId) {
         console.error('Invalid findId:', findId);
@@ -151,7 +151,7 @@ window.updateFind = function (findId, currentUserId, mapFilter) {
             }
             const formHtml = document.getElementById('update-form-container').innerHTML;
             const popupContent = formHtml.replace(/UpdateFindForm/g, `UpdateFindForm_${findId}`);
-                
+
 
             setTimeout(() => {
 
@@ -178,7 +178,7 @@ window.updateFind = function (findId, currentUserId, mapFilter) {
 
                         saveButton.addEventListener('click', () => {
                             console.log('Save button clicked');
-                            submitUpdatedFind(findId, markerData.lat, markerData.lng, currentUserId, mapFilter);
+                            submitUpdatedFind(findId, markerData.lat, markerData.lng, currentUserId, mapFilter, userName);
                         });
                     } else {
                         console.error('Save button not found within the form');
@@ -199,9 +199,9 @@ window.updateFind = function (findId, currentUserId, mapFilter) {
         });
 }
 
-window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter) {
+window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter, userName) {
 
-    const form = document.querySelector(`#UpdateFindForm_${findId}`);    
+    const form = document.querySelector(`#UpdateFindForm_${findId}`);
 
     if (!form) {
         console.error('Form not found for findId:', findId);
@@ -226,14 +226,13 @@ window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter)
         mapFilter
     ).then(userFindsViewModels => {
         console.log('Find updated successfully');
-        initializeMap(userFindsViewModels, currentUserId, mapFilter);
-        //updateMarkers(userFindsViewModels, currentUserId);
+        initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
     }).catch(error => {
         console.error('Error updating find:', error);
     });
 }
 
-window.createFind = function (tempId, lat, lng, currentUserId, mapFilter) {
+window.createFind = function (tempId, lat, lng, currentUserId, mapFilter, userName) {
     console.log('createFind called with:', tempId, lat, lng, currentUserId, mapFilter);
 
     console.log('mapfilter:', mapFilter);
@@ -259,29 +258,46 @@ window.createFind = function (tempId, lat, lng, currentUserId, mapFilter) {
     const selectedSpeciesTypes = Array.from(form.elements['speciesType'].selectedOptions).map(option => option.value);
     const speciesType = selectedSpeciesTypes.join(',');
 
-    DotNet.invokeMethodAsync('ForagerSite', 'CreateFind',
-        formData.get('findName'),
-        formData.get('speciesName'),
-        speciesType,
-        formData.get('useCategory'),
-        formData.get('features'),
-        formData.get('lookalikes'),
-        formData.get('harvestMethod'),
-        formData.get('tastesLike'),
-        formData.get('description'),
-        lat,
-        lng,
-        mapFilter
-    ).then(userFindsViewModels => {
-        console.log('Find created successfully');
-        initializeMap(userFindsViewModels, currentUserId, mapFilter);
-        //updateMarkers(userFindsViewModels, currentUserId);
-    }).catch(error => {
-        console.error('Error creating find:', error);
-    });
+    formData.append('userName', userName); // Pass the username
+
+    fetch('/api/upload/upload', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json(); 
+        })
+        .then(uploadedFileUrls => {
+            // Handle the rest of the form submission with uploadedFileUrls and other form data
+            DotNet.invokeMethodAsync('ForagerSite', 'CreateFind',
+                formData.get('findName'),
+                formData.get('speciesName'),
+                speciesType,
+                formData.get('useCategory'),
+                formData.get('features'),
+                formData.get('lookalikes'),
+                formData.get('harvestMethod'),
+                formData.get('tastesLike'),
+                formData.get('description'),
+                lat,
+                lng,
+                mapFilter,
+                uploadedFileUrls // Pass the uploaded file URLs
+            ).then(userFindsViewModels => {
+                initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
+            }).catch(error => {
+                console.error('Error creating find:', error);
+            });
+        })
+        .catch(error => {
+            console.error('Error uploading files:', error);
+        });
 }
 
-window.deleteFind = function (findId, currentUserId, mapFilter) {
+window.deleteFind = function (findId, currentUserId, mapFilter, userName) {
     if (!findId) {
         console.error('Invalid findId:', findId);
         return;
@@ -290,7 +306,7 @@ window.deleteFind = function (findId, currentUserId, mapFilter) {
     DotNet.invokeMethodAsync('ForagerSite', 'DeleteFind', findId, mapFilter)
         .then(userFindsViewModels => {
             console.log('Find deleted successfully');
-            initializeMap(userFindsViewModels, currentUserId, mapFilter);
+            initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
             //updateMarkers(userFindsViewModels, currentUserId);
         }).catch(error => {
             console.error('Error deleting find:', error);

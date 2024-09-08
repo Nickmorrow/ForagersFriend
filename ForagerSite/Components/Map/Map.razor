@@ -8,10 +8,16 @@
 @inject UserStateService userStateService
 @inject UserService userService
 @inject UserFindService userFindService
-
+@inject IConfiguration config
 
 
 <div id="map" style="height: 500px; width: 100%;"></div>
+
+@* <EditForm Model="_userFindsViewModels[0]">
+
+</EditForm>
+
+<InputFile OnChange="@_LoadFiles" class="form-control" multiple accept=".png, .jpg, .jpeg" /> *@
 
 <div id="filters">
     <button size="100px" id="get-all-finds" class="btn-primary" @onclick="_GetAllFinds"></button>
@@ -27,6 +33,10 @@
 
         <label for="speciesName">Species Name:</label>
         <input type="text" id="UsfSpeciesName" name="speciesName"><br>
+
+        <label for="imageUpload">Images:</label>
+        <input type="file" class="form-control" id="imageUpload" name="imageUpload" multiple accept=".png, .jpg, .jpeg" ><br>
+        <div id="imagePreview" style="margin-top: 5px;"></div>
 
         <label for="speciesType">Species Type:</label>
         <select id="UsfSpeciesType" class="dropdown-item"name="speciesType" >
@@ -108,6 +118,9 @@
     <p><strong>Name:</strong> {UsfName}</p>
     <p><strong>Discovered by:</strong> {UssUsername}</p>
     <p><strong>Species Name:</strong> {UsfSpeciesName}</p>
+    <div id="photo-gallery">
+        {Images}
+    </div>
     <p><strong>Species Type:</strong> {UsfSpeciesType}</p>
     <p><strong>Use Category:</strong> {UsfUseCategory}</p>
     <p><strong>Distinguishing Features:</strong> {UsfFeatures}</p>
@@ -129,46 +142,18 @@
 
     private List<UserFindsViewModel> _userFindsViewModels;
 
-    public bool currentUserFilter = true;
+    private const long _maxFileSize = 1024 * 1024 * 3; //3mb
 
-    public bool allUserFilter;
+    private const int _maxAllowedFiles = 4;
 
-    public bool friendUserFilter;
+    private List<string> _errors = new();
 
     static readonly List<string> MapFilters = new List<string>
     {
         "UserOnly", "AllUsers", "FriendUsers"
     };
 
-    public string mapFilter { get; set; } = MapFilters[0];
-
-    // protected override async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         var user = userStateService.CurrentUser.user;
-
-    //         if (user != null)
-    //         {
-    //             var settings = new JsonSerializerSettings
-    //                 {
-    //                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-    //                     Formatting = Formatting.Indented
-    //                 };
-
-    //             _userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
-    //             var json = JsonConvert.SerializeObject(_userFindsViewModels, settings);
-
-    //             await _InitializeMap(json, user.UsrId);
-    //         }
-    //     }
-    // }
-
-    // private async Task _InitializeMap(string json, Guid currentUserId)
-    // {
-    //     Console.WriteLine(json);
-    //     await JSRuntime.InvokeVoidAsync("initializeMap", json, currentUserId.ToString());
-    // }
+    public string mapFilter = MapFilters[0];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -185,7 +170,7 @@
                         Formatting = Formatting.Indented
                     });
 
-                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
+                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
             }
         }
     }
@@ -194,8 +179,6 @@
     {
         var user = userStateService.CurrentUser.user;
 
-        // currentUserFilter = true;
-        // allUserFilter = false;
         mapFilter = MapFilters[0];
 
         var settings = new JsonSerializerSettings
@@ -215,8 +198,7 @@
 
     private async Task _GetAllFinds()
     {
-        // allUserFilter = true;
-        // currentUserFilter = false;
+
         mapFilter = MapFilters[1];
 
         var user = userStateService.CurrentUser.user;
@@ -234,6 +216,41 @@
         await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
     }
 
+    private async Task _LoadFiles(InputFileChangeEventArgs e)
+    {
+        _errors.Clear();
+
+        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+
+        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+
+        if (e.FileCount > _maxAllowedFiles)
+        {
+            _errors.Add($"Error: Attempting to upload {e.FileCount} files, but only {_maxAllowedFiles} files are allowed");
+            return;
+        }
+        foreach(var file in e.GetMultipleFiles(_maxAllowedFiles)) // may not work once deployed
+        {
+            try
+            {
+                string newFileName = Path.ChangeExtension(
+                Path.GetRandomFileName(),
+                Path.GetExtension(file.Name));
+
+                string path = Path.Combine(config.GetValue<string>("FileStorage"), userName, newFileName);
+
+                Directory.CreateDirectory(Path.Combine(config.GetValue<string>("FileStorage"), userName));
+
+                await using FileStream fs = new(path, FileMode.Create);
+                await file.OpenReadStream(_maxFileSize).CopyToAsync(fs);
+            }
+            catch (Exception ex)
+            {
+                _errors.Add($"File: {file.Name} Error: {ex.Message}"); // add logic to encode filename for security
+                throw;
+            }
+        }
+    }
 
     [JSInvokable]
     public static async Task<UserFind> GetFindById(string findId)
@@ -260,7 +277,8 @@
     string description,
     double lat,
     double lng,
-    string mapFilter)
+    string mapFilter,
+    List<string> uploadedFileUrls)
     {
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
 
@@ -281,7 +299,8 @@
             tastesLike,
             description,
             lat,
-            lng
+            lng,
+            uploadedFileUrls
         );
 
         var updatedViewModels = new List<UserFindsViewModel>();
@@ -303,6 +322,7 @@
 
         return JsonConvert.SerializeObject(updatedViewModels, settings);
     }
+
 
     [JSInvokable]
     public static async Task<string> UpdateFind(
