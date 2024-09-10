@@ -55,7 +55,8 @@ namespace ForagerSite.Controllers
                     await file.CopyToAsync(fs);
                 }
 
-                string fileUrl = Path.Combine("/FindImageUploads", userName, newFileName);
+                //string fileUrl = Path.Combine("/FindImageUploads", userName, newFileName);
+                string fileUrl = $"/FindImageUploads/{userName}/{newFileName}";
                 uploadedFileUrls.Add(fileUrl);
             }
 

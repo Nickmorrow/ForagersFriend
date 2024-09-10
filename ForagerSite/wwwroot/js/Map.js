@@ -49,7 +49,6 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
 }
 
 window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, userName) {
-
     window.map.on('click', function (e) {
         if (window.tempMarker) {
             window.map.removeLayer(window.tempMarker);
@@ -69,6 +68,42 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                     createFind(tempId, e.latlng.lat, e.latlng.lng, currentUserId, mapFilter, userName);
                 });
             }
+
+            const imageUploadInput = document.querySelector(`#UserFindForm_${tempId} #imageUpload`);
+            const imagePreviewContainer = document.querySelector(`#UserFindForm_${tempId} #imagePreview`);
+
+            imageUploadInput.addEventListener('change', function () {
+                const files = Array.from(imageUploadInput.files);
+                imagePreviewContainer.innerHTML = ''; // Clear existing previews
+
+                files.forEach((file, index) => {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.style.maxWidth = '100px';
+                        img.style.marginRight = '10px';
+
+                        const removeButton = document.createElement('button');
+                        removeButton.innerText = 'Remove';
+                        removeButton.type = 'button';
+                        removeButton.addEventListener('click', function () {
+                            img.remove(); // Remove the image preview
+                            removeButton.remove(); // Remove the remove button
+                            // Clear the file input
+                            const dataTransfer = new DataTransfer();
+                            files.splice(index, 1); // Remove file from the list
+                            files.forEach(file => dataTransfer.items.add(file));
+                            imageUploadInput.files = dataTransfer.files;
+                        });
+
+                        imagePreviewContainer.appendChild(img);
+                        imagePreviewContainer.appendChild(removeButton);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
         }, 10);
 
         console.log('Popup Content:', popupContent);
@@ -100,12 +135,27 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                     var find = viewModel.userFinds.find(find => find.UsFId === location.UslUsfId);
 
                     if (find && find.UsFId) {
+
                         var findId = find.UsFId;
+                        
+                        let imageHtml = '';
+                        if (find.UserImages && find.UserImages.length > 0) {
+                            imageHtml = find.UserImages.map(image => {
+                                if (image && image.UsiImageData && typeof image.UsiImageData === 'string') {
+                                    const fullUrl = `https://localhost:7007${image.UsiImageData}`;
+                                    return `<img src="${fullUrl}" alt="Image" style="max-width: 100%; height: auto; margin-bottom: 5px;">`;
+                                } else {
+                                    console.error('Invalid image data:', image);
+                                    return '';
+                                }
+                            }).join('');
+                        }
 
                         var popupContent = templateHtml
                             .replace('{UsfName}', find.UsfName || '')
                             .replace('{UssUsername}', viewModel.userSecurity.UssUsername || '')
                             .replace('{UsfSpeciesName}', find.UsfSpeciesName || '')
+                            .replace('{Images}', imageHtml)
                             .replace('{UsfSpeciesType}', find.UsfSpeciesType || '')
                             .replace('{UsfUseCategory}', find.UsfUseCategory || '')
                             .replace('{UsfFeatures}', find.UsfFeatures || '')
