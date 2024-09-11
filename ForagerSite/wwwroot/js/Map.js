@@ -73,34 +73,42 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
             const imagePreviewContainer = document.querySelector(`#UserFindForm_${tempId} #imagePreview`);
 
             imageUploadInput.addEventListener('change', function () {
-                const files = Array.from(imageUploadInput.files);
+                let files = Array.from(imageUploadInput.files);
                 imagePreviewContainer.innerHTML = ''; // Clear existing previews
 
                 files.forEach((file, index) => {
                     const reader = new FileReader();
                     reader.onload = function (e) {
+                        // Create image preview
                         const img = document.createElement('img');
                         img.src = e.target.result;
                         img.style.maxWidth = '100px';
                         img.style.marginRight = '10px';
 
+                        // Create remove button
                         const removeButton = document.createElement('button');
                         removeButton.innerText = 'Remove';
                         removeButton.type = 'button';
-                        removeButton.addEventListener('click', function () {
-                            img.remove(); // Remove the image preview
-                            removeButton.remove(); // Remove the remove button
-                            // Clear the file input
+                        removeButton.style.marginLeft = '5px';
+
+                        // Prevent map click event propagation
+                        removeButton.addEventListener('click', function (event) {
+                            event.stopPropagation(); // Stop the event from propagating to Leaflet
+
+                            img.remove(); // Remove image preview
+                            removeButton.remove(); // Remove button
+
+                            // Remove the file from the list and update the input
+                            files.splice(index, 1);
                             const dataTransfer = new DataTransfer();
-                            files.splice(index, 1); // Remove file from the list
-                            files.forEach(file => dataTransfer.items.add(file));
+                            files.forEach(file => dataTransfer.items.add(file)); // Re-add remaining files
                             imageUploadInput.files = dataTransfer.files;
                         });
 
                         imagePreviewContainer.appendChild(img);
                         imagePreviewContainer.appendChild(removeButton);
                     };
-                    reader.readAsDataURL(file);
+                    reader.readAsDataURL(file); // Read the file for preview
                 });
             });
 
