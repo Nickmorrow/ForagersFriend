@@ -18,6 +18,10 @@ namespace ForagerSite.Data
             : base(options)
         {
         }
+        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        //{
+        //    optionsBuilder.UseLazyLoadingProxies(); // Enable lazy loading
+        //}
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

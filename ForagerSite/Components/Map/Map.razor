@@ -11,20 +11,17 @@
 @inject IConfiguration config
 
 
-<div id="map" style="height: 500px; width: 100%;"></div>
 
-@* <EditForm Model="_userFindsViewModels[0]">
 
-</EditForm>
-
-<InputFile OnChange="@_LoadFiles" class="form-control" multiple accept=".png, .jpg, .jpeg" /> *@
-
-<div id="filters">
-    <button size="100px" id="get-all-finds" class="btn-primary" @onclick="_GetAllFinds"></button>
-    <button id="get-my-finds" class="btn-primary" @onclick="_GetMyFinds"></button>
-    <button id="get-friends-finds" class="btn-primary"></button>
+<div>
+    <div id="filters">
+        <button id="get-all-finds" class="btn-primary" @onclick="GetAllFinds"></button>
+        <button id="get-my-finds" class="btn-primary" @onclick="GetMyFinds"></button>
+        <button id="get-friends-finds" class="btn-primary"></button>
+    </div>
 </div>
 
+<div id="map" style="height: 800px; width: 100%;"></div>
 
 <div id="find-form-container" style="display: none;">
     <form id="UserFindForm">
@@ -80,6 +77,14 @@
         <label for="speciesName">Species Name:</label>
         <input type="text" id="UsfSpeciesName" name="speciesName" value=""><br>
 
+        <div id="existingImageGallery">
+
+        </div>
+
+        <label for="imageUpload">Add Images:</label>
+        <input type="file" id="imageUpload" multiple accept="image/*"><br>
+        <div id="newImagePreview"></div> 
+
         <label for="speciesType">Species Type:</label>
         <select id="UsfSpeciesType" class="dropdown-item" name="speciesType">
             <option value="tree">Tree</option>
@@ -121,6 +126,7 @@
     <div id="photo-gallery">
         {Images}
     </div>
+    <button type="button" class="details-button">Details</button>
     <p><strong>Species Type:</strong> {UsfSpeciesType}</p>
     <p><strong>Use Category:</strong> {UsfUseCategory}</p>
     <p><strong>Distinguishing Features:</strong> {UsfFeatures}</p>
@@ -136,17 +142,11 @@
 
 @code {
 
-    private static Map _instance;
+    private Map instance;
 
-    private List<UserFindLocation> _userFindLocations;
+    private List<UserFindLocation> userFindLocations;
 
-    private List<UserFindsViewModel> _userFindsViewModels;
-
-    private const long _maxFileSize = 1024 * 1024 * 3; //3mb
-
-    private const int _maxAllowedFiles = 4;
-
-    private List<string> _errors = new();
+    private List<UserFindsViewModel> userFindsViewModels;
 
     static readonly List<string> MapFilters = new List<string>
     {
@@ -163,19 +163,19 @@
 
             if (user != null)
             {
-                _userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
-                var json = JsonConvert.SerializeObject(_userFindsViewModels, new JsonSerializerSettings
+                userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+                var json = JsonConvert.SerializeObject(userFindsViewModels, new JsonSerializerSettings
                     {
                         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                         Formatting = Formatting.Indented
                     });
 
-                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
+                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername); //
             }
         }
     }
 
-    private async Task _GetMyFinds()
+    private async Task GetMyFinds()
     {
         var user = userStateService.CurrentUser.user;
 
@@ -188,15 +188,15 @@
             };
         if (user != null)
         {
-            _userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
-            var json = JsonConvert.SerializeObject(_userFindsViewModels, settings);
+            userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+            var json = JsonConvert.SerializeObject(userFindsViewModels, settings);
 
             await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
         }
 
     }
 
-    private async Task _GetAllFinds()
+    private async Task GetAllFinds()
     {
 
         mapFilter = MapFilters[1];
@@ -209,47 +209,11 @@
                 Formatting = Formatting.Indented
             };
 
-        _userFindsViewModels = await userFindService.GetUserFindsViewModels();
+        userFindsViewModels = await userFindService.GetUserFindsViewModels();
 
-        var json = JsonConvert.SerializeObject(_userFindsViewModels, settings);
+        var json = JsonConvert.SerializeObject(userFindsViewModels, settings);
 
         await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
-    }
-
-    private async Task _LoadFiles(InputFileChangeEventArgs e)
-    {
-        _errors.Clear();
-
-        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-
-        if (e.FileCount > _maxAllowedFiles)
-        {
-            _errors.Add($"Error: Attempting to upload {e.FileCount} files, but only {_maxAllowedFiles} files are allowed");
-            return;
-        }
-        foreach(var file in e.GetMultipleFiles(_maxAllowedFiles)) // may not work once deployed
-        {
-            try
-            {
-                string newFileName = Path.ChangeExtension(
-                Path.GetRandomFileName(),
-                Path.GetExtension(file.Name));
-
-                string path = Path.Combine(config.GetValue<string>("FileStorage"), userName, newFileName);
-
-                Directory.CreateDirectory(Path.Combine(config.GetValue<string>("FileStorage"), userName));
-
-                await using FileStream fs = new(path, FileMode.Create);
-                await file.OpenReadStream(_maxFileSize).CopyToAsync(fs);
-            }
-            catch (Exception ex)
-            {
-                _errors.Add($"File: {file.Name} Error: {ex.Message}"); // add logic to encode filename for security
-                throw;
-            }
-        }
     }
 
     [JSInvokable]
@@ -338,7 +302,8 @@
     string description,
     double lat,
     double lng,
-    string mapFilter)
+    string mapFilter,
+    List<string> uploadedFileUrls)
     {
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
         var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
@@ -359,9 +324,10 @@
                 tastesLike,
                 description,
                 lat,
-                lng
+                lng,
+                uploadedFileUrls
             );
-           
+
             var updatedViewModels = new List<UserFindsViewModel>();
 
             if (mapFilter == "UserOnly")
@@ -393,11 +359,12 @@
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
         var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
         var user = userStateService.CurrentUser.user;
+        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
 
         Guid findGuid;
 
         if (Guid.TryParse(findId, out findGuid))
-            await userFindService.DeleteFind(findGuid);                              
+            await userFindService.DeleteFind(findGuid, userName);                              
 
         var updatedViewModels = new List<UserFindsViewModel>();
 
@@ -411,9 +378,9 @@
         }
 
         var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            };
+        {
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+        };
 
         return JsonConvert.SerializeObject(updatedViewModels, settings);
     }
