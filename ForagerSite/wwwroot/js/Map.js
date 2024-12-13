@@ -30,7 +30,6 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
         console.error("Geolocation is not supported by this browser.");
         initMap(defaultLatLng);
     }
-
     function initMap(latLng) {
         window.map = L.map('map').setView(latLng, 13);
 
@@ -44,11 +43,11 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
             .openPopup();
 
         updateMarkers(userFindsViewModels, currentUserId, mapFilter, userName);
-
     }
 }
 
 window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, userName) {
+    //Create new find
     window.map.on('click', function (e) {
         if (window.tempMarker) {
             window.map.removeLayer(window.tempMarker);
@@ -71,7 +70,6 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
 
             const imageUploadInput = document.querySelector(`#UserFindForm_${tempId} #imageUpload`);
             const imagePreviewContainer = document.querySelector(`#UserFindForm_${tempId} #imagePreview`);
-
             imageUploadInput.addEventListener('change', function () {
                 let files = Array.from(imageUploadInput.files);
                 imagePreviewContainer.innerHTML = ''; // Clear existing previews
@@ -120,7 +118,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
             window.tempMarker = null;
         });
     });
-
+    // Display all finds on map
     Object.keys(markers).forEach(key => {
         markers[key].marker.remove();
     });
@@ -402,7 +400,7 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName) {
             }
             
         }
-    }, 100);
+    }, 10);
     marker.once('popupclose', function () {
         marker.setPopupContent(markerData.originalPopupContent).openPopup();
     });

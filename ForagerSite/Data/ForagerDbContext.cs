@@ -48,6 +48,11 @@ namespace ForagerSite.Data
                 .WithOne(uf => uf.User)
                 .HasForeignKey(uf => uf.UsfUsrId);
 
+            modelBuilder.Entity<User>()
+                .HasOne(u => u.UserImage)
+                .WithOne(ui => ui.User)
+                .HasForeignKey<UserImage>(ui => ui.UsiUsrId);
+
             // One-to-One: UserFind -> UserFindLocation
             modelBuilder.Entity<UserFind>()
                 .HasOne(uf => uf.UserFindLocation)

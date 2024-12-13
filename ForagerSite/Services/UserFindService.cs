@@ -163,66 +163,6 @@ namespace ForagerSite.Services
             //return await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
         }
 
-        //public async Task SaveFind(
-        //Guid userId,
-        //string name,
-        //string speciesName,
-        //string speciesType,
-        //string useCategory,
-        //string features,
-        //string lookalikes,
-        //string harvestMethod,
-        //string tastesLike,
-        //string description,
-        //double lat,
-        //double lng,
-        //List<string> uploadedFileUrls)
-        //{
-        //    using var context = _dbContextFactory.CreateDbContext();
-
-        //    var userFind = new UserFind
-        //    {
-        //        UsfName = name,
-        //        UsfUsrId = userId,
-        //        UsfSpeciesName = speciesName,
-        //        UsfSpeciesType = speciesType,
-        //        UsfUseCategory = useCategory,
-        //        UsfFeatures = features,
-        //        UsfLookAlikes = lookalikes,
-        //        UsfHarvestMethod = harvestMethod,
-        //        UsfTastesLike = tastesLike,
-        //        UsfDescription = description,
-        //        UsfFindDate = DateTime.Now,
-        //    };
-
-        //    context.UserFinds.Add(userFind);
-        //    await context.SaveChangesAsync();
-
-        //    var userFindLocation = new UserFindLocation
-        //    {
-        //        UslLatitude = lat,
-        //        UslLongitude = lng,
-        //        UslUsfId = userFind.UsFId
-        //    };
-
-        //    context.UserFindLocations.Add(userFindLocation);
-        //    await context.SaveChangesAsync();
-
-        //    foreach (var image in uploadedFileUrls)
-        //    {
-        //        var userImage = new UserImage
-        //        {
-        //            UsiUsrId = userId,
-        //            UsiUsfId = userFind.UsFId,
-        //            UsiImageData = image
-        //        };
-
-        //        context.UserImages.Add(userImage);
-        //        await context.SaveChangesAsync();
-        //    }
-
-        //}
-
         public async Task CreateFind(
         Guid userId,
         string name,
@@ -334,11 +274,6 @@ namespace ForagerSite.Services
             var existingImages = await context.UserImages.Where(ui => ui.UsiUsfId == findId).ToListAsync();
             var existingImageUrls = existingImages.Select(ui => ui.UsiImageData).ToList();
 
-            // Determine which URLs need to be deleted
-
-            //var urlsToDelete = existingImageUrls.Except(uploadedFileUrls).ToList();
-            //var urlsToAdd = uploadedFileUrls.Except(existingImageUrls).ToList();
-
             // Delete old image URLs from the database
             if (deletedFileUrls != null)
             {
@@ -346,13 +281,6 @@ namespace ForagerSite.Services
                 {
                     var imageToDelete = existingImages.First(ui => ui.UsiImageData == urlToDelete);
                     context.UserImages.Remove(imageToDelete);
-
-                    // Optionally, delete the file from the server
-                    // var filePath = Path.Combine(_config.GetValue<string>("FileStorage"), imageToDelete.UsiImageData);
-                    // if (System.IO.File.Exists(filePath))
-                    // {
-                    //     System.IO.File.Delete(filePath);
-                    // }
                 }
             }           
             // Add new image URLs to the database
@@ -369,7 +297,6 @@ namespace ForagerSite.Services
             }           
             await context.SaveChangesAsync();
         }
-
 
         public async Task DeleteFind(Guid findId, string userName)
         {

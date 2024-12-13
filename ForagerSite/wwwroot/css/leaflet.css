@@ -483,6 +483,8 @@ svg.leaflet-image-layer.leaflet-interactive path {
 	padding: 1px;
 	text-align: left;
 	border-radius: 12px;
+	overflow: visible;
+	position: relative;
 	}
 .leaflet-popup-content {
 	margin: 13px 24px 13px 20px;

@@ -1,9 +1,37 @@
 ﻿@page "/Profile"
+@using ForagerSite.Services
+@using ForagerSite.Models
+@inject UserService userService
+@inject UserStateService userStateService
 
 <h3>Profile</h3>
+
+@if (!edit)
+{
+    <div id="profile-details-container">
+        <img src="@userVm.user.UserImage.UsiImageData"/>
+        <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
+        <p><strong>Name:</strong> @userVm.user.UsrName</p>
+        <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
+        <p><strong>Joined Date:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
+        <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
+        <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>
+        <p><strong>Experience Score:</strong> @userVm.user.UsrExpScore</p>
+        <p><strong>Finds:</strong> @userVm.user.UsrFindsNum</p>
+    </div>
+}
 
 
 
 @code {
+
+    UserViewModel userVm { get; set; } = new();
+
+    private bool edit { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userVm = userStateService.CurrentUser;        
+    }
 
 }
