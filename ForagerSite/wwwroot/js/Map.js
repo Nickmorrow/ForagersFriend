@@ -312,6 +312,8 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName) {
                 const imageGallery = form.querySelector('#existingImageGallery');
                 imageGallery.innerHTML = ''; // Clear any existing content
 
+                var deletedImageUrls = [];
+
                 if (find.UserImages && find.UserImages.length > 0) {
                     find.UserImages.forEach(image => {
                         if (image && image.UsiImageData && typeof image.UsiImageData === 'string') {
@@ -337,7 +339,10 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName) {
 
                             removeButton.addEventListener('click', function () {
                                 imageDiv.remove(); // Remove from UI
-                                deleteImage(userName, image.UsiImageData); // Delete image from server & DB
+                                event.stopPropagation();
+                                deleteImage(userName, image.UsiImageData);
+                                var deletedImageUrl = image.UsiImageData;
+                                deletedImageUrls.push(deletedImageUrl);// Delete image from server & DB
                             });
 
                             imageDiv.appendChild(img);
@@ -371,6 +376,7 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName) {
                             removeButton.addEventListener('click', function () {
                                 img.remove(); // Remove preview image
                                 removeButton.remove();
+                                event.stopPropagation();
                                 // Remove file from the input
                                 const dataTransfer = new DataTransfer();
                                 files.splice(index, 1); // Remove file from the list
@@ -388,7 +394,7 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName) {
                 if (saveButton) {
                     saveButton.addEventListener('click', () => {
                         console.log('Save button clicked');
-                        submitUpdatedFind(findId, markerData.lat, markerData.lng, currentUserId, mapFilter, userName);
+                        submitUpdatedFind(findId, markerData.lat, markerData.lng, currentUserId, mapFilter, userName, deletedImageUrls);
                     });
                 }
             } else {
@@ -426,14 +432,13 @@ window.deleteImage = function (userName, imageUrl) {
         });
     }
 };
-window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter, userName) {
+window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter, userName, deletedImageUrls) {
     const form = document.querySelector(`#UpdateFindForm_${findId}`);
 
     if (!form) {
         console.error('Form not found for findId:', findId);
         return;
     }
-
     const formData = new FormData(form);
 
     formData.append('findId', findId);
@@ -449,14 +454,15 @@ window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter,
             formData.append('files', file);
         });
     }
-
+    var uploadedUrls = [];
     // Send the form data to the server
     fetch('/api/upload/upload', {
         method: 'POST',
         body: formData
     })
     .then(response => response.json())
-    .then(uploadResult => {
+        .then(uploadResult => {
+            uploadedUrls = uploadResult;
         //if (uploadResult.length > 0) {
             // If file upload is successful, update the find with the URLs
             DotNet.invokeMethodAsync('ForagerSite', 'UpdateFind',
@@ -473,15 +479,16 @@ window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter,
                 lat,
                 lng,
                 mapFilter,
-                uploadResult // Send the uploaded file URLs to the server
+                uploadedUrls,
+                deletedImageUrls // Send the uploaded file URLs to the server
             )
-                .then(userFindsViewModels => {
-                    console.log('Find updated successfully');
-                    initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
-                })
-                .catch(error => {
-                    console.error('Error updating find:', error);
-                });
+            .then(userFindsViewModels => {
+                console.log('Find updated successfully');
+                initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
+            })
+            .catch(error => {
+                console.error('Error updating find:', error);
+            });
         //} else {
         //    console.error('File upload failed');
         //}
@@ -498,13 +505,13 @@ window.deleteFind = function (findId, currentUserId, mapFilter, userName) {
             return;
         }
         DotNet.invokeMethodAsync('ForagerSite', 'DeleteFind', findId, mapFilter)
-            .then(userFindsViewModels => {
-                console.log('Find deleted successfully');
-                initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
-                //updateMarkers(userFindsViewModels, currentUserId);
-            }).catch(error => {
-                console.error('Error deleting find:', error);
-            });
+        .then(userFindsViewModels => {
+            console.log('Find deleted successfully');
+            initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
+            //updateMarkers(userFindsViewModels, currentUserId);
+        }).catch(error => {
+            console.error('Error deleting find:', error);
+        });
     }
 };
 

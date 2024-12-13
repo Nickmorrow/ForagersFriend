@@ -296,7 +296,8 @@ namespace ForagerSite.Services
             string description,
             double lat,
             double lng,
-            List<string> uploadedFileUrls)
+            List<string>? uploadedFileUrls,
+            List<string>? deletedFileUrls)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -334,33 +335,38 @@ namespace ForagerSite.Services
             var existingImageUrls = existingImages.Select(ui => ui.UsiImageData).ToList();
 
             // Determine which URLs need to be deleted
-            var urlsToDelete = existingImageUrls.Except(uploadedFileUrls).ToList();
-            var urlsToAdd = uploadedFileUrls.Except(existingImageUrls).ToList();
+
+            //var urlsToDelete = existingImageUrls.Except(uploadedFileUrls).ToList();
+            //var urlsToAdd = uploadedFileUrls.Except(existingImageUrls).ToList();
 
             // Delete old image URLs from the database
-            foreach (var urlToDelete in urlsToDelete)
+            if (deletedFileUrls != null)
             {
-                var imageToDelete = existingImages.First(ui => ui.UsiImageData == urlToDelete);
-                context.UserImages.Remove(imageToDelete);
-
-                // Optionally, delete the file from the server
-                // var filePath = Path.Combine(_config.GetValue<string>("FileStorage"), imageToDelete.UsiImageData);
-                // if (System.IO.File.Exists(filePath))
-                // {
-                //     System.IO.File.Delete(filePath);
-                // }
-            }
-
-            // Add new image URLs to the database
-            foreach (var urlToAdd in urlsToAdd)
-            {
-                context.UserImages.Add(new UserImage
+                foreach (var urlToDelete in deletedFileUrls)
                 {
-                    UsiUsfId = findId,
-                    UsiImageData = urlToAdd
-                });
-            }
+                    var imageToDelete = existingImages.First(ui => ui.UsiImageData == urlToDelete);
+                    context.UserImages.Remove(imageToDelete);
 
+                    // Optionally, delete the file from the server
+                    // var filePath = Path.Combine(_config.GetValue<string>("FileStorage"), imageToDelete.UsiImageData);
+                    // if (System.IO.File.Exists(filePath))
+                    // {
+                    //     System.IO.File.Delete(filePath);
+                    // }
+                }
+            }           
+            // Add new image URLs to the database
+            if (uploadedFileUrls != null)
+            {
+                foreach (var urlToAdd in uploadedFileUrls)
+                {
+                    context.UserImages.Add(new UserImage
+                    {
+                        UsiUsfId = findId,
+                        UsiImageData = urlToAdd
+                    });
+                }
+            }           
             await context.SaveChangesAsync();
         }
 

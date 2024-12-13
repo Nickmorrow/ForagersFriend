@@ -163,10 +163,10 @@
             {
                 userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
                 var json = JsonConvert.SerializeObject(userFindsViewModels, new JsonSerializerSettings
-                    {
-                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                        Formatting = Formatting.Indented
-                    });
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    Formatting = Formatting.Indented
+                });
 
                 await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername); //
             }
@@ -180,10 +180,10 @@
         mapFilter = MapFilters[0];
 
         var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                Formatting = Formatting.Indented
-            };
+        {
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+            Formatting = Formatting.Indented
+        };
         if (user != null)
         {
             userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
@@ -191,7 +191,6 @@
 
             await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
         }
-
     }
 
     private async Task GetAllFinds()
@@ -202,10 +201,10 @@
         var user = userStateService.CurrentUser.user;
 
         var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                Formatting = Formatting.Indented
-            };
+        {
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+            Formatting = Formatting.Indented
+        };
 
         userFindsViewModels = await userFindService.GetUserFindsViewModels();
 
@@ -275,13 +274,10 @@
         {
             updatedViewModels = await userFindService.GetUserFindsViewModels();
         }
-
-
         var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            };
-
+        {
+            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+        };
         return JsonConvert.SerializeObject(updatedViewModels, settings);
     }
 
@@ -301,7 +297,8 @@
     double lat,
     double lng,
     string mapFilter,
-    List<string> uploadedFileUrls)
+    List<string>? uploadedFileUrls,
+    List<string>? deletedFileUrls)
     {
         var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
         var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
@@ -323,7 +320,8 @@
                 description,
                 lat,
                 lng,
-                uploadedFileUrls
+                uploadedFileUrls,
+                deletedFileUrls
             );
 
             var updatedViewModels = new List<UserFindsViewModel>();
@@ -338,9 +336,9 @@
             }
 
             var settings = new JsonSerializerSettings
-                {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-                };
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
 
             return JsonConvert.SerializeObject(updatedViewModels, settings);
         }
