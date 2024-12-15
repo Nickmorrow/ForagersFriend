@@ -1,37 +1,351 @@
 ﻿@page "/Profile"
 @using ForagerSite.Services
 @using ForagerSite.Models
+@rendermode InteractiveServer
 @inject UserService userService
 @inject UserStateService userStateService
+@inject IConfiguration config
 
 <h3>Profile</h3>
 
-@if (!edit)
-{
-    <div id="profile-details-container">
-        <img src="@userVm.user.UserImage.UsiImageData"/>
-        <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
-        <p><strong>Name:</strong> @userVm.user.UsrName</p>
-        <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
-        <p><strong>Joined Date:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
-        <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
-        <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>
-        <p><strong>Experience Score:</strong> @userVm.user.UsrExpScore</p>
-        <p><strong>Finds:</strong> @userVm.user.UsrFindsNum</p>
-    </div>
-}
 
-
+<div>
+    @if (!editProfilePic)
+    {
+        <div>
+            <img src="@GetProfileImageUrl()" alt="Profile Picture" style="max-width: 400px" /> 
+            <p><a @onclick="EditProfilePic">Edit profile picture</a></p>
+        </div>
+    } 
+    else
+    {
+        <div>
+            <label for="profilePicture">Profile Picture:</label>
+            <InputFile type="file" id="profilePicture" OnChange="@(async e => await HandleFileChange(e))" />
+            @if (!string.IsNullOrEmpty(previewUrl))
+            {
+                <img src="@previewUrl" alt="Preview" style="max-width: 200px; margin-top: 10px;" />
+            }
+            @if (errors.Any())
+            {
+                <ul>
+                    @foreach (var error in errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            }
+            <div>
+                <p><a @onclick="SaveProfilePic">Save Changes</a></p>
+                <p><a @onclick="CancelProfilePic">Cancel</a></p>
+            </div>
+        </div>
+    }
+    @if (!edit)
+    {
+        <div id="profile-details-container">
+            <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
+            <p><strong>Name:</strong> @userVm.user.UsrName</p>
+            <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
+            <p><strong>Joined Date:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
+            <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
+            <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>
+            <p><strong>Experience Score:</strong> @userVm.user.UsrExpScore</p>
+            <p><strong>Finds:</strong> @userVm.user.UsrFindsNum</p>
+            <button @onclick="EditProfile">Edit</button>
+        </div>
+    }
+    else
+    {
+        <div>
+             <EditForm Model="userVm.user" OnValidSubmit="SaveChanges">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                            
+                <div> 
+                    <label for="name">Name:</label> 
+                    <InputText id="name" @bind-Value="userVm.user.UsrName" /> 
+                </div> 
+                <div> 
+                    <label for="bio">Bio:</label> 
+                    <InputTextArea id="bio" @bind-Value="userVm.user.UsrBio" /> 
+                </div> 
+                <div> 
+                    <label for="country">Country:</label> 
+                    <InputText id="country" @bind-Value="userVm.user.UsrCountry" /> 
+                </div> 
+                <div> 
+                    <label for="state">State/Province:</label> 
+                    <InputText id="state" @bind-Value="userVm.user.UsrStateorProvince" /> 
+                </div> 
+                <div> 
+                    <label for="zipcode">Zip Code:</label>
+                    <InputNumber id="zipcode" @bind-Value="userVm.user.UsrZipCode" />
+                </div> 
+                <div> 
+                    <label for="email">Email:</label>
+                    <InputText id="email" @bind-Value="userVm.user.UsrEmail" />
+                    <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => userVm.user.UsrEmail)" />
+                </div>
+                <div>
+                    <button type="submit">Save</button> 
+                    <button type="button" @onclick="CancelEdit">Cancel</button>
+                </div>
+            
+                @if (errorMessage != null)
+                {
+                    <p style="color: red;">@errorMessage</p>
+                }
+            </EditForm>
+        </div>
+    }
+</div>
 
 @code {
 
     UserViewModel userVm { get; set; } = new();
 
-    private bool edit { get; set; } = false;
+    private bool edit;
+
+    private bool editProfilePic;
+
+    private string PlaceholderImageUrl = $"UserProfileImages/Shared/PlaceHolder.jpeg";
+
+    private const long maxFileSize = 100 * 1024 * 1024; // 100MB
+
+    private const int maxAllowedFiles = 1;
+
+    private List<string> errors  = new();
+
+    private string errorMessage;
+
+    private bool userEmailExists;
+
+    private string previewUrl;
+
+    private IBrowserFile? uploadedFile;
+
+    private static readonly List<string> allowedExtensions = new() 
+    { 
+        ".jpg", ".jpeg", ".png"
+    };
 
     protected override async Task OnInitializedAsync()
     {
-        userVm = userStateService.CurrentUser;        
+        userVm = userStateService.CurrentUser;
+        edit = false;
+        editProfilePic = false;
+    }
+    private string GetProfileImageUrl() 
+    { 
+        return !string.IsNullOrEmpty(userVm.user?.UserImage?.UsiImageData)
+        ? userVm.user.UserImage.UsiImageData 
+        : PlaceholderImageUrl; 
+    }
+    private void EditProfilePic()
+    {
+        editProfilePic = true;
+    }
+    private void CancelProfilePic()
+    {
+        editProfilePic = false;
+    }
+    private void EditProfile()
+    {
+        edit = true;
+    }
+    private void CancelEdit() 
+    { 
+        edit = false; 
+    }
+    private async Task SaveChanges() 
+    { 
+        try 
+        { 
+            errorMessage = null;
+            userEmailExists = await userService.EmailExists(userVm.user.UsrEmail);
+
+            if (userVm.user.UsrEmail == null)
+            {
+                errorMessage = "You must enter an Email address.";
+                return;
+            }
+            if (userEmailExists)
+            {
+                errorMessage = "Email already exists.";
+                return;
+            }
+
+            await userService.UpdateUserAsync(userVm.user); 
+            edit = false; 
+        } 
+        catch (Exception ex) 
+        { 
+            errors.Add($"Error saving changes: {ex.Message}"); 
+        } 
     }
 
+    private async Task HandleFileChange(InputFileChangeEventArgs e)
+    {
+        errors.Clear();
+
+        uploadedFile = e.File;
+
+        if (e.FileCount > maxAllowedFiles)
+        {
+            errors.Add($"Error: Attempting to upload {e.FileCount} images, but only {maxAllowedFiles} image is allowed");
+            return;
+        }
+
+        if (uploadedFile.Size > maxFileSize)
+        {
+            errors.Add($"File size exceeds the maximum allowed limit of {maxFileSize / (1024 * 1024)} MB.");
+            return;
+        }
+
+        var fileExtension = Path.GetExtension(uploadedFile.Name).ToLowerInvariant();
+        if (!allowedExtensions.Contains(fileExtension))
+        {
+            errors.Add("Only image files (JPG and PNG) are allowed.");
+            return;
+        }
+
+        try
+        {
+            using var stream = uploadedFile.OpenReadStream(maxFileSize);
+            var buffer = new byte[uploadedFile.Size];
+            await stream.ReadAsync(buffer, 0, (int)uploadedFile.Size);
+            previewUrl = $"data:{uploadedFile.ContentType};base64,{Convert.ToBase64String(buffer)}";
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Error generating preview: {ex.Message}");
+        }
+    }
+
+    private async Task SaveProfilePic()
+    {
+        if (errors.Any())
+        {
+            return; // Prevent saving if there are validation errors
+        }
+
+        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+        var file = uploadedFile; // Assume the file was saved during HandleFileChange
+        var fileExtension = Path.GetExtension(file.Name).ToLowerInvariant();
+
+        try
+        {
+            string newFileName = Path.ChangeExtension(Path.GetRandomFileName(), fileExtension);
+            string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
+            string filePath = Path.Combine(userDirectory, newFileName);
+
+            if (!Directory.Exists(userDirectory))
+            {
+                Directory.CreateDirectory(userDirectory);
+            }
+            // Remove existing files if the directory exists
+            if (Directory.Exists(userDirectory))
+            {
+                var existingFiles = Directory.GetFiles(userDirectory);
+                foreach (var existingFile in existingFiles)
+                {
+                    File.Delete(existingFile);
+                }
+            }
+            // Save the new file
+            await using var fs = new FileStream(filePath, FileMode.Create);
+            await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
+
+            // Generate file URL and update database
+            string fileUrl = $"/UserProfileImages/{userName}/{newFileName}";
+            await userService.UploadProfilePicUrl(userVm.user, fileUrl);
+
+            editProfilePic = false;
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Error uploading file: {ex.Message}");
+        }
+    }
+
+    // private async Task SaveProfilePic(InputFileChangeEventArgs e)
+    // {
+    //     editProfilePic = false;
+    //     await UploadProfilePic(e);
+    // }
+    // private async Task HandleFileChange(InputFileChangeEventArgs e) 
+    // { 
+    //     var file = e.File; 
+    //     using (var stream = file.OpenReadStream(maxFileSize)) 
+    //     { 
+    //         var buffer = new byte[file.Size]; 
+    //         await stream.ReadAsync(buffer, 0, (int)file.Size); 
+    //         previewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}"; 
+    //     }
+    // }
+    // private async Task UploadProfilePic(InputFileChangeEventArgs e)
+    // {
+    //     errors.Clear();
+
+    //     var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+    //     var uploadedFileUrls = new List<string>();
+    //     var file = e.File;
+
+    //     if (file.Size > maxFileSize)
+    //     {
+    //         errors.Add($"File size exceeds the maximum allowed limit of 100MB.");
+    //         return;
+    //     }
+    //     if (e.FileCount > maxAllowedFiles)
+    //     {
+    //         errors.Add($"Error: Attempting to upload {e.FileCount} images, but only {maxAllowedFiles} image is allowed");
+    //         return;
+    //     }
+    //     var fileExtension = Path.GetExtension(file.Name).ToLowerInvariant();
+    //     if (!allowedExtensions.Contains(fileExtension))
+    //     {
+    //         errors.Add("Only image files (JPG and PNG) are allowed.");
+    //         return;
+    //     }      
+    //     try
+    //     {
+    //         string newFileName = Path.ChangeExtension(
+    //         Path.GetRandomFileName(),
+    //         fileExtension);
+
+    //         string path = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName, newFileName);
+
+    //         Directory.CreateDirectory(Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName));
+
+    //         await using FileStream fs = new(path, FileMode.Create);
+    //         await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
+
+    //         string fileUrl = $"/UserProfileImages/{userName}/{newFileName}";
+    //         uploadedFileUrls.Add(fileUrl);
+
+    //         if (File.Exists(path))
+    //         {
+    //             var files = Directory.GetFiles(path); foreach (var filePath in files)
+    //             {
+    //                 if (filePath != path) 
+    //                 { 
+    //                     File.Delete(filePath);
+    //                 } 
+    //             }
+    //             await userService.UploadProfilePicUrl(userVm.user,fileUrl);
+    //         }            
+    //         else
+    //         {
+    //             errors.Add("Error: File was not found after upload.");
+    //             throw new Exception("File upload verification failed.");
+    //         }          
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errors.Add($"File: {file.Name} Error: {ex.Message}"); // add logic to encode filename for security
+    //         throw;
+    //     }
+        
+    // }
 }

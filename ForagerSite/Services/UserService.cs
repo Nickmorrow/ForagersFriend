@@ -2,6 +2,8 @@
 using ForagerSite.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.IdentityModel.Tokens;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ForagerSite.Services
 {
@@ -56,7 +58,6 @@ namespace ForagerSite.Services
                 context.SaveChanges();
             }
         }
-
         public void AddUser(User user, UserSecurity userSecurity)
         {
             using (var context = _dbContextFactory.CreateDbContext())
@@ -66,20 +67,64 @@ namespace ForagerSite.Services
                 context.SaveChanges();
             }
         }
-
         public async Task<User> GetUserAsync(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
             return await context.Users.FirstOrDefaultAsync(u => u.UsrId == userId);               
         }
-
         public async Task<List<User>> GetAllUsersAsync()
         {
             using var context = _dbContextFactory.CreateDbContext();
             return await context.Users.ToListAsync();
         }
 
- 
+        public async Task UpdateUserAsync(User user)
+        {
+            using var context = _dbContextFactory.CreateDbContext(); 
+            var existingUser = await context.Users.FindAsync(user.UsrId);
+
+            if (existingUser != null)
+            {
+                existingUser.UsrName = user.UsrName; 
+                existingUser.UsrBio = user.UsrBio; 
+                existingUser.UsrCountry = user.UsrCountry; 
+                existingUser.UsrStateorProvince = user.UsrStateorProvince; 
+                existingUser.UsrZipCode = user.UsrZipCode; 
+                existingUser.UsrEmail = user.UsrEmail;
+
+                context.Users.Update(existingUser); 
+                await context.SaveChangesAsync();
+            }
+            else 
+            { 
+                throw new Exception("User not found"); 
+            }
+        }
+        public async Task UploadProfilePicUrl(User user, string fileUrl)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+            var existingUrls = context.UserImages
+                .Where(ui => ui.UsiUsrId == user.UsrId 
+                    && ui.UsiUsfId == Guid.Empty 
+                    && ui.UsiImageData.Contains("UserProfileImages"))
+                .ToList();
+            if (existingUrls.Any())
+            {
+                foreach (var existingUrl in existingUrls)
+                {
+                    context.UserImages.Remove(existingUrl);
+                }
+            }
+            var imageUrl = new UserImage
+            {
+                UsiUsrId = user.UsrId,
+                UsiImageData = fileUrl
+            };
+            context.UserImages.Add(imageUrl);
+            context.SaveChanges();
+        }
+
+
 
 
 
