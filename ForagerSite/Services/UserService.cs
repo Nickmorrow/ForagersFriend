@@ -103,9 +103,11 @@ namespace ForagerSite.Services
         }
         public async Task<string> GetUserProfilePic(User user)
         {
+            string url;
             using var context = _dbContextFactory.CreateDbContext();
-            var image = context.UserImages.Where(ui => ui.UsiUsrId == user.UsrId && ui.UsiImageData.Contains("UserProfileImages") &&  ui.UsiUsfId == null).FirstOrDefault();
-            return image.UsiImageData;
+            var image = (context.UserImages.Where(ui => ui.UsiUsrId == user.UsrId && ui.UsiImageData.Contains("UserProfileImages") &&  ui.UsiUsfId == null).FirstOrDefault());
+
+            return image?.UsiImageData ?? string.Empty;
         }
         public async Task UploadProfilePicUrl(User user, string fileUrl)
         {
@@ -128,6 +130,16 @@ namespace ForagerSite.Services
                 UsiImageData = fileUrl
             };
             context.UserImages.Add(imageUrl);
+            context.SaveChanges();
+        }
+        public async Task DeleteProfilePicUrl(User user)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+            var image = context.UserImages.Where(ui => ui.UsiUsrId == user.UsrId && ui.UsiImageData.Contains("UserProfileImages") && ui.UsiUsfId == null).FirstOrDefault();
+
+            if (image != null) context.UserImages.Remove(image);
+
+            context.UserImages.Remove(image);
             context.SaveChanges();
         }
 

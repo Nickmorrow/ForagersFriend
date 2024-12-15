@@ -10,10 +10,10 @@
 
 
 <div>
+    <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px" />
     @if (!editProfilePic)
     {
-        <div>
-            <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px" />
+        <div>          
             <p><a @onclick="EditProfilePic">Edit profile picture</a></p>
         </div>
     } 
@@ -37,6 +37,7 @@
             }
             <div>
                 <p><a @onclick="SaveProfilePic">Save Changes</a></p>
+                <p><a @onclick="DeleteProfilePic">Delete</a></p>
                 <p><a @onclick="CancelProfilePic">Cancel</a></p>
             </div>
         </div>
@@ -141,7 +142,8 @@
     }
     private async Task<string> GetProfileImageUrl()
     {
-        string profilePicUrl = await userService.GetUserProfilePic(userVm.user);
+        string profilePicUrl = (await userService.GetUserProfilePic(userVm.user)) ?? string.Empty;
+
         return !string.IsNullOrEmpty(profilePicUrl)
             ? profilePicUrl
             : PlaceholderImageUrl;
@@ -264,6 +266,36 @@
             // Generate file URL and update database
             string fileUrl = $"/UserProfileImages/{userName}/{newFileName}";
             await userService.UploadProfilePicUrl(userVm.user, fileUrl);
+
+            editProfilePic = false;
+            profileImageUrl = await GetProfileImageUrl();
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"Error uploading file: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteProfilePic()
+    {
+
+        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+        var file = uploadedFile; // Assume the file was saved during HandleFileChange
+
+        try
+        {
+            string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
+
+            // Remove existing files if the directory exists
+            if (Directory.Exists(userDirectory))
+            {
+                var existingFiles = Directory.GetFiles(userDirectory);
+                foreach (var existingFile in existingFiles)
+                {
+                    File.Delete(existingFile);
+                }
+            }
+            await userService.DeleteProfilePicUrl(userVm.user);
 
             editProfilePic = false;
             profileImageUrl = await GetProfileImageUrl();
