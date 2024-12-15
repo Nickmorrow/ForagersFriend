@@ -43,11 +43,12 @@ namespace ForagerSite.Services
             }
         }
         
-        public async Task<bool> EmailExists(string email)
+        public async Task<bool> EmailExists(string email, User user = null)
         {
             using (var context = _dbContextFactory.CreateDbContext())
             {
-                return await context.Users.AnyAsync(u => u.UsrEmail == email);
+                return await context.Users
+                    .AnyAsync(u => u.UsrEmail == email && u.UsrId != user.UsrId);
             }
         }       
         

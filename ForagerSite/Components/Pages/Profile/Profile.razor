@@ -47,11 +47,11 @@
         <div id="profile-details-container">
             <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
             <p><strong>Name:</strong> @userVm.user.UsrName</p>
+            <p><strong>Experience Score:</strong> @userVm.user.UsrExpScore</p>           
+            <p><strong>Joined:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
             <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
-            <p><strong>Joined Date:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
             <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
-            <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>
-            <p><strong>Experience Score:</strong> @userVm.user.UsrExpScore</p>
+            <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>           
             <p><strong>Finds:</strong> @userVm.user.UsrFindsNum</p>
             <button @onclick="EditProfile">Edit</button>
         </div>
@@ -69,7 +69,12 @@
                 </div> 
                 <div> 
                     <label for="bio">Bio:</label> 
-                    <InputTextArea id="bio" @bind-Value="userVm.user.UsrBio" /> 
+                    <InputTextArea id="bio" @bind-Value="userVm.user.UsrBio" />
+                    <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => userVm.user.UsrBio)" />
+                    @if (userVm.user.UsrBio?.Length > 250)
+                    {
+                        <p style="color: red;">Bio cannot exceed 250 characters.</p>
+                    }
                 </div> 
                 <div> 
                     <label for="country">Country:</label> 
@@ -82,21 +87,37 @@
                 <div> 
                     <label for="zipcode">Zip Code:</label>
                     <InputNumber id="zipcode" @bind-Value="userVm.user.UsrZipCode" />
+                    @if (!IsValidZipCode(userVm.user.UsrZipCode))
+                    {
+                        <p style="color: red;">Please enter a valid zip code.</p>
+                    }
                 </div> 
                 <div> 
                     <label for="email">Email:</label>
                     <InputText id="email" @bind-Value="userVm.user.UsrEmail" />
                     <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => userVm.user.UsrEmail)" />
+                    @if (string.IsNullOrWhiteSpace(userVm.user.UsrEmail))
+                    {
+                        <p style="color: red;">You must enter an Email address.</p>                    
+                    }
+                    @if (!IsValidEmail(userVm.user.UsrEmail) && !string.IsNullOrWhiteSpace(userVm.user.UsrEmail))
+                    {
+                        <p style="color: red;">Please enter a valid email address (e.g., example@domain.com).</p>
+                    }                   
+                    @if (userEmailExists)
+                    {
+                        <p style="color: red;">This email is already taken. Please choose a different one.</p>                       
+                    }
                 </div>
                 <div>
                     <button type="submit">Save</button> 
                     <button type="button" @onclick="CancelEdit">Cancel</button>
                 </div>
             
-                @if (errorMessage != null)
+                @* @if (errorMessage != null)
                 {
                     <p style="color: red;">@errorMessage</p>
-                }
+                } *@
             </EditForm>
         </div>
     }
@@ -132,7 +153,23 @@
     { 
         ".jpg", ".jpeg", ".png"
     };
-
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var mailAddress = new System.Net.Mail.MailAddress(email);
+            return mailAddress.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    private bool IsValidZipCode(int? zipCode)
+    {
+        if (zipCode == null) return false;
+        return zipCode >= 10000 && zipCode <= 99999; // Example for a 5-digit US zip code
+    }
     protected override async Task OnInitializedAsync()
     {
         userVm = userStateService.CurrentUser;
@@ -169,16 +206,18 @@
         try 
         { 
             errorMessage = null;
-            userEmailExists = await userService.EmailExists(userVm.user.UsrEmail);
+            userEmailExists = await userService.EmailExists(userVm.user.UsrEmail, userVm.user);
 
-            if (userVm.user.UsrEmail == null)
+            if (string.IsNullOrWhiteSpace(userVm.user.UsrEmail))
             {
-                errorMessage = "You must enter an Email address.";
+                return;
+            }
+            if (!IsValidEmail(userVm.user.UsrEmail))
+            {
                 return;
             }
             if (userEmailExists)
             {
-                errorMessage = "Email already exists.";
                 return;
             }
 
