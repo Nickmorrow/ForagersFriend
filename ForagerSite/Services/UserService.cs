@@ -3,6 +3,7 @@ using ForagerSite.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.IdentityModel.Tokens;
+using System;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace ForagerSite.Services
@@ -100,12 +101,18 @@ namespace ForagerSite.Services
                 throw new Exception("User not found"); 
             }
         }
+        public async Task<string> GetUserProfilePic(User user)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+            var image = context.UserImages.Where(ui => ui.UsiUsrId == user.UsrId && ui.UsiImageData.Contains("UserProfileImages") &&  ui.UsiUsfId == null).FirstOrDefault();
+            return image.UsiImageData;
+        }
         public async Task UploadProfilePicUrl(User user, string fileUrl)
         {
             using var context = _dbContextFactory.CreateDbContext();
             var existingUrls = context.UserImages
                 .Where(ui => ui.UsiUsrId == user.UsrId 
-                    && ui.UsiUsfId == Guid.Empty 
+                    && ui.UsiUsfId == null 
                     && ui.UsiImageData.Contains("UserProfileImages"))
                 .ToList();
             if (existingUrls.Any())

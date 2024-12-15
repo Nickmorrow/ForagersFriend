@@ -13,7 +13,7 @@
     @if (!editProfilePic)
     {
         <div>
-            <img src="@GetProfileImageUrl()" alt="Profile Picture" style="max-width: 400px" /> 
+            <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px" />
             <p><a @onclick="EditProfilePic">Edit profile picture</a></p>
         </div>
     } 
@@ -125,6 +125,8 @@
 
     private IBrowserFile? uploadedFile;
 
+    private string profileImageUrl;
+
     private static readonly List<string> allowedExtensions = new() 
     { 
         ".jpg", ".jpeg", ".png"
@@ -135,12 +137,14 @@
         userVm = userStateService.CurrentUser;
         edit = false;
         editProfilePic = false;
+        profileImageUrl = await GetProfileImageUrl();
     }
-    private string GetProfileImageUrl() 
-    { 
-        return !string.IsNullOrEmpty(userVm.user?.UserImage?.UsiImageData)
-        ? userVm.user.UserImage.UsiImageData 
-        : PlaceholderImageUrl; 
+    private async Task<string> GetProfileImageUrl()
+    {
+        string profilePicUrl = await userService.GetUserProfilePic(userVm.user);
+        return !string.IsNullOrEmpty(profilePicUrl)
+            ? profilePicUrl
+            : PlaceholderImageUrl;
     }
     private void EditProfilePic()
     {
@@ -262,6 +266,7 @@
             await userService.UploadProfilePicUrl(userVm.user, fileUrl);
 
             editProfilePic = false;
+            profileImageUrl = await GetProfileImageUrl();
         }
         catch (Exception ex)
         {
