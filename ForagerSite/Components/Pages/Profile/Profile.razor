@@ -12,11 +12,13 @@
 
 <div id="profile-container">
     <div id="profile-pic-container">
-        <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px" />
+        <div class="circle-container">
+            <img src="@profileImageUrl" alt="Profile Picture"  />
+        </div>      
         @if (!editProfilePic)
         {
-            <div>          
-                <p><a @onclick="EditProfilePic">Edit profile picture</a></p>
+            <div>
+                <p style="cursor: pointer;"><a @onclick="EditProfilePic">Edit profile picture</a></p>
             </div>
         } 
         else
@@ -38,9 +40,9 @@
                     </ul>
                 }
                 <div>
-                    <p><a @onclick="SaveProfilePic">Save Changes</a></p>
-                    <p><a @onclick="DeleteProfilePic">Delete</a></p>
-                    <p><a @onclick="CancelProfilePic">Cancel</a></p>
+                    <p style ="cursor: pointer;"><a @onclick="SaveProfilePic">Save Changes</a></p>
+                    <p style="cursor: pointer;"><a @onclick="DeleteProfilePic">Delete</a></p>
+                    <p style="cursor: pointer;"><a @onclick="CancelProfilePic">Cancel</a></p>
                 </div>
             </div>
         }
@@ -128,22 +130,50 @@
     <div>
         <h3 @onclick="UserFindsExpanded">Finds (@findsCount)</h3>        
     </div>
-    <div>
-        @if (userFindsExpanded)
-        {
-            <ul>
+    <table>
+        <tbody>
+            @if (userFindsExpanded)
+            {               
                 @foreach (UserFind find in userFindsViewModel.userFinds)
                 {
-                    <li>
-                        <div>
-                            <p><strong>@find.UsfName</strong></p>
-                            <img src="@find.UserImages.FirstOrDefault().UsiImageData" style="max-width: 100px" />
-                        </div>                                    
-                    </li>
-                }
-            </ul>
-        }       
-    </div>
+                    <tr style ="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
+                        <td>
+                            <div>
+                                <p><strong>@find.UsfName</strong></p>
+                                <div>
+                                    <img src="@find.UserImages.FirstOrDefault().UsiImageData" />
+                                </div>                                                            
+                                
+                                @if (IsRowExpanded(find))
+                                {
+                                    <p><strong>Species Name: </strong><span>@find.UsfSpeciesName</span></p>
+                                    <p><strong>Species Type: </strong><span>@find.UsfSpeciesType</span></p>
+                                    <p><strong>Species Category: </strong><span>@find.UsfUseCategory</span></p>
+                                    <p><strong>Distinguishing Features: </strong><span>@find.UsfFeatures</span></p>
+                                    <p><strong>Dangerous Lookalikes: </strong><span>@find.UsfLookAlikes</span></p>                                   
+                                    <p><strong>Harvest Method: </strong><span>@find.UsfHarvestMethod</span></p>
+                                    <p><strong>Tastes like: </strong><span>@find.UsfTastesLike</span></p>
+                                    <p><strong>Notes: </strong><span>@find.UsfDescription</span></p>
+                                    <p><a></a>View on map</p>
+                                    <div>
+                                        <p><span>{Thumbs up}</span></p>
+                                        <p><span>{Thumbs down}</span></p>
+                                    </div> 
+                                    <div>
+                                        <p><span>Comments</span></p>
+                                        <table>
+                                            <tbody>
+                                            </tbody>
+                                        </table>
+                                    </div>                                    
+                                }
+                            </div>
+                        </td>                                    
+                    </tr>                   
+                }               
+            }       
+        </tbody>
+    </table>
 </div>
 
 @code {
@@ -182,6 +212,30 @@
     { 
         ".jpg", ".jpeg", ".png"
     };
+
+    private Dictionary<UserFind, bool> expandedRows = new Dictionary<UserFind, bool>();
+
+    private void ToggleRowExpansion(UserFind item)
+    {
+        if (expandedRows.ContainsKey(item))
+        {
+            expandedRows[item] = !expandedRows[item];
+        }
+        else
+        {
+            expandedRows[item] = true;
+        }
+    }
+
+    private bool IsRowExpanded(UserFind item)
+    {
+        return expandedRows.ContainsKey(item) && expandedRows[item];
+    }
+
+    private string GetRowClass(UserFind item)
+    {
+        return IsRowExpanded(item) ? "expanded" : "";
+    }
     private bool IsValidEmail(string email)
     {
         try
