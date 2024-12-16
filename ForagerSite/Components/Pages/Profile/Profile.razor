@@ -4,61 +4,63 @@
 @rendermode InteractiveServer
 @inject UserService userService
 @inject UserStateService userStateService
+@inject UserFindService userFindService
 @inject IConfiguration config
 
 <h3>Profile</h3>
 
 
-<div>
-    <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px" />
-    @if (!editProfilePic)
-    {
-        <div>          
-            <p><a @onclick="EditProfilePic">Edit profile picture</a></p>
-        </div>
-    } 
-    else
-    {
-        <div>
-            <label for="profilePicture">Profile Picture:</label>
-            <InputFile type="file" id="profilePicture" OnChange="@(async e => await HandleFileChange(e))" />
-            @if (!string.IsNullOrEmpty(previewUrl))
-            {
-                <img src="@previewUrl" alt="Preview" style="max-width: 200px; margin-top: 10px;" />
-            }
-            @if (errors.Any())
-            {
-                <ul>
-                    @foreach (var error in errors)
-                    {
-                        <li>@error</li>
-                    }
-                </ul>
-            }
-            <div>
-                <p><a @onclick="SaveProfilePic">Save Changes</a></p>
-                <p><a @onclick="DeleteProfilePic">Delete</a></p>
-                <p><a @onclick="CancelProfilePic">Cancel</a></p>
+<div id="profile-container">
+    <div id="profile-pic-container">
+        <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px" />
+        @if (!editProfilePic)
+        {
+            <div>          
+                <p><a @onclick="EditProfilePic">Edit profile picture</a></p>
             </div>
-        </div>
-    }
+        } 
+        else
+        {
+            <div>
+                <label for="profilePicture">Profile Picture:</label>
+                <InputFile type="file" id="profilePicture" OnChange="@(async e => await HandleFileChange(e))" />
+                @if (!string.IsNullOrEmpty(previewUrl))
+                {
+                    <img src="@previewUrl" alt="Preview" style="max-width: 200px; margin-top: 10px;" />
+                }
+                @if (errors.Any())
+                {
+                    <ul>
+                        @foreach (var error in errors)
+                        {
+                            <li><p style="color: red;">@error</p></li>
+                        }
+                    </ul>
+                }
+                <div>
+                    <p><a @onclick="SaveProfilePic">Save Changes</a></p>
+                    <p><a @onclick="DeleteProfilePic">Delete</a></p>
+                    <p><a @onclick="CancelProfilePic">Cancel</a></p>
+                </div>
+            </div>
+        }
+    </div>
     @if (!edit)
     {
         <div id="profile-details-container">
             <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
             <p><strong>Name:</strong> @userVm.user.UsrName</p>
-            <p><strong>Experience Score:</strong> @userVm.user.UsrExpScore</p>           
+            <p><strong>Rank:</strong> @userVm.user.UsrExpScore</p>           
             <p><strong>Joined:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
             <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
             <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
-            <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>           
-            <p><strong>Finds:</strong> @userVm.user.UsrFindsNum</p>
+            <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>
             <button @onclick="EditProfile">Edit</button>
         </div>
     }
     else
     {
-        <div>
+        <div id="edit-profile-container">
              <EditForm Model="userVm.user" OnValidSubmit="SaveChanges">
                 <DataAnnotationsValidator />
                 <ValidationSummary />
@@ -122,10 +124,33 @@
         </div>
     }
 </div>
+<div id="finds-container">
+    <div>
+        <h3 @onclick="UserFindsExpanded">Finds (@findsCount)</h3>        
+    </div>
+    <div>
+        @if (userFindsExpanded)
+        {
+            <ul>
+                @foreach (UserFind find in userFindsViewModel.userFinds)
+                {
+                    <li>
+                        <div>
+                            <p><strong>@find.UsfName</strong></p>
+                            <img src="@find.UserImages.FirstOrDefault().UsiImageData" style="max-width: 100px" />
+                        </div>                                    
+                    </li>
+                }
+            </ul>
+        }       
+    </div>
+</div>
 
 @code {
 
-    UserViewModel userVm { get; set; } = new();
+    private UserViewModel userVm { get; set; } = new();
+
+    private UserFindsViewModel userFindsViewModel { get; set; } = new();
 
     private bool edit;
 
@@ -149,6 +174,10 @@
 
     private string profileImageUrl;
 
+    private bool userFindsExpanded;
+
+    private int findsCount;
+
     private static readonly List<string> allowedExtensions = new() 
     { 
         ".jpg", ".jpeg", ".png"
@@ -168,14 +197,17 @@
     private bool IsValidZipCode(int? zipCode)
     {
         if (zipCode == null) return false;
-        return zipCode >= 10000 && zipCode <= 99999; // Example for a 5-digit US zip code
+        return zipCode >= 10000 && zipCode <= 99999; 
     }
     protected override async Task OnInitializedAsync()
     {
         userVm = userStateService.CurrentUser;
+        userFindsViewModel = await userFindService.GetUserFindsViewModel(userVm.user.UsrId);       
         edit = false;
         editProfilePic = false;
+        userFindsExpanded = false;
         profileImageUrl = await GetProfileImageUrl();
+        findsCount = userFindsViewModel.userFinds.Count();
     }
     private async Task<string> GetProfileImageUrl()
     {
@@ -200,6 +232,10 @@
     private void CancelEdit() 
     { 
         edit = false; 
+    }
+    private async Task UserFindsExpanded()
+    {
+        userFindsExpanded = userFindsExpanded ? false : true;
     }
     private async Task SaveChanges() 
     { 
@@ -345,83 +381,4 @@
         }
     }
 
-    // private async Task SaveProfilePic(InputFileChangeEventArgs e)
-    // {
-    //     editProfilePic = false;
-    //     await UploadProfilePic(e);
-    // }
-    // private async Task HandleFileChange(InputFileChangeEventArgs e) 
-    // { 
-    //     var file = e.File; 
-    //     using (var stream = file.OpenReadStream(maxFileSize)) 
-    //     { 
-    //         var buffer = new byte[file.Size]; 
-    //         await stream.ReadAsync(buffer, 0, (int)file.Size); 
-    //         previewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}"; 
-    //     }
-    // }
-    // private async Task UploadProfilePic(InputFileChangeEventArgs e)
-    // {
-    //     errors.Clear();
-
-    //     var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-    //     var uploadedFileUrls = new List<string>();
-    //     var file = e.File;
-
-    //     if (file.Size > maxFileSize)
-    //     {
-    //         errors.Add($"File size exceeds the maximum allowed limit of 100MB.");
-    //         return;
-    //     }
-    //     if (e.FileCount > maxAllowedFiles)
-    //     {
-    //         errors.Add($"Error: Attempting to upload {e.FileCount} images, but only {maxAllowedFiles} image is allowed");
-    //         return;
-    //     }
-    //     var fileExtension = Path.GetExtension(file.Name).ToLowerInvariant();
-    //     if (!allowedExtensions.Contains(fileExtension))
-    //     {
-    //         errors.Add("Only image files (JPG and PNG) are allowed.");
-    //         return;
-    //     }      
-    //     try
-    //     {
-    //         string newFileName = Path.ChangeExtension(
-    //         Path.GetRandomFileName(),
-    //         fileExtension);
-
-    //         string path = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName, newFileName);
-
-    //         Directory.CreateDirectory(Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName));
-
-    //         await using FileStream fs = new(path, FileMode.Create);
-    //         await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
-
-    //         string fileUrl = $"/UserProfileImages/{userName}/{newFileName}";
-    //         uploadedFileUrls.Add(fileUrl);
-
-    //         if (File.Exists(path))
-    //         {
-    //             var files = Directory.GetFiles(path); foreach (var filePath in files)
-    //             {
-    //                 if (filePath != path) 
-    //                 { 
-    //                     File.Delete(filePath);
-    //                 } 
-    //             }
-    //             await userService.UploadProfilePicUrl(userVm.user,fileUrl);
-    //         }            
-    //         else
-    //         {
-    //             errors.Add("Error: File was not found after upload.");
-    //             throw new Exception("File upload verification failed.");
-    //         }          
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         errors.Add($"File: {file.Name} Error: {ex.Message}"); // add logic to encode filename for security
-    //         throw;
-    //     }
-        
-    // }
 }

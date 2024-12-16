@@ -18,7 +18,65 @@ namespace ForagerSite.Services
             _dbContextFactory = dbContextFactory;
             _config = config;
         }
+        public async Task<UserFindsViewModel> GetUserFindsViewModel(Guid userId)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
 
+            var userWithFinds = await context.Users
+                .Include(u => u.UserSecurity)
+                .Include(u => u.UserFinds)
+                    .ThenInclude(uf => uf.UserFindLocation)
+                .Include(u => u.UserFinds)
+                    .ThenInclude(uf => uf.UserImages)
+                .Include(u => u.UserFinds)
+                    .ThenInclude(uf => uf.UserFindsCommentXrefs)
+                        .ThenInclude(xref => xref.UserFindsComment)
+                .Include(u => u.UserFinds)
+                    .ThenInclude(uf => uf.UserFindsCommentXrefs)
+                        .ThenInclude(xref => xref.User)
+                            .ThenInclude(commentUser => commentUser.UserSecurity)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.UsrId == userId);
+
+            if (userWithFinds == null)
+            {
+                return new UserFindsViewModel();
+            }
+
+            var userViewModel = new UserFindsViewModel
+            {
+                user = userWithFinds,
+                userSecurity = userWithFinds.UserSecurity,
+                userFinds = userWithFinds.UserFinds.ToList(),
+                userFindLocations = userWithFinds.UserFinds
+                                        .Select(uf => uf.UserFindLocation)
+                                        .Where(ufl => ufl != null)
+                                        .ToList(),
+                userImages = userWithFinds.UserFinds
+                                 .SelectMany(uf => uf.UserImages)
+                                 .ToList(),
+                userFindsCommentXrefs = userWithFinds.UserFinds
+                                            .SelectMany(uf => uf.UserFindsCommentXrefs)
+                                            .ToList(),
+                userFindsComments = userWithFinds.UserFinds
+                                        .SelectMany(uf => uf.UserFindsCommentXrefs)
+                                        .Select(xref => xref.UserFindsComment)
+                                        .Where(comment => comment != null)
+                                        .ToList(),
+                CommentUsers = userWithFinds.UserFinds
+                                   .SelectMany(uf => uf.UserFindsCommentXrefs)
+                                   .Select(xref => xref.User)
+                                   .Where(commentUser => commentUser != null)
+                                   .ToList(),
+                CommentUserSecurities = userWithFinds.UserFinds
+                                            .SelectMany(uf => uf.UserFindsCommentXrefs)
+                                            .Select(xref => xref.User.UserSecurity)
+                                            .Where(us => us != null)
+                                            .ToList()
+            };
+
+            return userViewModel;
+        }
         public async Task<List<UserFindsViewModel>> GetUserFindsViewModels(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -134,7 +192,7 @@ namespace ForagerSite.Services
             return userViewModelsList;
         }
 
-        public async Task<List<UserFindLocation>> GetUserFindsAndLocationsAsync(Guid userId)
+        public async Task<List<UserFindLocation>> GetUserFindLocations(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
             return await context.UserFindLocations
