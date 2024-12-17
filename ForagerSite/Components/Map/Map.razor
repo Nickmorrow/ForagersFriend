@@ -10,16 +10,56 @@
 @inject UserFindService userFindService
 @inject IConfiguration config
 
-
 <div>
-    <div id="filter-buttons">
-        <button id="get-all-finds" class="btn-primary" @onclick="GetAllFinds"></button>
-        <button id="get-my-finds" class="btn-primary" @onclick="GetMyFinds"></button>
-        <button id="get-friends-finds" class="btn-primary"></button>
+    <div id="search-container" style="display: flex; gap: 20px;">
+        <h4>Search</h4>
+        <div id="filter-buttons" class="mb-3">
+            <button id="get-all-finds" class="btn btn-primary btn-lg mr-2" @onclick="GetAllFinds">All Finds</button>
+            <button id="get-my-finds" class="btn btn-primary btn-lg mr-2" @onclick="GetMyFinds">My Finds</button>
+            <button id="get-friends-finds" class="btn btn-primary btn-lg">Friend's Finds</button>
+        </div>
+        <div class="mb-3">
+            <label for="species-dropdown">Species Type</label>
+            <select id="species-dropdown" class="form-control">
+                <option value="">Select an option</option>
+                <option value="Tree">Tree</option>
+                <option value="Mushroom">Mushroom</option>
+                <option value="Fruit">Fruit</option>
+                <option value="Herb">Herb</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="use-category-dropdown">Use Category</label>
+            <select id="use-category-dropdown" class="form-control">
+                <option value="">Select an option</option>
+                <option value="Medicinal">Medicinal</option>
+                <option value="Gourmet">Gourmet</option>
+                <option value="Crafting">Crafting</option>
+            </select>
+        </div>
+        <div id="search-container">
+            <label for="user-search">User Search</label>
+            <InputText id="user-search" @bind-Value="searchTerm" placeholder="Search..." class="form-control" @oninput="OnSearchInputChanged" />
+            <ul id="results-dropdown" class="dropdown-menu">
+                @foreach (var result in filteredResults)
+                {
+                    <li class="dropdown-item" @onclick="() => SelectResult(result)">@result</li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div id="map-container">
+        <div id="map" style="height: 800px; width: 100%;"></div>
+        <div id="finds-grid">
+            <table>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
-
-<div id="map" style="height: 800px; width: 100%;"></div>
 
 <div id="find-form-container" style="display: none;">
     <form id="UserFindForm">
@@ -147,6 +187,10 @@
         "UserOnly", "AllUsers", "FriendUsers"
     };
 
+    private string searchTerm = string.Empty;
+
+    private List<string> filteredResults = new List<string>();
+
     public string mapFilter = MapFilters[0];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -167,6 +211,26 @@
                 await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername); //
             }
         }
+    }
+
+    private void OnSearchInputChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString().ToLower() ?? string.Empty;
+        FilterResults();
+    }
+
+    private async Task FilterResults()
+    {
+        var userNames = await userService.GetAllUserNames();
+        filteredResults = userNames
+            .Where(u => u.ToLower().Contains(searchTerm))
+            .ToList();
+    }
+
+    private void SelectResult(string result)
+    {
+        searchTerm = result;
+        filteredResults.Clear(); // Clear the dropdown after selecting an item
     }
 
     private async Task GetMyFinds()

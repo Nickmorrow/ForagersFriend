@@ -79,6 +79,13 @@ namespace ForagerSite.Services
             using var context = _dbContextFactory.CreateDbContext();
             return await context.Users.ToListAsync();
         }
+        public async Task<List<string>> GetAllUserNames()
+        {
+            using var context = _dbContextFactory.CreateDbContext();          
+            var userSecurities = await context.UserSecurities.ToListAsync();
+            var userNames = userSecurities.Select(us => us.UssUsername).ToList();
+            return userNames;
+        }
 
         public async Task UpdateUserAsync(User user)
         {

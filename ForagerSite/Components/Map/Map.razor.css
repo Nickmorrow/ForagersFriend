@@ -2,11 +2,4 @@
 body {
 }
 
-.leaflet-popup-content-wrapper, .leaflet-popup-content {
-    overflow: visible !important; /* Allow overflow */
-    position: relative; /* Ensure proper positioning */
-}
 
-.leaflet-popup-tip-container {
-    display: none; /* Optionally hide the popup tip */
-}
