@@ -2,4 +2,51 @@
 body {
 }
 
+#map-container {
+    display: flex;
+    height: 800px;
+}
+
+#map {
+    flex: 2;
+    height: 100%;
+    background-color: #ddd; /* Placeholder for map */
+}
+
+.loading-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #777;
+}
+
+#finds-grid {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+}
+
+    #finds-grid table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    #finds-grid th, #finds-grid td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+        text-align: left;
+    }
+
+    #finds-grid thead tr {
+        background-color: #e2e2e2;
+        position: sticky;
+        top: 0;
+    }
+
+    #finds-grid tbody tr:nth-child(odd) {
+        background-color: #f5f5f5;
+    }
+
 
