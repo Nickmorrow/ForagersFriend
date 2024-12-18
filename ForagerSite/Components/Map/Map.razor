@@ -101,12 +101,41 @@
                 <tbody>
                     @foreach (var find in userFindsViewModels.SelectMany(vm => vm.userFinds))
                     {
-                        <tr>
+                        <tr style="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
                             <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.UsfName</td>
                             <td><img src="@find.UserImages.FirstOrDefault().UsiImageData" style="max-width: 100px;" /></td>
                             <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.UsfSpeciesType</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Dicovered by: @find.User.UserSecurity.UssUsername</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Discovered by: @find.User.UserSecurity.UssUsername</td>
                         </tr>
+                            @if (IsRowExpanded(find))
+                            {
+                                <tr>
+                                    <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">
+                                        <div style="padding-left: 20px;">
+                                            <p><strong>Species Name: </strong><span>@find.UsfSpeciesName</span></p>
+                                            <p><strong>Species Category: </strong><span>@find.UsfUseCategory</span></p>
+                                            <p><strong>Distinguishing Features: </strong><span>@find.UsfFeatures</span></p>
+                                            <p><strong>Dangerous Lookalikes: </strong><span>@find.UsfLookAlikes</span></p>
+                                            <p><strong>Harvest Method: </strong><span>@find.UsfHarvestMethod</span></p>
+                                            <p><strong>Tastes like: </strong><span>@find.UsfTastesLike</span></p>
+                                            <p><strong>Notes: </strong><span>@find.UsfDescription</span></p>
+                                            <p><a href="#" onclick="viewOnMap(@find.UsFId)">View on map</a></p>
+                                            <div>
+                                                <p><span>Thumbs up</span></p>
+                                                <p><span>Thumbs down</span></p>
+                                            </div>
+                                            <div>
+                                                <p><span>Comments</span></p>
+                                                <table>
+                                                    <tbody>
+                                                        <!-- Render comments here -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                     }
                 </tbody>
             </table>
@@ -261,6 +290,8 @@
 
     private bool isAdvancedSearchVisible = false;
 
+    private Dictionary<UserFind, bool> expandedRows = new Dictionary<UserFind, bool>();
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -276,7 +307,7 @@
                     Formatting = Formatting.Indented
                 });
 
-                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername); //
+                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername); 
             }
         }
     }
@@ -389,7 +420,7 @@
         {
             userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
         }
-        if (mapFilter == "AllUsers")
+        else if (mapFilter == "AllUsers")
         {
             userFindsViewModels = await userFindService.GetUserFindsViewModels();
         }
@@ -443,6 +474,35 @@
         findSearchTerm = string.Empty;
 
         filteredUserResults.Clear();
+    }
+
+    private bool userFindsExpanded;
+
+    private void ToggleRowExpansion(UserFind item)
+    {
+        if (expandedRows.ContainsKey(item))
+        {
+            expandedRows[item] = !expandedRows[item];
+        }
+        else
+        {
+            expandedRows[item] = true;
+        }
+    }
+
+    private bool IsRowExpanded(UserFind item)
+    {
+        return expandedRows.ContainsKey(item) && expandedRows[item];
+    }
+
+    private string GetRowClass(UserFind item)
+    {
+        return IsRowExpanded(item) ? "expanded" : "";
+    }
+
+    private void viewOnMap(Guid findId)
+    {
+        // Logic to view the find on the map, possibly focusing the map view on this find's location.
     }
 
     // [JSInvokable]
@@ -502,7 +562,7 @@
         {
             updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
         }
-        if (mapFilter == "AllUsers")
+        else if (mapFilter == "AllUsers")
         {
             updatedViewModels = await userFindService.GetUserFindsViewModels();
         }
@@ -562,7 +622,7 @@
             {
                 updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
             }
-            if (mapFilter == "AllUsers")
+            else if (mapFilter == "AllUsers")
             {
                 updatedViewModels = await userFindService.GetUserFindsViewModels();
             }
@@ -600,7 +660,7 @@
         {
             updatedViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
         }
-        if (mapFilter == "AllUsers")
+        else if (mapFilter == "AllUsers")
         {
             updatedViewModels = await userFindService.GetUserFindsViewModels();
         }
