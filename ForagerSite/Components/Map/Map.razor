@@ -11,14 +11,15 @@
 @inject IConfiguration config
 
 <div>
+    <h4>Search</h4>
     <div id="search-container" style="display: flex; gap: 20px;">
-        <h4>Search</h4>
-        <div id="filter-buttons" class="mb-3">
+        <div id="filter-buttons" class="mb-3" >
             <button id="get-all-finds" class="btn btn-primary btn-lg mr-2" @onclick="GetAllFinds">All Finds</button>
             <button id="get-my-finds" class="btn btn-primary btn-lg mr-2" @onclick="GetMyFinds">My Finds</button>
             <button id="get-friends-finds" class="btn btn-primary btn-lg">Friend's Finds</button>
         </div>
-
+        
+      <div>
         <div>
             <label>
                 <InputCheckbox @bind-Value="isAdvancedSearchVisible" @onchange="OnAdvancedSearchToggled" />
@@ -26,11 +27,11 @@
             </label>
         </div>
         @if (isAdvancedSearchVisible)
-        {
-            <div id="advanced-search-container">           
+        {            
+            <div id="advanced-search-container" style="display: flex; gap: 20px;">
                 <div class="mb-3">
                     <label for="species-dropdown">Species Type</label>
-                    <select id="species-dropdown" class="form-control">
+                    <select id="species-dropdown" class="form-control" @bind="selectedSpeciesType">
                         <option value="">Select an option</option>
                         <option value="Tree">Tree</option>
                         <option value="Mushroom">Mushroom</option>
@@ -40,7 +41,7 @@
                 </div>
                 <div class="mb-3">
                     <label for="use-category-dropdown">Use Category</label>
-                    <select id="use-category-dropdown" class="form-control">
+                    <select id="use-category-dropdown" class="form-control" @bind="selectedUseCategory">
                         <option value="">Select an option</option>
                         <option value="Medicinal">Medicinal</option>
                         <option value="Gourmet">Gourmet</option>
@@ -75,9 +76,10 @@
                         class="form-control"
                         @oninput="FindSearchInputChanged" />
                 </div>
-            </div>
-            <button id="advanced-search-button" class="btn btn-primary mt-3" @onclick="GetFindsBySearch">Search</button>
+                <button id="advanced-search-button" class="btn btn-primary mt-3" @onclick="GetFindsBySearch">Search</button>
+            </div>           
         }
+        </div>
     </div>
 
     <div id="map-container" style="display: flex; height: 800px;">
@@ -91,6 +93,7 @@
                 <thead>
                     <tr style="background-color: #e2e2e2; position: sticky; top: 0;">
                         <th style="padding: 10px; border-bottom: 1px solid #ddd;">Find Name</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #ddd;"></th>
                         <th style="padding: 10px; border-bottom: 1px solid #ddd;">Species</th>
                         <th style="padding: 10px; border-bottom: 1px solid #ddd;">User</th>
                     </tr>
@@ -382,20 +385,56 @@
             Formatting = Formatting.Indented
         };
 
-        var filteredResults = userFindsViewModels
-        .Where(vm =>
-            (string.IsNullOrEmpty(selectedSpeciesType) ||
-             vm.userFinds.Any(f => f.UsfSpeciesType.Equals(selectedSpeciesType, StringComparison.OrdinalIgnoreCase)))
-            && (string.IsNullOrEmpty(selectedUseCategory) ||
-                vm.userFinds.Any(f => f.UsfUseCategory.Equals(selectedUseCategory, StringComparison.OrdinalIgnoreCase)))
-            && (string.IsNullOrEmpty(userSearchTerm) ||
-                vm.userSecurity.UssUsername.Contains(userSearchTerm, StringComparison.OrdinalIgnoreCase))
-            && (string.IsNullOrEmpty(findSearchTerm) ||
-                vm.userFinds.Any(f => f.UsfName.Contains(findSearchTerm, StringComparison.OrdinalIgnoreCase)))
-        )
-        .ToList();
+        if (mapFilter == "UserOnly")
+        {
+            userFindsViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+        }
+        if (mapFilter == "AllUsers")
+        {
+            userFindsViewModels = await userFindService.GetUserFindsViewModels();
+        }
 
-        var json = JsonConvert.SerializeObject(filteredResults, settings);
+        if (!string.IsNullOrEmpty(userSearchTerm))
+        {
+            userFindsViewModels = userFindsViewModels
+            .Where(f => f.userSecurity.UssUsername
+                .Contains(userSearchTerm)).ToList();
+        }
+        if (!string.IsNullOrEmpty(selectedSpeciesType) 
+        || !string.IsNullOrEmpty(selectedUseCategory)
+        || !string.IsNullOrEmpty(findSearchTerm))
+        {
+            foreach (var vm in userFindsViewModels)
+            {
+                vm.userFinds = vm.userFinds
+                .Where(f =>
+                    (string.IsNullOrEmpty(selectedSpeciesType) ||
+                     f.UsfSpeciesType.Equals(selectedSpeciesType, StringComparison.OrdinalIgnoreCase))
+                    && (string.IsNullOrEmpty(selectedUseCategory) ||
+                        f.UsfUseCategory.Equals(selectedUseCategory, StringComparison.OrdinalIgnoreCase))
+                    && (string.IsNullOrEmpty(findSearchTerm) ||
+                        f.UsfName.Contains(findSearchTerm, StringComparison.OrdinalIgnoreCase))
+                )
+                .ToList();
+
+                var validFindIds = vm.userFinds.Select(f => f.UsFId).ToList();
+                var filteredLocations = new List<UserFindLocation>();
+
+                foreach (Guid id in validFindIds)
+                {
+                    var matchingLocation = vm.userFindLocations
+                        .FirstOrDefault(loc => loc.UslUsfId == id);
+
+                    if (matchingLocation != null)
+                    {
+                        filteredLocations.Add(matchingLocation);
+                    }
+                }
+                vm.userFindLocations = filteredLocations;
+            }
+        }
+        
+        var json = JsonConvert.SerializeObject(userFindsViewModels, settings);
         await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
 
         selectedSpeciesType = string.Empty;
@@ -406,17 +445,17 @@
         filteredUserResults.Clear();
     }
 
-    [JSInvokable]
-    public static async Task<UserFind> GetFindById(string findId)
-    {
-        if (string.IsNullOrEmpty(findId) || !Guid.TryParse(findId, out var guidId))
-        {
-            throw new ArgumentException($"Invalid GUID format, Received findId: {findId}");
-        }
+    // [JSInvokable]
+    // public static async Task<UserFind> GetFindById(string findId)
+    // {
+    //     if (string.IsNullOrEmpty(findId) || !Guid.TryParse(findId, out var guidId))
+    //     {
+    //         throw new ArgumentException($"Invalid GUID format, Received findId: {findId}");
+    //     }
 
-        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-        return await userFindService.GetFindById(guidId);
-    }
+    //     var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+    //     return await userFindService.GetFindById(guidId);
+    // }
 
     [JSInvokable]
     public static async Task<string> CreateFind(
