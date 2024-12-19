@@ -1,5 +1,5 @@
-﻿using ForagerSite.Data;
-using ForagerSite.Models;
+﻿using DataAccess.Data;
+using DataAccess.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.IdentityModel.Tokens;

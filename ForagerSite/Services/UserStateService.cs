@@ -1,4 +1,4 @@
-﻿using ForagerSite.Models;
+﻿using DataAccess.Models;
 
 namespace ForagerSite.Services
 {

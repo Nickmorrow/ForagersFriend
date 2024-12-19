@@ -1,6 +1,6 @@
 ﻿using Azure.Core;
-using ForagerSite.Data;
-using ForagerSite.Models;
+using DataAccess.Data;
+using DataAccess.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 

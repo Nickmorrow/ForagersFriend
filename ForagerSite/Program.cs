@@ -1,6 +1,6 @@
 using ForagerSite.Services;
 using ForagerSite.Components;
-using ForagerSite.Data;
+using DataAccess.Data;
 using ForagerSite.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
