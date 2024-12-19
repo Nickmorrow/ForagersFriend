@@ -513,3 +513,9 @@ window.deleteFind = function (findId, currentUserId, mapFilter, userName) {
     }
 };
 
+window.centerMapOnFind = function (lat, lng) {
+    if (window.map) {
+        window.map.setView([lat, lng], 13);
+    }
+};
+

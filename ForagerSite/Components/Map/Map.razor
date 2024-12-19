@@ -119,7 +119,7 @@
                                             <p><strong>Harvest Method: </strong><span>@find.UsfHarvestMethod</span></p>
                                             <p><strong>Tastes like: </strong><span>@find.UsfTastesLike</span></p>
                                             <p><strong>Notes: </strong><span>@find.UsfDescription</span></p>
-                                            <p><a href="#" onclick="viewOnMap(@find.UsFId)">View on map</a></p>
+                                            <p><a href="#" @onclick="() => ViewOnMap(find.User.UsrId, find.UsFId)">View on map</a></p>
                                             <div>
                                                 <p><span>Thumbs up</span></p>
                                                 <p><span>Thumbs down</span></p>
@@ -464,7 +464,7 @@
                 vm.userFindLocations = filteredLocations;
             }
         }
-        
+
         var json = JsonConvert.SerializeObject(userFindsViewModels, settings);
         await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
 
@@ -500,22 +500,23 @@
         return IsRowExpanded(item) ? "expanded" : "";
     }
 
-    private void viewOnMap(Guid findId)
+    private async Task ViewOnMap(Guid userId, Guid findId)
     {
-        // Logic to view the find on the map, possibly focusing the map view on this find's location.
+        var ufvm = userFindsViewModels
+            .FirstOrDefault(u => u.user.UsrId == userId);
+
+        var uf = ufvm.userFinds
+            .FirstOrDefault(f => f.UsFId == findId);
+
+        var location = ufvm.userFindLocations
+            .FirstOrDefault(l => l.UslUsfId == uf.UsFId);
+
+        double latitude = location.UslLatitude;
+        double longitude = location.UslLongitude;
+
+        await JSRuntime.InvokeVoidAsync("centerMapOnFind", latitude, longitude);
     }
 
-    // [JSInvokable]
-    // public static async Task<UserFind> GetFindById(string findId)
-    // {
-    //     if (string.IsNullOrEmpty(findId) || !Guid.TryParse(findId, out var guidId))
-    //     {
-    //         throw new ArgumentException($"Invalid GUID format, Received findId: {findId}");
-    //     }
-
-    //     var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-    //     return await userFindService.GetFindById(guidId);
-    // }
 
     [JSInvokable]
     public static async Task<string> CreateFind(
