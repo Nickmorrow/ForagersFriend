@@ -112,6 +112,7 @@
                                 <tr>
                                     <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">
                                         <div style="padding-left: 20px;">
+                                            <p><strong>Discovered: </strong><span>@find.UsfFindDate.ToString("MMMM dd, yyyy")</span></p>
                                             <p><strong>Species Name: </strong><span>@find.UsfSpeciesName</span></p>
                                             <p><strong>Species Category: </strong><span>@find.UsfUseCategory</span></p>
                                             <p><strong>Distinguishing Features: </strong><span>@find.UsfFeatures</span></p>
@@ -253,7 +254,7 @@
     <div id="photo-gallery">
         {Images}
     </div>
-    <button type="button">Details</button>
+    @* <p><strong>Discovered:</strong> {Date}</p> *@
     <p><strong>Species Type:</strong> {UsfSpeciesType}</p>
     <p><strong>Use Category:</strong> {UsfUseCategory}</p>
     <p><strong>Distinguishing Features:</strong> {UsfFeatures}</p>
@@ -264,6 +265,8 @@
     <button type="button" class="edit-button">Edit</button>
     <button type="button" class="delete-button">Delete</button>
 </div>
+
+<div></div>
 
 @code {
 
