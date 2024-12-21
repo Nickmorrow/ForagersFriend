@@ -1,4 +1,6 @@
-﻿namespace DataAccess.Models
+﻿using Newtonsoft.Json;
+
+namespace DataAccess.Models
 {
     public class UserFindsViewModel
     {
@@ -11,6 +13,6 @@
         public List<UserFindsComment> userFindsComments { get; set; }  
         public List<User> CommentUsers { get; set; }
         public List<UserSecurity> CommentUserSecurities { get; set; }
-
+        
     }
 }

@@ -212,6 +212,8 @@ namespace ForagerSite.Services
                 userFind.UserImages = await context.UserImages
                     .Where(ui => ui.UsiUsfId == findId)
                     .ToListAsync();
+                userFind.UserFindLocation = await context.UserFindLocations
+                    .Where(l => l.UslUsfId == findId).FirstOrDefaultAsync();
             }
             return userFind;
             //return await context.UserFinds

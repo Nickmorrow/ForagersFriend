@@ -8,7 +8,6 @@ namespace DataAccess.Data
         public DbSet<User> Users { get; set; }
         public DbSet<UserSecurity> UserSecurities { get; set; }
         public DbSet<UserMessage> UserMessages { get; set; }
-        public DbSet<UserMessageXref> UserMessageXrefs { get; set; }
         public DbSet<UserFind> UserFinds { get; set; }
         public DbSet<UserFindLocation> UserFindLocations { get; set; }
         public DbSet<UserImage> UserImages { get; set; }
@@ -30,7 +29,6 @@ namespace DataAccess.Data
             modelBuilder.Entity<User>().ToTable("Users");
             modelBuilder.Entity<UserSecurity>().ToTable("UserSecurity");
             modelBuilder.Entity<UserMessage>().ToTable("UserMessages");
-            modelBuilder.Entity<UserMessageXref>().ToTable("UserMessagesXref");
             modelBuilder.Entity<UserFind>().ToTable("userFinds");
             modelBuilder.Entity<UserFindLocation>().ToTable("UserFindLocation");
             modelBuilder.Entity<UserImage>().ToTable("UserImages");
