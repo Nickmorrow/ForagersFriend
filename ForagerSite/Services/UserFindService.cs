@@ -78,6 +78,17 @@ namespace ForagerSite.Services
                                             .ToList()
             };
 
+            foreach (var find in userViewModel.userFinds)
+            {
+                string oldPw = find.User.UserSecurity.UssPassword;
+                find.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
+            }
+            foreach (var xref in userViewModel.userFindsCommentXrefs)
+            {
+                string oldPw = xref.User.UserSecurity.UssPassword;
+                xref.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
+            }
+
             return userViewModel;
         }
         public async Task<List<UserFindsViewModel>> GetUserFindsViewModels(Guid userId)
@@ -137,6 +148,17 @@ namespace ForagerSite.Services
                                             .ToList()
             };
 
+            foreach (var find in userViewModel.userFinds)
+            {
+                string oldPw = find.User.UserSecurity.UssPassword;
+                find.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
+            }
+            foreach (var xref in userViewModel.userFindsCommentXrefs)
+            {
+                string oldPw = xref.User.UserSecurity.UssPassword;
+                xref.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
+            }
+
             return new List<UserFindsViewModel> { userViewModel };
         }
 
@@ -160,36 +182,52 @@ namespace ForagerSite.Services
                 .AsNoTracking()
                 .ToListAsync();
 
-            var userViewModelsList = usersWithFinds.Select(user => new UserFindsViewModel
+            var userViewModelsList = usersWithFinds.Select(user =>
             {
-                userId = user.UsrId,
-                userName = user.UserSecurity.UssUsername,
-                userFinds = user.UserFinds.ToList(),
-                userFindLocations = user.UserFinds
-                                        .Select(uf => uf.UserFindLocation)
-                                        .Where(ufl => ufl != null)
-                                        .ToList(),
-                userImages = user.UserFinds
-                                 .SelectMany(uf => uf.UserImages)
-                                 .ToList(),
-                userFindsCommentXrefs = user.UserFinds
-                                            .SelectMany(uf => uf.UserFindsCommentXrefs)
+                if (!string.IsNullOrEmpty(user.UserSecurity.UssPassword))
+                {
+                    user.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(user.UserSecurity.UssPassword);
+                }
+
+                foreach (var xref in user.UserFinds.SelectMany(uf => uf.UserFindsCommentXrefs))
+                {
+                    if (!string.IsNullOrEmpty(xref.User?.UserSecurity?.UssPassword))
+                    {
+                        xref.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(xref.User.UserSecurity.UssPassword);
+                    }
+                }
+
+                return new UserFindsViewModel
+                {
+                    userId = user.UsrId,
+                    userName = user.UserSecurity.UssUsername,
+                    userFinds = user.UserFinds.ToList(),
+                    userFindLocations = user.UserFinds
+                                            .Select(uf => uf.UserFindLocation)
+                                            .Where(ufl => ufl != null)
                                             .ToList(),
-                userFindsComments = user.UserFinds
-                                        .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                        .Select(xref => xref.UserFindsComment)
-                                        .Where(comment => comment != null)
-                                        .ToList(),
-                CommentUsers = user.UserFinds
-                                   .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                   .Select(xref => xref.User)
-                                   .Where(commentUser => commentUser != null)
-                                   .ToList(),
-                CommentUserSecurities = user.UserFinds
+                    userImages = user.UserFinds
+                                     .SelectMany(uf => uf.UserImages)
+                                     .ToList(),
+                    userFindsCommentXrefs = user.UserFinds
+                                                .SelectMany(uf => uf.UserFindsCommentXrefs)
+                                                .ToList(),
+                    userFindsComments = user.UserFinds
                                             .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                            .Select(xref => xref.User.UserSecurity)
-                                            .Where(us => us != null)
-                                            .ToList()
+                                            .Select(xref => xref.UserFindsComment)
+                                            .Where(comment => comment != null)
+                                            .ToList(),
+                    CommentUsers = user.UserFinds
+                                       .SelectMany(uf => uf.UserFindsCommentXrefs)
+                                       .Select(xref => xref.User)
+                                       .Where(commentUser => commentUser != null)
+                                       .ToList(),
+                    CommentUserSecurities = user.UserFinds
+                                                .SelectMany(uf => uf.UserFindsCommentXrefs)
+                                                .Select(xref => xref.User.UserSecurity)
+                                                .Where(us => us != null)
+                                                .ToList()
+                };
             }).ToList();
 
             return userViewModelsList;
