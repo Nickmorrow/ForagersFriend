@@ -48,8 +48,8 @@ namespace ForagerSite.Services
 
             var userViewModel = new UserFindsViewModel
             {
-                user = userWithFinds,
-                userSecurity = userWithFinds.UserSecurity,
+                userId = userWithFinds.UsrId,
+                userName = userWithFinds.UserSecurity.UssUsername,
                 userFinds = userWithFinds.UserFinds.ToList(),
                 userFindLocations = userWithFinds.UserFinds
                                         .Select(uf => uf.UserFindLocation)
@@ -107,8 +107,8 @@ namespace ForagerSite.Services
 
             var userViewModel = new UserFindsViewModel
             {
-                user = userWithFinds,
-                userSecurity = userWithFinds.UserSecurity,
+                userId = userWithFinds.UsrId,
+                userName = userWithFinds.UserSecurity.UssUsername,
                 userFinds = userWithFinds.UserFinds.ToList(),
                 userFindLocations = userWithFinds.UserFinds
                                         .Select(uf => uf.UserFindLocation)
@@ -162,8 +162,8 @@ namespace ForagerSite.Services
 
             var userViewModelsList = usersWithFinds.Select(user => new UserFindsViewModel
             {
-                user = user,
-                userSecurity = user.UserSecurity,
+                userId = user.UsrId,
+                userName = user.UserSecurity.UssUsername,
                 userFinds = user.UserFinds.ToList(),
                 userFindLocations = user.UserFinds
                                         .Select(uf => uf.UserFindLocation)
@@ -241,7 +241,7 @@ namespace ForagerSite.Services
         double lng,
         List<string> uploadedFileUrls,
         Guid userId,
-        Guid userSecId)
+        string userName)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -249,8 +249,8 @@ namespace ForagerSite.Services
 
             //mapViewModel.user = user;
             //mapViewModel.userSecurity = userSec;
-            mapViewModel.user = context.Users.Where(u => u.UsrId == userId).FirstOrDefault();
-            mapViewModel.userSecurity = context.UserSecurities.Where(us => us.UssId == userSecId).FirstOrDefault();
+            mapViewModel.userId = userId;
+            mapViewModel.userName = userName;
 
             var userFind = new UserFind
             {
@@ -315,15 +315,15 @@ namespace ForagerSite.Services
             List<string>? uploadedFileUrls,
             List<string>? deletedFileUrls,
             Guid userId,
-            Guid userSecId)
+            string userName)
         {
             using var context = _dbContextFactory.CreateDbContext();
             var mapViewModel = new UserFindsViewModel();
 
             //mapViewModel.user = user;
             //mapViewModel.userSecurity = userSec;
-            mapViewModel.user = context.Users.Where(u => u.UsrId == userId).FirstOrDefault();
-            mapViewModel.userSecurity = context.UserSecurities.Where(us => us.UssId == userSecId).FirstOrDefault();
+            mapViewModel.userId = userId;
+            mapViewModel.userName = userName;
 
             var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
             if (userFind == null)
@@ -393,7 +393,7 @@ namespace ForagerSite.Services
             return mapViewModel;
         }
 
-        public async Task<UserFindsViewModel> DeleteFind(Guid findId, Guid userId, Guid userSecId, string userName)
+        public async Task<UserFindsViewModel> DeleteFind(Guid findId, Guid userId, string userName)
         {
             using var context = _dbContextFactory.CreateDbContext();
             var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
@@ -403,8 +403,8 @@ namespace ForagerSite.Services
             var viewModelCopy = new UserFindsViewModel();
             //viewModelCopy.user = user;
             //viewModelCopy.userSecurity = userSec;
-            viewModelCopy.user = context.Users.Where(u => u.UsrId == userId).FirstOrDefault();
-            viewModelCopy.userSecurity = context.UserSecurities.Where(us => us.UssId == userSecId).FirstOrDefault();
+            viewModelCopy.userId = userId;
+            viewModelCopy.userName = userName;
             viewModelCopy.userFinds.Add(userFind);
             viewModelCopy.userFindLocations.Add(userFindLocation);
             viewModelCopy.userImages.AddRange(images);

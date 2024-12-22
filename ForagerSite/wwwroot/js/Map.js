@@ -170,7 +170,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                         }
                         var popupContent = templateHtml
                             .replace('{UsfName}', find.UsfName || '')
-                            .replace('{UssUsername}', viewModel.userSecurity.UssUsername || '')
+                            .replace('{UssUsername}', viewModel.userName || '')
                             .replace('{UsfSpeciesName}', find.UsfSpeciesName || '')
                             .replace('{Images}', imageHtml)
                             .replace('{UsfSpeciesType}', find.UsfSpeciesType || '')
@@ -181,7 +181,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                             .replace('{UsfTastesLike}', find.UsfTastesLike || '')
                             .replace('{UsfDescription}', find.UsfDescription || '');
 
-                        if (viewModel.user.UsrId === currentUserId) {
+                        if (viewModel.userId === currentUserId) {
                             const serializedViewModel = JSON.stringify(currentViewModel).replace(/"/g, '&quot;');
                             popupContent = popupContent.replace('class="edit-button"', `onclick="updateFind('${findId}', '${currentUserId}', '${mapFilter}', '${userName}', '${serializedViewModel}')"`)
                                 .replace('class="delete-button"', `onclick="deleteFind('${findId}', '${currentUserId}', '${mapFilter}')"`);

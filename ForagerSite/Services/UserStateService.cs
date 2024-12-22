@@ -6,6 +6,7 @@ namespace ForagerSite.Services
     {
         public bool IsAuthenticated { get; set; }
         public UserViewModel CurrentUser { get; set; }
+        //public string userName { get; set; }
 
         public void SetUserState(bool isAuthenticated, UserViewModel currentUser)
         {
