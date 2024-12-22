@@ -31,6 +31,7 @@ namespace ForagerSite
             builder.Services.AddTransient<UserService>();
             builder.Services.AddTransient<UserFindService>();
             builder.Services.AddSingleton<UserStateService>();
+            builder.Services.AddSingleton<VmService>();
 
             //builder.Services.AddTransient<EmailService>();
             //builder.Services.AddTransient<PasswordResetService>();

@@ -1,8 +1,10 @@
 ﻿using Azure.Core;
 using DataAccess.Data;
 using DataAccess.Models;
+using ForagerSite.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 
 namespace ForagerSite.Services
 {
@@ -18,6 +20,7 @@ namespace ForagerSite.Services
             _dbContextFactory = dbContextFactory;
             _config = config;
         }
+        
         public async Task<UserFindsViewModel> GetUserFindsViewModel(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -201,6 +204,7 @@ namespace ForagerSite.Services
                 .ToListAsync();
         }
 
+
         public async Task<UserFind> GetFindById(Guid findId)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -223,8 +227,7 @@ namespace ForagerSite.Services
             //return await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
         }
 
-        public async Task CreateFind(
-        Guid userId,
+        public async Task<UserFindsViewModel> CreateFind(
         string name,
         string speciesName,
         string speciesType,
@@ -236,9 +239,18 @@ namespace ForagerSite.Services
         string description,
         double lat,
         double lng,
-        List<string> uploadedFileUrls)
+        List<string> uploadedFileUrls,
+        Guid userId,
+        Guid userSecId)
         {
             using var context = _dbContextFactory.CreateDbContext();
+
+            var mapViewModel = new UserFindsViewModel();
+
+            //mapViewModel.user = user;
+            //mapViewModel.userSecurity = userSec;
+            mapViewModel.user = context.Users.Where(u => u.UsrId == userId).FirstOrDefault();
+            mapViewModel.userSecurity = context.UserSecurities.Where(us => us.UssId == userSecId).FirstOrDefault();
 
             var userFind = new UserFind
             {
@@ -254,6 +266,7 @@ namespace ForagerSite.Services
                 UsfDescription = description,
                 UsfFindDate = DateTime.Now,
             };
+            mapViewModel.userFinds.Add(userFind);
 
             context.UserFinds.Add(userFind);
             await context.SaveChangesAsync();
@@ -264,6 +277,7 @@ namespace ForagerSite.Services
                 UslLongitude = lng,
                 UslUsfId = userFind.UsFId
             };
+            mapViewModel.userFindLocations.Add(userFindLocation);
 
             context.UserFindLocations.Add(userFindLocation);
             await context.SaveChangesAsync();
@@ -276,14 +290,16 @@ namespace ForagerSite.Services
                     UsiUsfId = userFind.UsFId,
                     UsiImageData = image
                 };
+                mapViewModel.userImages.Add(userImage);
 
                 context.UserImages.Add(userImage);
                 await context.SaveChangesAsync();
             }
-
+            mapViewModel.userFinds[0].UsFId = userFind.UsFId;
+            return mapViewModel;
         }
 
-        public async Task UpdateFind(
+        public async Task<UserFindsViewModel> UpdateFind(
             Guid findId,
             string name,
             string speciesName,
@@ -297,9 +313,17 @@ namespace ForagerSite.Services
             double lat,
             double lng,
             List<string>? uploadedFileUrls,
-            List<string>? deletedFileUrls)
+            List<string>? deletedFileUrls,
+            Guid userId,
+            Guid userSecId)
         {
             using var context = _dbContextFactory.CreateDbContext();
+            var mapViewModel = new UserFindsViewModel();
+
+            //mapViewModel.user = user;
+            //mapViewModel.userSecurity = userSec;
+            mapViewModel.user = context.Users.Where(u => u.UsrId == userId).FirstOrDefault();
+            mapViewModel.userSecurity = context.UserSecurities.Where(us => us.UssId == userSecId).FirstOrDefault();
 
             var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
             if (userFind == null)
@@ -318,6 +342,7 @@ namespace ForagerSite.Services
             userFind.UsfDescription = description;
 
             context.UserFinds.Update(userFind);
+            mapViewModel.userFinds.Add(userFind);
 
             var userFindLocation = await context.UserFindLocations.FirstOrDefaultAsync(ufl => ufl.UslUsfId == findId);
             if (userFindLocation == null)
@@ -329,10 +354,12 @@ namespace ForagerSite.Services
             userFindLocation.UslLongitude = lng;
 
             context.UserFindLocations.Update(userFindLocation);
+            mapViewModel.userFindLocations.Add(userFindLocation);
 
             // Manage image URLs
             var existingImages = await context.UserImages.Where(ui => ui.UsiUsfId == findId).ToListAsync();
             var existingImageUrls = existingImages.Select(ui => ui.UsiImageData).ToList();
+            mapViewModel.userImages.AddRange(existingImages);
 
             // Delete old image URLs from the database
             if (deletedFileUrls != null)
@@ -341,6 +368,7 @@ namespace ForagerSite.Services
                 {
                     var imageToDelete = existingImages.First(ui => ui.UsiImageData == urlToDelete);
                     context.UserImages.Remove(imageToDelete);
+                    mapViewModel.userImages.Remove(imageToDelete);
                 }
             }           
             // Add new image URLs to the database
@@ -353,26 +381,43 @@ namespace ForagerSite.Services
                         UsiUsfId = findId,
                         UsiImageData = urlToAdd
                     });
+                    mapViewModel.userImages.Add(new UserImage
+                    {
+                        UsiUsfId = findId,
+                        UsiImageData = urlToAdd
+                    });
                 }
             }           
             await context.SaveChangesAsync();
+            mapViewModel.userFinds[0].UsFId = findId;
+            return mapViewModel;
         }
 
-        public async Task DeleteFind(Guid findId, string userName)
+        public async Task<UserFindsViewModel> DeleteFind(Guid findId, Guid userId, Guid userSecId, string userName)
         {
             using var context = _dbContextFactory.CreateDbContext();
             var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
             var userFindLocation = await context.UserFindLocations.FirstOrDefaultAsync(ufl => ufl.UslUsfId == userFind.UsFId);
             var images = await context.UserImages.Where(ui => ui.UsiUsfId == findId).ToListAsync();
 
-            foreach (var image in images) 
+            var viewModelCopy = new UserFindsViewModel();
+            //viewModelCopy.user = user;
+            //viewModelCopy.userSecurity = userSec;
+            viewModelCopy.user = context.Users.Where(u => u.UsrId == userId).FirstOrDefault();
+            viewModelCopy.userSecurity = context.UserSecurities.Where(us => us.UssId == userSecId).FirstOrDefault();
+            viewModelCopy.userFinds.Add(userFind);
+            viewModelCopy.userFindLocations.Add(userFindLocation);
+            viewModelCopy.userImages.AddRange(images);
+
+            foreach (var image in images)
             {
                 var fileName = Path.GetFileName(image.UsiImageData);
                 string userDirectory = Path.Combine(_config.GetValue<string>("FileStorage"), userName);
                 string filePath = Path.Combine(userDirectory, fileName);
+
                 try
-                {                    
-                    System.IO.File.Delete(filePath);                    
+                {
+                    System.IO.File.Delete(filePath);
                 }
                 catch (Exception ex)
                 {
@@ -385,7 +430,8 @@ namespace ForagerSite.Services
                 context.UserFindLocations.Remove(userFindLocation);
                 context.UserFinds.Remove(userFind);
                 await context.SaveChangesAsync();
-            }
+            }                        
+            return viewModelCopy;
         }
 
 
