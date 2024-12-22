@@ -89,7 +89,13 @@
         <div id="map" style="flex: 2; height: 100%;"></div>
 
         <div id="finds-grid" style="flex: 1; overflow-y: auto; border: 1px solid #ccc; background-color: #f9f9f9;">
-            @if (vmService.CurrentViewModels != null && vmService.CurrentViewModels.Any())
+        @if (isLoading)
+        {
+            <div class="loading-indicator">
+                <p>Loading...</p>
+            </div>
+        }
+        else if (vmService.CurrentViewModels != null && vmService.CurrentViewModels.Any())
         {
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
@@ -155,8 +161,8 @@
         }
         else
         {
-            <div class="loading-indicator">
-                <p>Loading...</p>
+            <div class="no-data-indicator">
+                <p>No data available.</p>
             </div>
         }
         </div>
@@ -303,6 +309,8 @@
 
     private Dictionary<UserFind, bool> expandedRows = new Dictionary<UserFind, bool>();
 
+    private bool isLoading = true;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -311,16 +319,25 @@
 
             if (user != null)
             {
-                vmService.CurrentViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
-                vmService.MyViewModels = VmUtilities.Copy(vmService.CurrentViewModels);
-
-                var json = JsonConvert.SerializeObject(vmService.CurrentViewModels, new JsonSerializerSettings
+                isLoading = true;
+                try
                 {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                    Formatting = Formatting.Indented
-                });
+                    vmService.CurrentViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+                    vmService.MyViewModels = VmUtilities.Copy(vmService.CurrentViewModels);
 
-                await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername); 
+                    var json = JsonConvert.SerializeObject(vmService.CurrentViewModels, new JsonSerializerSettings
+                        {
+                            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                            Formatting = Formatting.Indented
+                        });
+
+                    await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
+                }
+                finally
+                {
+                    isLoading = false;
+                }
+                StateHasChanged();
             }
         }
     }
@@ -404,27 +421,36 @@
         var user = userStateService.CurrentUser.user;
         mapFilter = MapFilters[1];
 
-        if (!vmService.AllViewModels.Any()) //AllViewModels hasn't been set - make sql call
-        {               
-            try
-            {
-                vmService.AllViewModels = await userFindService.GetUserFindsViewModels();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error fetching ViewModels: {ex.Message}");
-                //AllViewModels = new List<UserFindsViewModel>();
-            }
-        }
-        var settings = new JsonSerializerSettings
+        isLoading = true;
+        try
         {
-            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-            Formatting = Formatting.Indented
-        };
-        vmService.CurrentViewModels = VmUtilities.Copy(vmService.AllViewModels);
+            if (!vmService.AllViewModels.Any()) //AllViewModels hasn't been set - make sql call
+            {
+                try
+                {
+                    vmService.AllViewModels = await userFindService.GetUserFindsViewModels();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error fetching ViewModels: {ex.Message}");
+                    //AllViewModels = new List<UserFindsViewModel>();
+                }
+            }
+            var settings = new JsonSerializerSettings
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    Formatting = Formatting.Indented
+                };
+            vmService.CurrentViewModels = VmUtilities.Copy(vmService.AllViewModels);
 
-        var json = JsonConvert.SerializeObject(vmService.CurrentViewModels, settings);
-        await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
+            var json = JsonConvert.SerializeObject(vmService.CurrentViewModels, settings);
+            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+        StateHasChanged();
     }
 
     private async Task GetFindsBySearch()

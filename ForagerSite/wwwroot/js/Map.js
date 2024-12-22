@@ -3,7 +3,7 @@ window.map = null;
 var markers = {};
 var tempMarker = null;
 var userMarker = null;
-var currentViewModel = null;
+
 
 window.initializeMap = function (json, currentUserId, mapFilter, userName) {
 
@@ -128,7 +128,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
 
     userFindsViewModels.forEach(viewModel => {
 
-        currentViewModel = viewModel;
+        var currentViewModel = viewModel;
 
         viewModel.userFindLocations.forEach(location => {
 
@@ -182,7 +182,8 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                             .replace('{UsfDescription}', find.UsfDescription || '');
 
                         if (viewModel.user.UsrId === currentUserId) {
-                            popupContent = popupContent.replace('class="edit-button"', `onclick="updateFind('${findId}', '${currentUserId}', '${mapFilter}', '${userName}')"`)
+                            const serializedViewModel = JSON.stringify(currentViewModel).replace(/"/g, '&quot;');
+                            popupContent = popupContent.replace('class="edit-button"', `onclick="updateFind('${findId}', '${currentUserId}', '${mapFilter}', '${userName}', '${serializedViewModel}')"`)
                                 .replace('class="delete-button"', `onclick="deleteFind('${findId}', '${currentUserId}', '${mapFilter}')"`);
                         }
                         marker.bindPopup(popupContent);
@@ -263,12 +264,14 @@ window.createFind = function (tempId, lat, lng, currentUserId, mapFilter, userNa
             console.error('Error uploading files:', error);
         });
 };
-window.updateFind = function (findId, currentUserId, mapFilter, userName) {
+window.updateFind = function (findId, currentUserId, mapFilter, userName, serializedViewModel) {
 
     if (!findId) {
         console.error('Invalid findId:', findId);
         return;
     }
+    const currentViewModel = JSON.parse(serializedViewModel);
+    console.log(currentViewModel);
     var find = currentViewModel.userFinds.find(find => find.UsFId === findId);
 
     var markerData = markers[findId];
