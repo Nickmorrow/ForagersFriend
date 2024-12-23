@@ -4,9 +4,7 @@ var markers = {};
 var tempMarker = null;
 var userMarker = null;
 
-
 window.initializeMap = function (json, currentUserId, mapFilter, userName) {
-
     let userFindsViewModels = JSON.parse(json);
 
     if (window.map) {
@@ -17,6 +15,11 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
 
     const defaultLatLng = [51.505, -0.09];
     let latLng = defaultLatLng;
+
+    const northAmericaBounds = [
+        [7.0, -168.0], // Southwest corner (latitude, longitude)
+        [83.0, -30.0]  // Northeast corner (latitude, longitude)
+    ];
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function (position) {
@@ -30,11 +33,19 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
         console.error("Geolocation is not supported by this browser.");
         initMap(defaultLatLng);
     }
+
     function initMap(latLng) {
-        window.map = L.map('map').setView(latLng, 13);
+        window.map = L.map('map', {
+            center: latLng,
+            zoom: 13,
+            maxBounds: northAmericaBounds, // Restrict panning to North America
+            maxBoundsViscosity: 1.0 // Stickiness when reaching bounds
+        });
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            minZoom: 4, // Minimum zoom level to focus on North America
+            maxZoom: 18 // Maximum zoom level
         }).addTo(window.map);
 
         L.marker(latLng)
@@ -45,6 +56,7 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
         updateMarkers(userFindsViewModels, currentUserId, mapFilter, userName);
     }
 }
+
 
 window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, userName) {
     //Create new find
