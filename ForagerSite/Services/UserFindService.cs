@@ -46,6 +46,17 @@ namespace ForagerSite.Services
                 return new UserFindsViewModel();
             }
 
+            //var userFindDtos = userWithFinds.UserFinds.Select(uf => new UserFindDto
+            //{
+            //    UsFId = uf.UsFId,
+            //    UsfName = uf.UsfName,
+            //    UsfSpeciesName = uf.UsfSpeciesName,
+            //    UsfSpeciesType = uf.UsfSpeciesType,
+            //    UsfFindDate = uf.UsfFindDate,
+            //    UsfDescription = uf.UsfDescription
+            //    // Map other necessary fields, excluding User-related fields
+            //}).ToList();
+
             var userViewModel = new UserFindsViewModel
             {
                 userId = userWithFinds.UsrId,
