@@ -197,7 +197,11 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                             const serializedViewModel = JSON.stringify(currentViewModel).replace(/"/g, '&quot;');
                             popupContent = popupContent.replace('class="edit-button"', `onclick="updateFind('${findId}', '${currentUserId}', '${mapFilter}', '${userName}', '${serializedViewModel}')"`)
                                 .replace('class="delete-button"', `onclick="deleteFind('${findId}', '${currentUserId}', '${mapFilter}')"`);
+                        } else {
+                            popupContent = popupContent.replace('class="edit-button"', 'style="display: none;"')
+                                .replace('class="delete-button"', 'style="display: none;"');
                         }
+                    
                         marker.bindPopup(popupContent);
                         markers[findId] = { marker: marker, lat: lat, lng: lng, originalPopupContent: popupContent };
                     } else {
