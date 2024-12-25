@@ -195,11 +195,13 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
 
                         if (viewModel.userId === currentUserId) {
                             const serializedViewModel = JSON.stringify(currentViewModel).replace(/"/g, '&quot;');
-                            popupContent = popupContent.replace('class="edit-button"', `onclick="updateFind('${findId}', '${currentUserId}', '${mapFilter}', '${userName}', '${serializedViewModel}')"`)
-                                .replace('class="delete-button"', `onclick="deleteFind('${findId}', '${currentUserId}', '${mapFilter}')"`);
+                            popupContent = popupContent
+                                .replace('id="details-button"', `onclick="getDetails('${findId}', '${currentUserId}', '${mapFilter}', '${viewModel.userId}', '${viewModel.userName}', '${userName}')"`)
+                                .replace('id="edit-button"', `onclick="updateFind('${findId}', '${currentUserId}', '${mapFilter}', '${userName}', '${serializedViewModel}')"`)
+                                .replace('id="delete-button"', `onclick="deleteFind('${findId}', '${currentUserId}', '${mapFilter}')"`);
                         } else {
-                            popupContent = popupContent.replace('class="edit-button"', 'style="display: none;"')
-                                .replace('class="delete-button"', 'style="display: none;"');
+                            popupContent = popupContent.replace('id="edit-button"', 'style="display: none;"')
+                                .replace('id="delete-button"', 'style="display: none;"');
                         }
                     
                         marker.bindPopup(popupContent);
@@ -514,7 +516,6 @@ window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter,
         console.error('Error uploading files:', error);
     });
 };
-
 window.deleteFind = function (findId, currentUserId, mapFilter, userName) {
     if (confirm("Are you sure you want to delete this discovery?")) {
         if (!findId) {
@@ -531,10 +532,27 @@ window.deleteFind = function (findId, currentUserId, mapFilter, userName) {
         });
     }
 };
-
 window.centerMapOnFind = function (lat, lng) {
     if (window.map) {
         window.map.setView([lat, lng], 13);
     }
 };
+window.getDetails = function (findId, currentUserId, mapFilter, findUserId, findUserName, userName) {
+    
+
+    DotNet.invokeMethodAsync('ForagerSite', 'GetDetails',
+        findId,
+        mapFilter,
+        findUserId,
+        findUserName
+    )
+    .then(userFindsViewModels => {
+        console.log('Find updated successfully');
+        initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
+    })
+    .catch(error => {
+        console.error('Error updating find:', error);
+    });
+
+}
 

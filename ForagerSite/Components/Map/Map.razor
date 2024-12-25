@@ -280,8 +280,9 @@
     <p><strong>Harvest Method:</strong> {UsfHarvestMethod}</p>
     <p><strong>Tastes Like:</strong> {UsfTastesLike}</p>
     <p><strong>Notes:</strong> {UsfDescription}</p>
-    <button type="button" class="edit-button">Edit</button>
-    <button type="button" class="delete-button">Delete</button>
+    <button type="button" id="details-button" class="form-control">View Details</button>
+    <button type="button" id="edit-button" class="form-control">Edit</button>
+    <button type="button" id="delete-button"class="form-control">Delete</button>
 </div>
 
 <div></div>
@@ -561,7 +562,50 @@
         await JSRuntime.InvokeVoidAsync("centerMapOnFind", latitude, longitude);
     }
 
+    [JSInvokable]
+    public static async Task<string> GetDetails(string findId, string mapFilter, string findUserId, string findUserName)   
+    {
+        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
+        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+        var vmService = ServiceLocator.ServiceProvider.GetService<VmService>();
+        var userId = userStateService.CurrentUser.user.UsrId;
+        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
 
+        Guid findGuid;
+        Guid findUserGuid;
+        var selectedVm = new UserFindsViewModel();
+        var selectedVms = new List<UserFindsViewModel>();
+
+        if (Guid.TryParse(findId, out findGuid) && Guid.TryParse(findUserId, out findUserGuid))
+        {
+            var selectedFind = vmService.CurrentViewModels
+            .FirstOrDefault(vm => vm.userId == findUserGuid)
+            .userFinds
+            .FirstOrDefault(f => f.UsFId == findGuid);
+
+            selectedVm.userFinds.Add(selectedFind);
+            selectedVm.userId = findUserGuid;
+            selectedVm.userName = findUserName;
+            selectedVm.userFindLocations = vmService.CurrentViewModels
+                .FirstOrDefault(vm => vm.userId == findUserGuid)
+                .userFindLocations
+                .Where(l => l.UslUsfId == findGuid)
+                .ToList();
+            selectedVm.userImages = vmService.CurrentViewModels
+                .FirstOrDefault(vm => vm.userId == findUserGuid)
+                .userImages
+                .Where(i => i.UsiUsfId == findGuid)
+                .ToList();
+            selectedVms.Add(selectedVm);
+        }
+        vmService.CurrentViewModels = VmUtilities.Copy(selectedVms);
+
+        var settings = new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+            };
+        return JsonConvert.SerializeObject(vmService.CurrentViewModels, settings);
+    }
 
     [JSInvokable]
     public static async Task<string> CreateFind(
