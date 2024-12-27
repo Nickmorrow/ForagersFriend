@@ -3,7 +3,7 @@ window.map = null;
 var markers = {};
 var tempMarker = null;
 var userMarker = null;
-
+var dotNetObjectReference = null;
 window.initializeMap = function (json, currentUserId, mapFilter, userName) {
     let userFindsViewModels = JSON.parse(json);
 
@@ -56,7 +56,9 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
         updateMarkers(userFindsViewModels, currentUserId, mapFilter, userName);
     }
 }
-
+window.setDotNetObjectReference = function (reference) {
+    dotNetObjectReference = reference;
+};
 
 window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, userName) {
     //Create new find
@@ -258,7 +260,7 @@ window.createFind = function (tempId, lat, lng, currentUserId, mapFilter, userNa
         })
         .then(uploadedFileUrls => {
             // Handle the rest of the form submission with uploadedFileUrls and other form data
-            DotNet.invokeMethodAsync('ForagerSite', 'CreateFind',
+            dotNetObjectReference.invokeMethodAsync('CreateFind',
                 formData.get('findName'),
                 formData.get('speciesName'),
                 speciesType,
@@ -484,7 +486,7 @@ window.submitUpdatedFind = function (findId, lat, lng, currentUserId, mapFilter,
             uploadedUrls = uploadResult;
         //if (uploadResult.length > 0) {
             // If file upload is successful, update the find with the URLs
-            DotNet.invokeMethodAsync('ForagerSite', 'UpdateFind',
+            dotNetObjectReference.invokeMethodAsync('UpdateFind',
                 findId,
                 formData.get('findName'),
                 formData.get('speciesName'),
@@ -522,7 +524,7 @@ window.deleteFind = function (findId, currentUserId, mapFilter, userName) {
             console.error('Invalid findId:', findId);
             return;
         }
-        DotNet.invokeMethodAsync('ForagerSite', 'DeleteFind', findId, mapFilter)
+        dotNetObjectReference.invokeMethodAsync('DeleteFind', findId, mapFilter)
         .then(userFindsViewModels => {
             console.log('Find deleted successfully');
             initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
@@ -539,20 +541,22 @@ window.centerMapOnFind = function (lat, lng) {
 };
 window.getDetails = function (findId, currentUserId, mapFilter, findUserId, findUserName, userName) {
     
-
-    DotNet.invokeMethodAsync('ForagerSite', 'GetDetails',
-        findId,
-        mapFilter,
-        findUserId,
-        findUserName
-    )
-    .then(userFindsViewModels => {
-        console.log('Find updated successfully');
-        initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
-    })
-    .catch(error => {
-        console.error('Error updating find:', error);
-    });
-
+    if (dotNetObjectReference) {
+        dotNetObjectReference.invokeMethodAsync('GetDetails',
+            findId,
+            mapFilter,
+            findUserId,
+            findUserName
+        )
+            .then(userFindsViewModels => {
+                console.log('Find updated successfully');
+                initializeMap(userFindsViewModels, currentUserId, mapFilter, userName);
+            })
+            .catch(error => {
+                console.error('Error updating find:', error);
+            });
+    } else {
+        console.error('DotNetObjectReference is not set.');
+    }
 }
 
