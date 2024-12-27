@@ -3,12 +3,14 @@ using DataAccess.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.JSInterop;
 using System;
 using static System.Net.Mime.MediaTypeNames;
 
+
 namespace ForagerSite.Services
 {
-    public class UserService 
+    public class UserService
     {
         private IDbContextFactory<ForagerDbContext> _dbContextFactory;
 

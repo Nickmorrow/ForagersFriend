@@ -6,11 +6,13 @@
 @using Utilities
 @rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
+@inject IConfiguration config
 @inject UserStateService userStateService
 @inject UserService userService
 @inject UserFindService userFindService
 @inject VmService vmService
-@inject IConfiguration config
+@inject MapService mapService
+
 
 <div>
     <h4>Search</h4>
@@ -95,7 +97,7 @@
                 <p>Loading...</p>
             </div>
         }
-        else if (vmService.CurrentViewModels != null && vmService.CurrentViewModels.Any())
+        else if (mapService.CurrentViewModels != null && mapService.CurrentViewModels.Any())
         {
             <table style="width: 100%; border-collapse: collapse;">
                 <thead>
@@ -107,7 +109,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var vm in vmService.CurrentViewModels)
+                    @foreach (var vm in mapService.CurrentViewModels)
                     {
                         foreach (var find in vm.userFinds)
                         {                                                          
@@ -280,14 +282,18 @@
     <p><strong>Harvest Method:</strong> {UsfHarvestMethod}</p>
     <p><strong>Tastes Like:</strong> {UsfTastesLike}</p>
     <p><strong>Notes:</strong> {UsfDescription}</p>
-    <button type="button" id="details-button" class="form-control">View Details</button>
-    <button type="button" id="edit-button" class="form-control">Edit</button>
-    <button type="button" id="delete-button"class="form-control">Delete</button>
+    <div style="display: flex; 10px">
+        <button type="button" id="details-button" class="form-control">View Details</button>
+        <button type="button" id="edit-button" class="form-control">Edit</button>
+        <button type="button" id="delete-button" class="form-control">Delete</button>
+    </div>
 </div>
 
 <div></div>
 
 @code {
+
+    private DotNetObjectReference<MapService> _mapServiceReference;
 
     static readonly List<string> MapFilters = new List<string>
     {
@@ -323,16 +329,18 @@
                 isLoading = true;
                 try
                 {
-                    vmService.CurrentViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
-                    vmService.MyViewModels = VmUtilities.Copy(vmService.CurrentViewModels);
-
-                    var json = JsonConvert.SerializeObject(vmService.CurrentViewModels, new JsonSerializerSettings
+                    _mapServiceReference = DotNetObjectReference.Create(mapService);
+                    mapService.CurrentViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+                    mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
+                    
+                    var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, new JsonSerializerSettings
                         {
                             ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                             Formatting = Formatting.Indented
                         });
 
                     await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
+                    await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
                 }
                 finally
                 {
@@ -342,6 +350,11 @@
             }
         }
     }
+
+    // private async Task GetDetails()
+    // {
+    //     await JSRuntime.InvokeVoidAsync("getDetails", _mapServiceReference, "findId", "currentUserId", "mapFilter", "findUserId", "findUserName", "userName");
+    // }
 
     private void OnAdvancedSearchToggled(ChangeEventArgs e)
     {
@@ -404,7 +417,7 @@
         if (user != null)
         {
             mapFilter = MapFilters[0];
-            vmService.CurrentViewModels = VmUtilities.Copy(vmService.MyViewModels);
+            mapService.CurrentViewModels = VmUtilities.Copy(mapService.MyViewModels);
 
             var settings = new JsonSerializerSettings
             {
@@ -412,7 +425,7 @@
                 Formatting = Formatting.Indented
             };
 
-            var json = JsonConvert.SerializeObject(vmService.CurrentViewModels, settings);
+            var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
             await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
         }
     }
@@ -425,11 +438,11 @@
         isLoading = true;
         try
         {
-            if (!vmService.AllViewModels.Any()) //AllViewModels hasn't been set - make sql call
+            if (!mapService.AllViewModels.Any()) //AllViewModels hasn't been set - make sql call
             {
                 try
                 {
-                    vmService.AllViewModels = await userFindService.GetUserFindsViewModels();
+                    mapService.AllViewModels = await userFindService.GetUserFindsViewModels();
                 }
                 catch (Exception ex)
                 {
@@ -442,9 +455,9 @@
                     ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
                     Formatting = Formatting.Indented
                 };
-            vmService.CurrentViewModels = VmUtilities.Copy(vmService.AllViewModels);
+            mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
 
-            var json = JsonConvert.SerializeObject(vmService.CurrentViewModels, settings);
+            var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
             await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
         }
         finally
@@ -466,15 +479,15 @@
 
         if (mapFilter == "UserOnly")
         {
-            vmService.CurrentViewModels = VmUtilities.Copy(vmService.MyViewModels);
+            mapService.CurrentViewModels = VmUtilities.Copy(mapService.MyViewModels);
         }
         else if (mapFilter == "AllUsers")
         {
-            vmService.CurrentViewModels = VmUtilities.Copy(vmService.AllViewModels);
+            mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
         }
         if (!string.IsNullOrEmpty(userSearchTerm))
         {
-            vmService.CurrentViewModels = vmService.CurrentViewModels
+            mapService.CurrentViewModels = mapService.CurrentViewModels
             .Where(f => f.userName
                 .Contains(userSearchTerm)).ToList();
         }
@@ -482,7 +495,7 @@
         || !string.IsNullOrEmpty(selectedUseCategory)
         || !string.IsNullOrEmpty(findSearchTerm))
         {
-            foreach (var vm in vmService.CurrentViewModels)
+            foreach (var vm in mapService.CurrentViewModels)
             {
                 vm.userFinds = vm.userFinds
                 .Where(f =>
@@ -511,7 +524,7 @@
                 vm.userFindLocations = filteredLocations;
             }
         }
-        var json = JsonConvert.SerializeObject(vmService.CurrentViewModels, settings);
+        var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
         await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
 
         selectedSpeciesType = string.Empty;
@@ -547,7 +560,7 @@
 
     private async Task ViewOnMap(Guid userId, Guid findId)
     {
-        var ufvm = vmService.CurrentViewModels
+        var ufvm = mapService.CurrentViewModels
             .FirstOrDefault(u => u.userId == userId);
 
         var uf = ufvm.userFinds
@@ -562,203 +575,10 @@
         await JSRuntime.InvokeVoidAsync("centerMapOnFind", latitude, longitude);
     }
 
-    [JSInvokable]
-    public static async Task<string> GetDetails(string findId, string mapFilter, string findUserId, string findUserName)   
+    public void Dispose()
     {
-        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-        var vmService = ServiceLocator.ServiceProvider.GetService<VmService>();
-        var userId = userStateService.CurrentUser.user.UsrId;
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-
-        Guid findGuid;
-        Guid findUserGuid;
-        var selectedVm = new UserFindsViewModel();
-        var selectedVms = new List<UserFindsViewModel>();
-
-        if (Guid.TryParse(findId, out findGuid) && Guid.TryParse(findUserId, out findUserGuid))
-        {
-            var selectedFind = vmService.CurrentViewModels
-            .FirstOrDefault(vm => vm.userId == findUserGuid)
-            .userFinds
-            .FirstOrDefault(f => f.UsFId == findGuid);
-
-            selectedVm.userFinds.Add(selectedFind);
-            selectedVm.userId = findUserGuid;
-            selectedVm.userName = findUserName;
-            selectedVm.userFindLocations = vmService.CurrentViewModels
-                .FirstOrDefault(vm => vm.userId == findUserGuid)
-                .userFindLocations
-                .Where(l => l.UslUsfId == findGuid)
-                .ToList();
-            selectedVm.userImages = vmService.CurrentViewModels
-                .FirstOrDefault(vm => vm.userId == findUserGuid)
-                .userImages
-                .Where(i => i.UsiUsfId == findGuid)
-                .ToList();
-            selectedVms.Add(selectedVm);
-        }
-        vmService.CurrentViewModels = VmUtilities.Copy(selectedVms);
-
-        var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            };
-        return JsonConvert.SerializeObject(vmService.CurrentViewModels, settings);
+        _mapServiceReference?.Dispose();
     }
-
-    [JSInvokable]
-    public static async Task<string> CreateFind(
-    string name,
-    string speciesName,
-    string speciesType,
-    string useCategory,
-    string features,
-    string lookalikes,
-    string harvestMethod,
-    string tastesLike,
-    string description,
-    double lat,
-    double lng,
-    string mapFilter,
-    List<string> uploadedFileUrls)
-    {
-        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-        var vmService = ServiceLocator.ServiceProvider.GetService<VmService>();
-        var userId = userStateService.CurrentUser.user.UsrId;
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-
-        var newUserFindViewModel =
-        await userFindService.CreateFind(           
-            name,
-            speciesName,
-            speciesType,
-            useCategory,
-            features,
-            lookalikes,
-            harvestMethod,
-            tastesLike,
-            description,
-            lat,
-            lng,
-            uploadedFileUrls,
-            userId,
-            userName
-        );        
-        vmService.AddViewModel(userId, newUserFindViewModel);
-
-        List<UserFindsViewModel> updatedViewModels = mapFilter switch
-        {
-            "UserOnly" => vmService.CurrentViewModels.Where(vm => vm.userId == userId).ToList(),
-            "AllUsers" => vmService.CurrentViewModels.ToList(),
-            _ => new List<UserFindsViewModel>()
-        }; 
-        var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            };
-        return JsonConvert.SerializeObject(updatedViewModels, settings);              
-    }
-
-
-    [JSInvokable]
-    public static async Task<string> UpdateFind(
-    string findId, 
-    string name,
-    string speciesName,
-    string speciesType,
-    string useCategory,
-    string features,
-    string lookalikes,
-    string harvestMethod,
-    string tastesLike,
-    string description,
-    double lat,
-    double lng,
-    string mapFilter,
-    List<string>? uploadedFileUrls,
-    List<string>? deletedFileUrls)
-    {
-        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-        var vmService = ServiceLocator.ServiceProvider.GetService<VmService>();
-        var userId = userStateService.CurrentUser.user.UsrId;
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-
-        Guid findGuid;
-        if (Guid.TryParse(findId, out findGuid))
-        {
-            var newUserFindViewModel =
-            await userFindService.UpdateFind(
-                findGuid,
-                name,
-                speciesName,
-                speciesType,
-                useCategory,
-                features,
-                lookalikes,
-                harvestMethod,
-                tastesLike,
-                description,
-                lat,
-                lng,
-                uploadedFileUrls,
-                deletedFileUrls,
-                userId,
-                userName
-            );                      
-            vmService.UpdateViewModel(userId, newUserFindViewModel);
-
-            List<UserFindsViewModel> updatedViewModels = mapFilter switch
-            {
-                "UserOnly" => vmService.CurrentViewModels.Where(vm => vm.userId == userId).ToList(),
-                "AllUsers" => vmService.CurrentViewModels.ToList(),
-                _ => new List<UserFindsViewModel>()
-            };
-            var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            };
-            return JsonConvert.SerializeObject(updatedViewModels, settings);
-        }
-        else
-        {
-            throw new ArgumentException("Invalid GUID format", nameof(findId));
-        }
-    }
-
-
-    [JSInvokable]
-    public static async Task<string> DeleteFind(string findId, string mapFilter)
-    {
-        var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-        var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-        var vmService = ServiceLocator.ServiceProvider.GetService<VmService>();
-        var userId = userStateService.CurrentUser.user.UsrId;
-        //var userSecId = userStateService.CurrentUser.userSecurity.UssId; 
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-        var deletedFindVm = new UserFindsViewModel();
-
-        Guid findGuid;
-        if (Guid.TryParse(findId, out findGuid))        
-            deletedFindVm = await userFindService.DeleteFind(findGuid, userId, userName);
-
-        vmService.DeleteInfo(userId, findGuid);
-
-        List<UserFindsViewModel> updatedViewModels = mapFilter switch
-        {
-            "UserOnly" => vmService.CurrentViewModels.Where(vm => vm.userId == userId).ToList(),
-            "AllUsers" => vmService.CurrentViewModels.ToList(),
-            _ => new List<UserFindsViewModel>()
-        };
-        var settings = new JsonSerializerSettings
-        {
-            ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-        };
-        return JsonConvert.SerializeObject(updatedViewModels, settings);
-    }
-
 
 
 
