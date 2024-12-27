@@ -14,6 +14,12 @@ namespace ForagerSite.Services
         public List<UserFindsViewModel> MyViewModels { get; set; } = new();
         public List<UserFindsViewModel> AllViewModels { get; set; } = new();
         public List<UserFindsViewModel> CurrentViewModels { get; set; } = new();
+
+        public event Action OnChange;
+        public event Action<bool> OnLoadingChange;
+        private void NotifyStateChanged() => OnChange?.Invoke();
+        private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading);
+
         public MapService(UserStateService userStateService, UserFindService userFindService)
         {
             _userStateService = userStateService;
@@ -121,17 +127,20 @@ namespace ForagerSite.Services
         [JSInvokable("GetDetails")]
         public async Task<string> GetDetails(string findId, string mapFilter, string findUserId, string findUserName)
         {
+            NotifyLoadingChanged(true);
+
             var userId = _userStateService.CurrentUser.user.UsrId;
             var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
 
             Guid findGuid;
             Guid findUserGuid;
+            var selectedFind = new UserFind();
             var selectedVm = new UserFindsViewModel();
             var selectedVms = new List<UserFindsViewModel>();
 
             if (Guid.TryParse(findId, out findGuid) && Guid.TryParse(findUserId, out findUserGuid))
             {
-                var selectedFind = CurrentViewModels
+                selectedFind = CurrentViewModels
                 .FirstOrDefault(vm => vm.userId == findUserGuid)
                 .userFinds
                 .FirstOrDefault(f => f.UsFId == findGuid);
@@ -157,6 +166,9 @@ namespace ForagerSite.Services
             {
                 ReferenceLoopHandling = ReferenceLoopHandling.Ignore
             };
+            NotifyStateChanged(); 
+            NotifyLoadingChanged(false);
+
             return JsonConvert.SerializeObject(CurrentViewModels, settings);
         }
 
@@ -176,13 +188,13 @@ namespace ForagerSite.Services
         string mapFilter,
         List<string> uploadedFileUrls)
         {
-            var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-            var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-            var userId = userStateService.CurrentUser.user.UsrId;
-            var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+            //var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
+            //var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+            var userId = _userStateService.CurrentUser.user.UsrId;
+            var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
 
             var newUserFindViewModel =
-            await userFindService.CreateFind(
+            await _userFindService.CreateFind(
                 name,
                 speciesName,
                 speciesType,
@@ -232,16 +244,16 @@ namespace ForagerSite.Services
         List<string>? uploadedFileUrls,
         List<string>? deletedFileUrls)
         {
-            var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-            var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-            var userId = userStateService.CurrentUser.user.UsrId;
-            var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+            //var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
+            //var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+            var userId = _userStateService.CurrentUser.user.UsrId;
+            var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
 
             Guid findGuid;
             if (Guid.TryParse(findId, out findGuid))
             {
                 var newUserFindViewModel =
-                await userFindService.UpdateFind(
+                await _userFindService.UpdateFind(
                     findGuid,
                     name,
                     speciesName,
@@ -283,15 +295,15 @@ namespace ForagerSite.Services
         [JSInvokable("DeleteFind")]
         public async Task<string> DeleteFind(string findId, string mapFilter)
         {
-            var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
-            var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
-            var userId = userStateService.CurrentUser.user.UsrId;
-            var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+            //var userStateService = ServiceLocator.ServiceProvider.GetService<UserStateService>();
+            //var userFindService = ServiceLocator.ServiceProvider.GetService<UserFindService>();
+            var userId = _userStateService.CurrentUser.user.UsrId;
+            var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
             var deletedFindVm = new UserFindsViewModel();
 
             Guid findGuid;
             if (Guid.TryParse(findId, out findGuid))
-                deletedFindVm = await userFindService.DeleteFind(findGuid, userId, userName);
+                deletedFindVm = await _userFindService.DeleteFind(findGuid, userId, userName);
 
             DeleteInfo(userId, findGuid);
 
