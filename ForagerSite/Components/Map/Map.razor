@@ -10,7 +10,6 @@
 @inject UserStateService userStateService
 @inject UserService userService
 @inject UserFindService userFindService
-@inject VmService vmService
 @inject MapService mapService
 
 
@@ -332,7 +331,7 @@
                     _mapServiceReference = DotNetObjectReference.Create(mapService);
                     mapService.CurrentViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
                     mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
-                    
+
                     var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, new JsonSerializerSettings
                         {
                             ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
@@ -351,10 +350,32 @@
         }
     }
 
-    // private async Task GetDetails()
-    // {
-    //     await JSRuntime.InvokeVoidAsync("getDetails", _mapServiceReference, "findId", "currentUserId", "mapFilter", "findUserId", "findUserName", "userName");
-    // }
+    protected override void OnInitialized()
+    {
+        mapService.OnChange += StateHasChanged;
+        mapService.OnLoadingChange += RefreshGrid;
+    }
+
+    private void RefreshGrid(bool loading)
+    {
+        isLoading = loading;
+        try
+        {
+            if (mapService.CurrentViewModels[0].userFinds[0] != null)
+            {
+                ToggleRowExpansion(mapService.CurrentViewModels[0].userFinds[0]);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error viewing details: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+        StateHasChanged();
+    }
 
     private void OnAdvancedSearchToggled(ChangeEventArgs e)
     {
@@ -447,7 +468,6 @@
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error fetching ViewModels: {ex.Message}");
-                    //AllViewModels = new List<UserFindsViewModel>();
                 }
             }
             var settings = new JsonSerializerSettings
@@ -578,6 +598,8 @@
     public void Dispose()
     {
         _mapServiceReference?.Dispose();
+        mapService.OnChange -= StateHasChanged;
+        mapService.OnLoadingChange -= RefreshGrid;
     }
 
 

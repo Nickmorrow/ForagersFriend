@@ -193,12 +193,11 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                             .replace('{UsfLookAlikes}', find.UsfLookAlikes || '')
                             .replace('{UsfHarvestMethod}', find.UsfHarvestMethod || '')
                             .replace('{UsfTastesLike}', find.UsfTastesLike || '')
-                            .replace('{UsfDescription}', find.UsfDescription || '');
-
+                            .replace('{UsfDescription}', find.UsfDescription || '')
+                            .replace('id="details-button"', `onclick="getDetails('${findId}', '${currentUserId}', '${mapFilter}', '${viewModel.userId}', '${viewModel.userName}', '${userName}')"`);
                         if (viewModel.userId === currentUserId) {
                             const serializedViewModel = JSON.stringify(currentViewModel).replace(/"/g, '&quot;');
-                            popupContent = popupContent
-                                .replace('id="details-button"', `onclick="getDetails('${findId}', '${currentUserId}', '${mapFilter}', '${viewModel.userId}', '${viewModel.userName}', '${userName}')"`)
+                            popupContent = popupContent           
                                 .replace('id="edit-button"', `onclick="updateFind('${findId}', '${currentUserId}', '${mapFilter}', '${userName}', '${serializedViewModel}')"`)
                                 .replace('id="delete-button"', `onclick="deleteFind('${findId}', '${currentUserId}', '${mapFilter}')"`);
                         } else {
