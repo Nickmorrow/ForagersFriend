@@ -294,14 +294,7 @@
 
     private DotNetObjectReference<MapService> _mapServiceReference;
 
-    static readonly List<string> MapFilters = new List<string>
-    {
-        "UserOnly", "AllUsers", "FriendUsers"
-    };
-
     private List<string> filteredUserResults = new List<string>();
-
-    public string mapFilter = MapFilters[0];
 
     private string selectedSpeciesType = string.Empty;
 
@@ -338,7 +331,7 @@
                             Formatting = Formatting.Indented
                         });
 
-                    await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
+                    await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);
                     await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
                 }
                 finally
@@ -353,10 +346,10 @@
     protected override void OnInitialized()
     {
         mapService.OnChange += StateHasChanged;
-        mapService.OnLoadingChange += RefreshGrid;
+        mapService.OnLoadingChange += ViewDetails;
     }
 
-    private void RefreshGrid(bool loading)
+    private void ViewDetails(bool loading)
     {
         isLoading = loading;
         try
@@ -437,7 +430,7 @@
 
         if (user != null)
         {
-            mapFilter = MapFilters[0];
+            mapService.mapFilter = "UserOnly";
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.MyViewModels);
 
             var settings = new JsonSerializerSettings
@@ -447,14 +440,14 @@
             };
 
             var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
+            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);
         }
     }
 
     private async Task GetAllFinds() // To Do - logic to filter AllViewmodels by map zoom radius to reduce load time
     {
         var user = userStateService.CurrentUser.user;
-        mapFilter = MapFilters[1];
+        mapService.mapFilter = "AllUsers";
 
         isLoading = true;
         try
@@ -478,7 +471,7 @@
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
 
             var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter, user.UserSecurity.UssUsername);
+            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);
         }
         finally
         {
@@ -497,11 +490,11 @@
             Formatting = Formatting.Indented
         };
 
-        if (mapFilter == "UserOnly")
+        if (mapService.mapFilter == "UserOnly")
         {
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.MyViewModels);
         }
-        else if (mapFilter == "AllUsers")
+        else if (mapService.mapFilter == "AllUsers")
         {
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
         }
@@ -545,7 +538,7 @@
             }
         }
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-        await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapFilter);
+        await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter);
 
         selectedSpeciesType = string.Empty;
         selectedUseCategory = string.Empty;
@@ -599,7 +592,7 @@
     {
         _mapServiceReference?.Dispose();
         mapService.OnChange -= StateHasChanged;
-        mapService.OnLoadingChange -= RefreshGrid;
+        mapService.OnLoadingChange -= ViewDetails;
     }
 
 
