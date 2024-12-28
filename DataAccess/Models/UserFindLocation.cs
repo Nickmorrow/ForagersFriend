@@ -9,7 +9,7 @@ namespace DataAccess.Models
         [Key]
         public Guid UslId { get; set; }
         public Guid UslUsfId { get; set; }
-        [ForeignKey("UslUsfId")]
+        [ForeignKey("locFindId")]
         public UserFind UserFind { get; set; }
         public double UslLatitude { get; set; } //changed to double from float
         public double UslLongitude { get; set; }

@@ -138,7 +138,7 @@
             <tbody>
                 @if (userFindsExpanded)
                 {               
-                    @foreach (UserFind find in userFindsViewModel.userFinds)
+                    @foreach (UserFind find in userFindsViewModel.finds)
                     {
                         <tr style ="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
                             <td>
@@ -282,7 +282,7 @@
         editProfilePic = false;
         userFindsExpanded = false;
         profileImageUrl = await GetProfileImageUrl();
-        findsCount = userFindsViewModel.userFinds.Count();
+        findsCount = userFindsViewModel.finds.Count();
     }
 
     private async Task<string> GetProfileImageUrl()

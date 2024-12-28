@@ -6,204 +6,204 @@ namespace DataAccess.Models
 {
     public class UserFindsViewModel
     {
-        public Guid userId { get; set; }
-        public string userName { get; set; }
-        public List<UserFind> userFinds { get; set; }
-        public List<UserFindLocation> userFindLocations { get; set; }
-        public List<UserImage> userImages { get; set; }
-        public List<UserFindsCommentXref> userFindsCommentXrefs { get; set; }
-        public List<UserFindsComment> userFindsComments { get; set; }
-        public List<User> CommentUsers { get; set; }
-        public List<UserSecurity> CommentUserSecurities { get; set; }
-
-        public UserFindsViewModel()
-        {
-            userId = Guid.NewGuid();
-            userName = string.Empty;
-            userFinds = new List<UserFind>();
-            userFindLocations = new List<UserFindLocation>();
-            userImages = new List<UserImage>();
-            userFindsCommentXrefs = new List<UserFindsCommentXref>();
-            userFindsComments = new List<UserFindsComment>();
-            CommentUsers = new List<User>();
-            CommentUserSecurities = new List<UserSecurity>();
-        }
-
-        public UserFindsViewModel(Guid userId,string userName, List<UserFind> userFinds, 
-            List<UserFindLocation> userFindLocations, List<UserImage> userImages)
-        {
-            this.userId = userId;
-            this.userName = userName;
-            this.userFinds = userFinds;
-            this.userFindLocations = userFindLocations;
-            this.userImages = userImages;
-            this.userFindsCommentXrefs = new List<UserFindsCommentXref>();
-            this.userFindsComments = new List<UserFindsComment>();
-            this.CommentUsers = new List<User>();
-            this.CommentUserSecurities = new List<UserSecurity>();
-        }
-
-        public bool IsEmpty()
-        {
-            return userId == Guid.Empty &&
-                   !string.IsNullOrEmpty(userName) &&
-                   !userFinds.Any() &&
-                   !userFindLocations.Any() &&
-                   !userImages.Any() &&
-                   !userFindsCommentXrefs.Any() &&
-                   !userFindsComments.Any() &&
-                   !CommentUsers.Any() &&
-                   !CommentUserSecurities.Any();
-        }
-
         //public Guid userId { get; set; }
         //public string userName { get; set; }
-        //public List<UserFindDto> userFinds { get; set; }
-        //public List<UserFindLocationDto> userFindLocations { get; set; }
-        //public List<UserImageDto> userImages { get; set; }
-        //public List<UserFindsCommentXrefDto> userFindsCommentXrefs { get; set; }
-        //public List<UserFindsCommentDto> userFindsComments { get; set; }
-        //public List<Guid> CommentUserIds { get; set; } = new List<Guid>();
-        //public List<string> CommentUserNames { get; set; } = new List<string>();
+        //public List<UserFind> finds { get; set; }
+        //public List<UserFindLocation> findLocations { get; set; }
+        //public List<UserImage> images { get; set; }
+        //public List<findsCommentXref> findsCommentXrefs { get; set; }
+        //public List<UserFindsComment> findsComments { get; set; }
+        //public List<User> CommentUsers { get; set; }
+        //public List<UserSecurity> CommentUserSecurities { get; set; }
 
         //public UserFindsViewModel()
         //{
         //    userId = Guid.NewGuid();
         //    userName = string.Empty;
-        //    userFinds = new List<UserFindDto>();
-        //    userFindLocations = new List<UserFindLocationDto>();
-        //    userImages = new List<UserImageDto>();
-        //    userFindsCommentXrefs = new List<UserFindsCommentXrefDto>();
-        //    userFindsComments = new List<UserFindsCommentDto>();
-        //    CommentUserIds = new List<Guid>();
-        //    CommentUserNames = new List<string>();
+        //    finds = new List<UserFind>();
+        //    findLocations = new List<UserFindLocation>();
+        //    images = new List<UserImage>();
+        //    findsCommentXrefs = new List<findsCommentXref>();
+        //    findsComments = new List<UserFindsComment>();
+        //    CommentUsers = new List<User>();
+        //    CommentUserSecurities = new List<UserSecurity>();
+        //}
+
+        //public UserFindsViewModel(Guid userId,string userName, List<UserFind> finds, 
+        //    List<UserFindLocation> findLocations, List<UserImage> images)
+        //{
+        //    this.userId = userId;
+        //    this.userName = userName;
+        //    this.finds = finds;
+        //    this.findLocations = findLocations;
+        //    this.images = images;
+        //    this.findsCommentXrefs = new List<findsCommentXref>();
+        //    this.findsComments = new List<UserFindsComment>();
+        //    this.CommentUsers = new List<User>();
+        //    this.CommentUserSecurities = new List<UserSecurity>();
         //}
 
         //public bool IsEmpty()
         //{
         //    return userId == Guid.Empty &&
         //           !string.IsNullOrEmpty(userName) &&
-        //           !userFinds.Any() &&
-        //           !userFindLocations.Any() &&
-        //           !userImages.Any() &&
-        //           !userFindsCommentXrefs.Any() &&
-        //           !userFindsComments.Any() &&
-        //           !CommentUserIds.Any() &&
-        //           !CommentUserNames.Any();
+        //           !finds.Any() &&
+        //           !findLocations.Any() &&
+        //           !images.Any() &&
+        //           !findsCommentXrefs.Any() &&
+        //           !findsComments.Any() &&
+        //           !CommentUsers.Any() &&
+        //           !CommentUserSecurities.Any();
         //}
 
+        public Guid userId { get; set; }
+        public string userName { get; set; }
+        public List<FindDto> finds { get; set; }
+        public List<FindLocationDto> findLocations { get; set; }
+        public List<ImageDto> images { get; set; }
+        public List<FindsCommentXrefDto> findsCommentXrefs { get; set; }
+        public List<FindCommentDto> findsComments { get; set; }
+        public List<Guid> commentUserIds { get; set; } = new List<Guid>();
+        public List<string> commentUserNames { get; set; } = new List<string>();
+
+        public UserFindsViewModel()
+        {
+            userId = Guid.NewGuid();
+            userName = string.Empty;
+            finds = new List<FindDto>();
+            findLocations = new List<FindLocationDto>();
+            images = new List<ImageDto>();
+            findsCommentXrefs = new List<FindsCommentXrefDto>();
+            findsComments = new List<FindCommentDto>();
+            commentUserIds = new List<Guid>();
+            commentUserNames = new List<string>();
+        }
+
+        public bool IsEmpty()
+        {
+            return userId == Guid.Empty &&
+                   !string.IsNullOrEmpty(userName) &&
+                   !finds.Any() &&
+                   !findLocations.Any() &&
+                   !images.Any() &&
+                   !findsCommentXrefs.Any() &&
+                   !findsComments.Any() &&
+                   !commentUserIds.Any() &&
+                   !commentUserNames.Any();
+        }
+
     }
-    //public class UserFindDto
-    //{
-    //    public Guid UsFId { get; set; }
-    //    public Guid UsfUsrId { get; set; }
-    //    public string UsfName { get; set; }
-    //    public string UsfSpeciesName { get; set; }
-    //    public string UsfSpeciesType { get; set; }
-    //    public DateTime UsfFindDate { get; set; }
-    //    public string UsfUseCategory { get; set; }
-    //    public string UsfFeatures { get; set; }
-    //    public string UsfLookAlikes { get; set; }
-    //    public string UsfHarvestMethod { get; set; }
-    //    public string UsfTastesLike { get; set; }
-    //    public string UsfDescription { get; set; }
-    //    public int? UsfAccuracyScore { get; set; }
-    //    public UserFindLocationDto UserFindLocation { get; set; }
-    //    public ICollection<UserImageDto> UserImages { get; set; }
-    //    public ICollection<UserFindsCommentXrefDto> UserFindsCommentXrefs { get; set; }
+    public class FindDto
+    {
+        public Guid findId { get; set; }
+        public Guid findUserId { get; set; }
+        public string findName { get; set; }
+        public string SpeciesName { get; set; }
+        public string SpeciesType { get; set; }
+        public DateTime findDate { get; set; }
+        public string useCategory { get; set; }
+        public string features { get; set; }
+        public string lookAlikes { get; set; }
+        public string harvestMethod { get; set; }
+        public string tastesLike { get; set; }
+        public string description { get; set; }
+        public int? findScore { get; set; }
+        public FindLocationDto UserFindLocation { get; set; }
+        public ICollection<ImageDto> UserImages { get; set; }
+        public ICollection<FindsCommentXrefDto> UserFindsCommentXrefs { get; set; }
 
-    //    public UserFindDto(UserFind userFind)
-    //    {
-    //        UsFId = userFind.UsFId;
-    //        UsfUsrId = userFind.UsfUsrId;
-    //        UsfName = userFind.UsfName;
-    //        UsfSpeciesName = userFind.UsfSpeciesName;
-    //        UsfSpeciesType = userFind.UsfSpeciesType;
-    //        UsfFindDate = userFind.UsfFindDate;
-    //        UsfUseCategory = userFind.UsfUseCategory;
-    //        UsfFeatures = userFind.UsfFeatures;
-    //        UsfLookAlikes = userFind.UsfLookAlikes;
-    //        UsfHarvestMethod = userFind.UsfHarvestMethod;
-    //        UsfTastesLike = userFind.UsfTastesLike;
-    //        UsfDescription = userFind.UsfDescription;
-    //        UsfAccuracyScore = userFind.UsfAccuracyScore;
-    //        UserFindLocation = new UserFindLocationDto(userFind.UserFindLocation);
-    //        UserImages = userFind.UserImages?.Select(ui => new UserImageDto(ui)).ToList();
-    //        UserFindsCommentXrefs = userFind.UserFindsCommentXrefs?.Select(xref => new UserFindsCommentXrefDto(xref)).ToList();
-    //    }
+        public FindDto(UserFind userFind)
+        {
+            findId = userFind.UsFId;
+            findUserId = userFind.UsfUsrId;
+            findName = userFind.UsfName;
+            SpeciesName = userFind.UsfSpeciesName;
+            SpeciesType = userFind.UsfSpeciesType;
+            findDate = userFind.UsfFindDate;
+            useCategory = userFind.UsfUseCategory;
+            features = userFind.UsfFeatures;
+            lookAlikes = userFind.UsfLookAlikes;
+            harvestMethod = userFind.UsfHarvestMethod;
+            tastesLike = userFind.UsfTastesLike;
+            description = userFind.UsfDescription;
+            findScore = userFind.UsfAccuracyScore;
+            UserFindLocation = new FindLocationDto(userFind.UserFindLocation);
+            UserImages = userFind.UserImages?.Select(ui => new ImageDto(ui)).ToList();
+            UserFindsCommentXrefs = userFind.UserFindsCommentXrefs?.Select(xref => new FindsCommentXrefDto(xref)).ToList();
+        }
 
-    //}
+    }
 
-    //public class UserFindLocationDto
-    //{
-    //    public Guid UslId { get; set; }
-    //    public Guid UslUsfId { get; set; }
-    //    public UserFindDto UserFind { get; set; }
-    //    public double UslLatitude { get; set; } 
-    //    public double UslLongitude { get; set; }
+    public class FindLocationDto
+    {
+        public Guid locId { get; set; }
+        public Guid locFindId { get; set; }
+        public FindDto UserFind { get; set; }
+        public double latitude { get; set; }
+        public double longitude { get; set; }
 
-    //    public UserFindLocationDto(UserFindLocation location)
-    //    {
-    //        UslId = location.UslId;
-    //        UslUsfId = location.UslUsfId;
-    //        UslLatitude = location.UslLatitude;
-    //        UslLongitude = location.UslLongitude;
-    //    }
-    //}
-    //public class UserImageDto
-    //{
-    //    public Guid UsiId { get; set; }
-    //    public Guid? UsiUsrId { get; set; }
-    //    public Guid? UsiUsfId { get; set; }
-    //    public string UsiImageData { get; set; }
-    //    public UserFindDto UserFind { get; set; }
+        public FindLocationDto(UserFindLocation location)
+        {
+            locId = location.UslId;
+            locFindId = location.UslUsfId;
+            latitude = location.UslLatitude;
+            longitude = location.UslLongitude;
+        }
+    }
+    public class ImageDto
+    {
+        public Guid imageId { get; set; }
+        public Guid? imgUserId { get; set; }
+        public Guid? imgFindId { get; set; }
+        public string ImageData { get; set; }
+        public FindDto UserFind { get; set; }
 
-    //    public UserImageDto(UserImage userImage)
-    //    {
-    //        UsiId = userImage.UsiId;
-    //        UsiUsrId = userImage.UsiUsrId;
-    //        UsiUsfId = userImage.UsiUsfId;
-    //        UsiImageData = userImage.UsiImageData;
-    //        UserFind = new UserFindDto(userImage.UserFind);
-    //    }
-    //}
+        public ImageDto(UserImage userImage)
+        {
+            imageId = userImage.UsiId;
+            imgUserId = userImage.UsiUsrId;
+            imgFindId = userImage.UsiUsfId;
+            ImageData = userImage.UsiImageData;
+            UserFind = new FindDto(userImage.UserFind);
+        }
+    }
 
-    //public class UserFindsCommentDto
-    //{
-    //    public Guid UscId { get; set; }
-    //    public string UscComment { get; set; }
-    //    public int? UscCommentScore { get; set; }
-    //    public DateTime UscCommentDate { get; set; }
-    //    public UserFindsCommentXrefDto UserFindsCommentXref { get; set; }
+    public class FindCommentDto
+    {
+        public Guid comId { get; set; }
+        public string comment { get; set; }
+        public int? commentScore { get; set; }
+        public DateTime commentDate { get; set; }
+        public FindsCommentXrefDto findsCommentXref { get; set; }
 
-    //    public UserFindsCommentDto(UserFindsComment comment)
-    //    {
-    //        UscId = comment.UscId;
-    //        UscComment = comment.UscComment;
-    //        UscCommentScore = comment.UscCommentScore;
-    //        UscCommentDate = comment.UscCommentDate;
-    //        UserFindsCommentXref = new UserFindsCommentXrefDto(comment.UserFindsCommentXref);
-    //    }
+        public FindCommentDto(UserFindsComment comment)
+        {
+            comId = comment.UscId;
+            this.comment = comment.UscComment;
+            commentScore = comment.UscCommentScore;
+            commentDate = comment.UscCommentDate;
+            findsCommentXref = new FindsCommentXrefDto(comment.UserFindsCommentXref);
+        }
 
-    //}
+    }
 
-    //public class UserFindsCommentXrefDto
-    //{
-    //    public Guid UcxId { get; set; }
-    //    public Guid UcxUsrId { get; set; }
-    //    public Guid UcxUscId { get; set; }
-    //    public UserFindsCommentDto UserFindsComment { get; set; }
-    //    public Guid UcxUsfId { get; set; }
-    //    public UserFindDto UserFind { get; set; }
+    public class FindsCommentXrefDto
+    {
+        public Guid comXfId { get; set; }
+        public Guid comxUserId { get; set; }
+        public Guid comxComId { get; set; }
+        public FindCommentDto UserFindsComment { get; set; }
+        public Guid comxFindId { get; set; }
+        public FindDto UserFind { get; set; }
 
-    //    public UserFindsCommentXrefDto(UserFindsCommentXref xref)
-    //    {
-    //        UcxId = xref.UcxId;
-    //        UcxUsrId = xref.UcxUsrId;
-    //        UcxUscId = xref.UcxUscId;
-    //        UcxUsfId = xref.UcxUsfId;
-    //        UserFindsComment = new UserFindsCommentDto(xref.UserFindsComment);
-    //        UserFind = new UserFindDto(xref.UserFind);
-    //    }
-    //}
+        public FindsCommentXrefDto(UserFindsCommentXref xref)
+        {
+            comXfId = xref.UcxId;
+            comxUserId = xref.UcxUsrId;
+            comxComId = xref.UcxUscId;
+            comxFindId = xref.UcxUsfId;
+            UserFindsComment = new FindCommentDto(xref.UserFindsComment);
+            UserFind = new FindDto(xref.UserFind);
+        }
+    }
 }

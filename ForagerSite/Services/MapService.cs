@@ -33,23 +33,23 @@ namespace ForagerSite.Services
         {
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
 
-            existingViewModel.userFinds.Add(viewModel.userFinds[0]);
-            existingViewModel.userFindLocations.Add(viewModel.userFindLocations[0]);
-            existingViewModel.userImages.AddRange(viewModel.userImages);
+            existingViewModel.finds.Add(viewModel.finds[0]);
+            existingViewModel.findLocations.Add(viewModel.findLocations[0]);
+            existingViewModel.images.AddRange(viewModel.images);
 
             var backupVmlMy = MyViewModels.FirstOrDefault(vm => vm.userId == userId); // Backup Vm My filter
 
-            backupVmlMy.userFinds.Add(viewModel.userFinds[0]);
-            backupVmlMy.userFindLocations.Add(viewModel.userFindLocations[0]);
-            backupVmlMy.userImages.AddRange(viewModel.userImages);
+            backupVmlMy.finds.Add(viewModel.finds[0]);
+            backupVmlMy.findLocations.Add(viewModel.findLocations[0]);
+            backupVmlMy.images.AddRange(viewModel.images);
 
             if (AllViewModels.Count > 0) // Backup Vm All filter
             {
                 var backupVmlAll = AllViewModels.FirstOrDefault(vm => vm.userId == userId);
 
-                backupVmlAll.userFinds.Add(viewModel.userFinds[0]);
-                backupVmlAll.userFindLocations.Add(viewModel.userFindLocations[0]);
-                backupVmlAll.userImages.AddRange(viewModel.userImages);
+                backupVmlAll.finds.Add(viewModel.finds[0]);
+                backupVmlAll.findLocations.Add(viewModel.findLocations[0]);
+                backupVmlAll.images.AddRange(viewModel.images);
             }
         }
         public void UpdateViewModel(Guid userId, UserFindsViewModel viewModel)
@@ -58,27 +58,27 @@ namespace ForagerSite.Services
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
             if (existingViewModel != null)
             {
-                existingViewModel.userFinds.Remove(existingViewModel.userFinds.Where(f => f.UsFId == viewModel.userFinds[0].UsFId).FirstOrDefault());
-                existingViewModel.userFinds.Add(viewModel.userFinds[0]);
+                existingViewModel.finds.Remove(existingViewModel.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
+                existingViewModel.finds.Add(viewModel.finds[0]);
 
-                existingViewModel.userFindLocations.Remove(existingViewModel.userFindLocations.Where(fl => fl.UslUsfId == viewModel.userFinds[0].UsFId).FirstOrDefault());
-                existingViewModel.userFindLocations.Add(viewModel.userFindLocations[0]);
+                existingViewModel.findLocations.Remove(existingViewModel.findLocations.Where(fl => fl.locFindId == viewModel.finds[0].findId).FirstOrDefault());
+                existingViewModel.findLocations.Add(viewModel.findLocations[0]);
 
-                existingViewModel.userImages.RemoveAll(fi => fi.UsiUsfId == viewModel.userFinds[0].UsFId);
-                existingViewModel.userImages.AddRange(viewModel.userImages);
+                existingViewModel.images.RemoveAll(fi => fi.imgFindId == viewModel.finds[0].findId);
+                existingViewModel.images.AddRange(viewModel.images);
             }
             // Backup Vm My filter
             var backupVmlMy = MyViewModels.FirstOrDefault(vm => vm.userId == userId);
             if (existingViewModel != null)
             {
-                backupVmlMy.userFinds.Remove(backupVmlMy.userFinds.Where(f => f.UsFId == viewModel.userFinds[0].UsFId).FirstOrDefault());
-                backupVmlMy.userFinds.Add(viewModel.userFinds[0]);
+                backupVmlMy.finds.Remove(backupVmlMy.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
+                backupVmlMy.finds.Add(viewModel.finds[0]);
 
-                backupVmlMy.userFindLocations.Remove(backupVmlMy.userFindLocations.Where(fl => fl.UslUsfId == viewModel.userFinds[0].UsFId).FirstOrDefault());
-                backupVmlMy.userFindLocations.Add(viewModel.userFindLocations[0]);
+                backupVmlMy.findLocations.Remove(backupVmlMy.findLocations.Where(fl => fl.locFindId == viewModel.finds[0].findId).FirstOrDefault());
+                backupVmlMy.findLocations.Add(viewModel.findLocations[0]);
 
-                backupVmlMy.userImages.RemoveAll(fi => fi.UsiUsfId == viewModel.userFinds[0].UsFId);
-                backupVmlMy.userImages.AddRange(viewModel.userImages);
+                backupVmlMy.images.RemoveAll(fi => fi.imgFindId == viewModel.finds[0].findId);
+                backupVmlMy.images.AddRange(viewModel.images);
             }
             // Backup Vm All filter
             if (existingViewModel != null)
@@ -87,14 +87,14 @@ namespace ForagerSite.Services
                 {
                     var backupVmlAll = AllViewModels.FirstOrDefault(vm => vm.userId == userId);
 
-                    backupVmlAll.userFinds.Remove(backupVmlAll.userFinds.Where(f => f.UsFId == viewModel.userFinds[0].UsFId).FirstOrDefault());
-                    backupVmlAll.userFinds.Add(viewModel.userFinds[0]);
+                    backupVmlAll.finds.Remove(backupVmlAll.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
+                    backupVmlAll.finds.Add(viewModel.finds[0]);
 
-                    backupVmlAll.userFindLocations.Remove(backupVmlAll.userFindLocations.Where(fl => fl.UslUsfId == viewModel.userFinds[0].UsFId).FirstOrDefault());
-                    backupVmlAll.userFindLocations.Add(viewModel.userFindLocations[0]);
+                    backupVmlAll.findLocations.Remove(backupVmlAll.findLocations.Where(fl => fl.locFindId == viewModel.finds[0].findId).FirstOrDefault());
+                    backupVmlAll.findLocations.Add(viewModel.findLocations[0]);
 
-                    backupVmlAll.userImages.RemoveAll(fi => fi.UsiUsfId == viewModel.userFinds[0].UsFId);
-                    backupVmlAll.userImages.AddRange(viewModel.userImages);
+                    backupVmlAll.images.RemoveAll(fi => fi.imgFindId == viewModel.finds[0].findId);
+                    backupVmlAll.images.AddRange(viewModel.images);
                 }
             }
         }
@@ -106,22 +106,22 @@ namespace ForagerSite.Services
         {
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
 
-            existingViewModel.userFinds.Remove(existingViewModel.userFinds.Where(f => f.UsFId == findId).FirstOrDefault());
-            existingViewModel.userFindLocations.Remove(existingViewModel.userFindLocations.Where(fl => fl.UslUsfId == findId).FirstOrDefault());
-            existingViewModel.userImages.RemoveAll(fi => fi.UsiUsfId == findId);
+            existingViewModel.finds.Remove(existingViewModel.finds.Where(f => f.findId == findId).FirstOrDefault());
+            existingViewModel.findLocations.Remove(existingViewModel.findLocations.Where(fl => fl.locFindId == findId).FirstOrDefault());
+            existingViewModel.images.RemoveAll(fi => fi.imgFindId == findId);
 
             var backupVmMy = MyViewModels.FirstOrDefault(vm => vm.userId == userId);
 
-            backupVmMy.userFinds.Remove(backupVmMy.userFinds.Where(f => f.UsFId == findId).FirstOrDefault());
-            backupVmMy.userFindLocations.Remove(backupVmMy.userFindLocations.Where(fl => fl.UslUsfId == findId).FirstOrDefault());
-            backupVmMy.userImages.RemoveAll(fi => fi.UsiUsfId == findId);
+            backupVmMy.finds.Remove(backupVmMy.finds.Where(f => f.findId == findId).FirstOrDefault());
+            backupVmMy.findLocations.Remove(backupVmMy.findLocations.Where(fl => fl.locFindId == findId).FirstOrDefault());
+            backupVmMy.images.RemoveAll(fi => fi.imgFindId == findId);
 
             if (AllViewModels.Count > 0)
             {
                 var backupVmAll = AllViewModels.FirstOrDefault(vm => vm.userId == userId);
-                backupVmAll.userFinds.Remove(backupVmAll.userFinds.Where(f => f.UsFId == findId).FirstOrDefault());
-                backupVmAll.userFindLocations.Remove(backupVmAll.userFindLocations.Where(fl => fl.UslUsfId == findId).FirstOrDefault());
-                backupVmAll.userImages.RemoveAll(fi => fi.UsiUsfId == findId);
+                backupVmAll.finds.Remove(backupVmAll.finds.Where(f => f.findId == findId).FirstOrDefault());
+                backupVmAll.findLocations.Remove(backupVmAll.findLocations.Where(fl => fl.locFindId == findId).FirstOrDefault());
+                backupVmAll.images.RemoveAll(fi => fi.imgFindId == findId);
             }
         }
 
@@ -143,21 +143,21 @@ namespace ForagerSite.Services
             {
                 selectedFind = CurrentViewModels
                 .FirstOrDefault(vm => vm.userId == findUserGuid)
-                .userFinds
-                .FirstOrDefault(f => f.UsFId == findGuid);
+                .finds
+                .FirstOrDefault(f => f.findId == findGuid);
 
-                selectedVm.userFinds.Add(selectedFind);
+                selectedVm.finds.Add(selectedFind);
                 selectedVm.userId = findUserGuid;
                 selectedVm.userName = findUserName;
-                selectedVm.userFindLocations = CurrentViewModels
+                selectedVm.findLocations = CurrentViewModels
                     .FirstOrDefault(vm => vm.userId == findUserGuid)
-                    .userFindLocations
-                    .Where(l => l.UslUsfId == findGuid)
+                    .findLocations
+                    .Where(l => l.locFindId == findGuid)
                     .ToList();
-                selectedVm.userImages = CurrentViewModels
+                selectedVm.images = CurrentViewModels
                     .FirstOrDefault(vm => vm.userId == findUserGuid)
-                    .userImages
-                    .Where(i => i.UsiUsfId == findGuid)
+                    .images
+                    .Where(i => i.imgFindId == findGuid)
                     .ToList();
                 selectedVms.Add(selectedVm);
             }
