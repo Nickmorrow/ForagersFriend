@@ -29,11 +29,11 @@ namespace DataAccess.Data
             modelBuilder.Entity<User>().ToTable("Users");
             modelBuilder.Entity<UserSecurity>().ToTable("UserSecurity");
             modelBuilder.Entity<UserMessage>().ToTable("UserMessages");
-            modelBuilder.Entity<UserFind>().ToTable("userFinds");
+            modelBuilder.Entity<UserFind>().ToTable("finds");
             modelBuilder.Entity<UserFindLocation>().ToTable("UserFindLocation");
             modelBuilder.Entity<UserImage>().ToTable("UserImages");
             modelBuilder.Entity<UserFindsComment>().ToTable("UserFindsComments");
-            modelBuilder.Entity<UserFindsCommentXref>().ToTable("UserFindsCommentXref");
+            modelBuilder.Entity<UserFindsCommentXref>().ToTable("findsCommentXref");
 
             modelBuilder.Entity<User>()
                 .HasOne(u => u.UserSecurity)
@@ -63,25 +63,25 @@ namespace DataAccess.Data
                 .WithOne(ui => ui.UserFind)
                 .HasForeignKey(ui => ui.UsiUsfId);
 
-            // One-to-Many: UserFind -> UserFindsCommentXref
+            // One-to-Many: UserFind -> findsCommentXref
             modelBuilder.Entity<UserFind>()
                 .HasMany(uf => uf.UserFindsCommentXrefs)
                 .WithOne(xref => xref.UserFind)
                 .HasForeignKey(xref => xref.UcxUsfId);
 
-            // One-to-One: UserFindsCommentXref -> UserFindsComment
+            // One-to-One: findsCommentXref -> UserFindsComment
             modelBuilder.Entity<UserFindsCommentXref>()
                 .HasOne(xref => xref.UserFindsComment)
                 .WithOne(usc => usc.UserFindsCommentXref)
                 .HasForeignKey<UserFindsCommentXref>(xref => xref.UcxUscId);
 
-            // Many-to-One: UserFindsCommentXref -> User (Commenter)
+            // Many-to-One: findsCommentXref -> User (Commenter)
             modelBuilder.Entity<UserFindsCommentXref>()
                 .HasOne(xref => xref.User)
                 .WithMany(u => u.UserFindsCommentXrefs)
                 .HasForeignKey(xref => xref.UcxUsrId);
 
-            // One-to-One: UserFindsCommentXref -> UserFindsComment
+            // One-to-One: findsCommentXref -> UserFindsComment
             modelBuilder.Entity<UserFindsCommentXref>()
                 .HasOne(xref => xref.UserFindsComment)
                 .WithOne(usc => usc.UserFindsCommentXref)

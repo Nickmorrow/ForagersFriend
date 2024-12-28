@@ -46,14 +46,14 @@ namespace ForagerSite.Services
                 return new UserFindsViewModel();
             }
 
-            //var userFindDtos = userWithFinds.UserFinds.Select(uf => new UserFindDto
+            //var userFindDtos = userWithFinds.UserFinds.Select(uf => new FindDto
             //{
-            //    UsFId = uf.UsFId,
-            //    UsfName = uf.UsfName,
-            //    UsfSpeciesName = uf.UsfSpeciesName,
-            //    UsfSpeciesType = uf.UsfSpeciesType,
-            //    UsfFindDate = uf.UsfFindDate,
-            //    UsfDescription = uf.UsfDescription
+            //    findId = uf.findId,
+            //    findName = uf.findName,
+            //    SpeciesName = uf.SpeciesName,
+            //    SpeciesType = uf.SpeciesType,
+            //    findDate = uf.findDate,
+            //    description = uf.description
             //    // Map other necessary fields, excluding User-related fields
             //}).ToList();
 
@@ -61,18 +61,18 @@ namespace ForagerSite.Services
             {
                 userId = userWithFinds.UsrId,
                 userName = userWithFinds.UserSecurity.UssUsername,
-                userFinds = userWithFinds.UserFinds.ToList(),
-                userFindLocations = userWithFinds.UserFinds
+                finds = userWithFinds.UserFinds.ToList(),
+                findLocations = userWithFinds.UserFinds
                                         .Select(uf => uf.UserFindLocation)
                                         .Where(ufl => ufl != null)
                                         .ToList(),
-                userImages = userWithFinds.UserFinds
+                images = userWithFinds.UserFinds
                                  .SelectMany(uf => uf.UserImages)
                                  .ToList(),
-                userFindsCommentXrefs = userWithFinds.UserFinds
+                findsCommentXrefs = userWithFinds.UserFinds
                                             .SelectMany(uf => uf.UserFindsCommentXrefs)
                                             .ToList(),
-                userFindsComments = userWithFinds.UserFinds
+                findsComments = userWithFinds.UserFinds
                                         .SelectMany(uf => uf.UserFindsCommentXrefs)
                                         .Select(xref => xref.UserFindsComment)
                                         .Where(comment => comment != null)
@@ -89,12 +89,12 @@ namespace ForagerSite.Services
                                             .ToList()
             };
 
-            foreach (var find in userViewModel.userFinds)
+            foreach (var find in userViewModel.finds)
             {
                 string oldPw = find.User.UserSecurity.UssPassword;
                 find.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
             }
-            foreach (var xref in userViewModel.userFindsCommentXrefs)
+            foreach (var xref in userViewModel.findsCommentXrefs)
             {
                 string oldPw = xref.User.UserSecurity.UssPassword;
                 xref.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
@@ -131,18 +131,18 @@ namespace ForagerSite.Services
             {
                 userId = userWithFinds.UsrId,
                 userName = userWithFinds.UserSecurity.UssUsername,
-                userFinds = userWithFinds.UserFinds.ToList(),
-                userFindLocations = userWithFinds.UserFinds
+                finds = userWithFinds.UserFinds.ToList(),
+                findLocations = userWithFinds.UserFinds
                                         .Select(uf => uf.UserFindLocation)
                                         .Where(ufl => ufl != null)
                                         .ToList(),
-                userImages = userWithFinds.UserFinds
+                images = userWithFinds.UserFinds
                                  .SelectMany(uf => uf.UserImages)
                                  .ToList(),
-                userFindsCommentXrefs = userWithFinds.UserFinds
+                findsCommentXrefs = userWithFinds.UserFinds
                                             .SelectMany(uf => uf.UserFindsCommentXrefs)
                                             .ToList(),
-                userFindsComments = userWithFinds.UserFinds
+                findsComments = userWithFinds.UserFinds
                                         .SelectMany(uf => uf.UserFindsCommentXrefs)
                                         .Select(xref => xref.UserFindsComment)
                                         .Where(comment => comment != null)
@@ -159,12 +159,12 @@ namespace ForagerSite.Services
                                             .ToList()
             };
 
-            foreach (var find in userViewModel.userFinds)
+            foreach (var find in userViewModel.finds)
             {
                 string oldPw = find.User.UserSecurity.UssPassword;
                 find.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
             }
-            foreach (var xref in userViewModel.userFindsCommentXrefs)
+            foreach (var xref in userViewModel.findsCommentXrefs)
             {
                 string oldPw = xref.User.UserSecurity.UssPassword;
                 xref.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
@@ -212,18 +212,18 @@ namespace ForagerSite.Services
                 {
                     userId = user.UsrId,
                     userName = user.UserSecurity.UssUsername,
-                    userFinds = user.UserFinds.ToList(),
-                    userFindLocations = user.UserFinds
+                    finds = user.UserFinds.ToList(),
+                    findLocations = user.UserFinds
                                             .Select(uf => uf.UserFindLocation)
                                             .Where(ufl => ufl != null)
                                             .ToList(),
-                    userImages = user.UserFinds
+                    images = user.UserFinds
                                      .SelectMany(uf => uf.UserImages)
                                      .ToList(),
-                    userFindsCommentXrefs = user.UserFinds
+                    findsCommentXrefs = user.UserFinds
                                                 .SelectMany(uf => uf.UserFindsCommentXrefs)
                                                 .ToList(),
-                    userFindsComments = user.UserFinds
+                    findsComments = user.UserFinds
                                             .SelectMany(uf => uf.UserFindsCommentXrefs)
                                             .Select(xref => xref.UserFindsComment)
                                             .Where(comment => comment != null)
@@ -271,9 +271,9 @@ namespace ForagerSite.Services
             return userFind;
             //return await context.UserFinds
             //    .Include(uf => uf.UserImages) // Eagerly load UserImages
-            //    .FirstOrDefaultAsync(uf => uf.UsFId == findId);
+            //    .FirstOrDefaultAsync(uf => uf.findId == findId);
 
-            //return await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
+            //return await context.UserFinds.FirstOrDefaultAsync(uf => uf.findId == findId);
         }
 
         public async Task<UserFindsViewModel> CreateFind(
@@ -315,7 +315,7 @@ namespace ForagerSite.Services
                 UsfDescription = description,
                 UsfFindDate = DateTime.Now,
             };
-            mapViewModel.userFinds.Add(userFind);
+            mapViewModel.finds.Add(userFind);
 
             context.UserFinds.Add(userFind);
             await context.SaveChangesAsync();
@@ -326,7 +326,7 @@ namespace ForagerSite.Services
                 UslLongitude = lng,
                 UslUsfId = userFind.UsFId
             };
-            mapViewModel.userFindLocations.Add(userFindLocation);
+            mapViewModel.findLocations.Add(userFindLocation);
 
             context.UserFindLocations.Add(userFindLocation);
             await context.SaveChangesAsync();
@@ -339,12 +339,12 @@ namespace ForagerSite.Services
                     UsiUsfId = userFind.UsFId,
                     UsiImageData = image
                 };
-                mapViewModel.userImages.Add(userImage);
+                mapViewModel.images.Add(userImage);
 
                 context.UserImages.Add(userImage);
                 await context.SaveChangesAsync();
             }
-            mapViewModel.userFinds[0].UsFId = userFind.UsFId;
+            mapViewModel.finds[0].findId = userFind.UsFId;
             return mapViewModel;
         }
 
@@ -391,7 +391,7 @@ namespace ForagerSite.Services
             userFind.UsfDescription = description;
 
             context.UserFinds.Update(userFind);
-            mapViewModel.userFinds.Add(userFind);
+            mapViewModel.finds.Add(userFind);
 
             var userFindLocation = await context.UserFindLocations.FirstOrDefaultAsync(ufl => ufl.UslUsfId == findId);
             if (userFindLocation == null)
@@ -403,12 +403,12 @@ namespace ForagerSite.Services
             userFindLocation.UslLongitude = lng;
 
             context.UserFindLocations.Update(userFindLocation);
-            mapViewModel.userFindLocations.Add(userFindLocation);
+            mapViewModel.findLocations.Add(userFindLocation);
 
             // Manage image URLs
             var existingImages = await context.UserImages.Where(ui => ui.UsiUsfId == findId).ToListAsync();
             var existingImageUrls = existingImages.Select(ui => ui.UsiImageData).ToList();
-            mapViewModel.userImages.AddRange(existingImages);
+            mapViewModel.images.AddRange(existingImages);
 
             // Delete old image URLs from the database
             if (deletedFileUrls != null)
@@ -417,7 +417,7 @@ namespace ForagerSite.Services
                 {
                     var imageToDelete = existingImages.First(ui => ui.UsiImageData == urlToDelete);
                     context.UserImages.Remove(imageToDelete);
-                    mapViewModel.userImages.Remove(imageToDelete);
+                    mapViewModel.images.Remove(imageToDelete);
                 }
             }           
             // Add new image URLs to the database
@@ -430,7 +430,7 @@ namespace ForagerSite.Services
                         UsiUsfId = findId,
                         UsiImageData = urlToAdd
                     });
-                    mapViewModel.userImages.Add(new UserImage
+                    mapViewModel.images.Add(new UserImage
                     {
                         UsiUsfId = findId,
                         UsiImageData = urlToAdd
@@ -438,7 +438,7 @@ namespace ForagerSite.Services
                 }
             }           
             await context.SaveChangesAsync();
-            mapViewModel.userFinds[0].UsFId = findId;
+            mapViewModel.finds[0].findId = findId;
             return mapViewModel;
         }
 
@@ -454,9 +454,9 @@ namespace ForagerSite.Services
             //viewModelCopy.userSecurity = userSec;
             viewModelCopy.userId = userId;
             viewModelCopy.userName = userName;
-            viewModelCopy.userFinds.Add(userFind);
-            viewModelCopy.userFindLocations.Add(userFindLocation);
-            viewModelCopy.userImages.AddRange(images);
+            viewModelCopy.finds.Add(userFind);
+            viewModelCopy.findLocations.Add(userFindLocation);
+            viewModelCopy.images.AddRange(images);
 
             foreach (var image in images)
             {

@@ -19,13 +19,13 @@ namespace DataAccess.Models
         [Key]
         public Guid UcxId { get; set; }
         public Guid UcxUsrId { get; set; }
-        [ForeignKey("UcxUsrId")]
+        [ForeignKey("comxUserId")]
         public User User { get; set; }
         public Guid UcxUscId { get; set; }
-        [ForeignKey("UcxUscId")]
+        [ForeignKey("comxComId")]
         public UserFindsComment UserFindsComment { get; set; }
         public Guid UcxUsfId { get; set; }
-        [ForeignKey("UcxUsfId")]
+        [ForeignKey("comxFindId")]
         public UserFind UserFind { get; set; }
 
     }
