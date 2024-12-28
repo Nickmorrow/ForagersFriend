@@ -9,23 +9,26 @@ namespace ForagerSite.Services
 {
     public class MapService
     {
+        public static readonly List<string> MapFilters = new List<string>
+        {
+            "UserOnly", "AllUsers", "FriendUsers"
+        };
+        public string mapFilter = MapFilters[0];
         private readonly UserStateService _userStateService;
         private readonly UserFindService _userFindService;
+        public event Action OnChange;
+        public event Action<bool> OnLoadingChange;
         public List<UserFindsViewModel> MyViewModels { get; set; } = new();
         public List<UserFindsViewModel> AllViewModels { get; set; } = new();
         public List<UserFindsViewModel> CurrentViewModels { get; set; } = new();
-
-        public event Action OnChange;
-        public event Action<bool> OnLoadingChange;
-        private void NotifyStateChanged() => OnChange?.Invoke();
-        private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading);
-
         public MapService(UserStateService userStateService, UserFindService userFindService)
         {
             _userStateService = userStateService;
             _userFindService = userFindService;
         }
 
+        private void NotifyStateChanged() => OnChange?.Invoke();
+        private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading);       
         public void AddViewModel(Guid userId, UserFindsViewModel viewModel)
         {
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
@@ -95,12 +98,10 @@ namespace ForagerSite.Services
                 }
             }
         }
-
         public UserFindsViewModel GetViewModel(Guid userId)
         {
             return CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
         }
-
         public void DeleteInfo(Guid userId, Guid findId)
         {
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
