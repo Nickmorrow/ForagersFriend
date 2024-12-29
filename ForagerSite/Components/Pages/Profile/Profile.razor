@@ -138,29 +138,29 @@
             <tbody>
                 @if (userFindsExpanded)
                 {               
-                    @foreach (UserFind find in userFindsViewModel.finds)
+                    @foreach (FindDto find in userFindsViewModel.finds)
                     {
                         <tr style ="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
                             <td>
                                 <div>
                                     <div >
-                                        <p><strong>@find.UsfName</strong></p>
+                                        <p><strong>@find.findName</strong></p>
                                         <div>
-                                            <img src="@find.UserImages.FirstOrDefault().UsiImageData" style="max-width: 100px;" />
-                                            <p><strong>Discovered: </strong><span>@find.UsfFindDate.ToString("MMMM dd, yyyy")</span></p>
+                                            <img src="@find.findImages.FirstOrDefault().imageData" style="max-width: 100px;" />
+                                            <p><strong>Discovered: </strong><span>@find.findDate.ToString("MMMM dd, yyyy")</span></p>
                                         </div>
                                     </div>                                                                                              
                                 
                                     @if (IsRowExpanded(find))
                                     {
-                                        <p><strong>Species Name: </strong><span>@find.UsfSpeciesName</span></p>
-                                        <p><strong>Species Type: </strong><span>@find.UsfSpeciesType</span></p>
-                                        <p><strong>Species Category: </strong><span>@find.UsfUseCategory</span></p>
-                                        <p><strong>Distinguishing Features: </strong><span>@find.UsfFeatures</span></p>
-                                        <p><strong>Dangerous Lookalikes: </strong><span>@find.UsfLookAlikes</span></p>                                   
-                                        <p><strong>Harvest Method: </strong><span>@find.UsfHarvestMethod</span></p>
-                                        <p><strong>Tastes like: </strong><span>@find.UsfTastesLike</span></p>
-                                        <p><strong>Notes: </strong><span>@find.UsfDescription</span></p>
+                                        <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
+                                        <p><strong>Species Type: </strong><span>@find.speciesType</span></p>
+                                        <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
+                                        <p><strong>Distinguishing Features: </strong><span>@find.features</span></p>
+                                        <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>                                   
+                                        <p><strong>Harvest Method: </strong><span>@find.harvestMethod</span></p>
+                                        <p><strong>Tastes like: </strong><span>@find.tastesLike</span></p>
+                                        <p><strong>Notes: </strong><span>@find.description</span></p>
                                         <p><a></a>View on map</p>
                                         <div>
                                             <p><span>{Thumbs up}</span></p>
@@ -230,10 +230,10 @@
         ".jpg", ".jpeg", ".png"
     };
 
-    private Dictionary<UserFind, bool> expandedRows = new Dictionary<UserFind, bool>();
+    private Dictionary<FindDto, bool> expandedRows = new Dictionary<FindDto, bool>();
     #endregion
     #region Methods
-    private void ToggleRowExpansion(UserFind item)
+    private void ToggleRowExpansion(FindDto item)
     {
         if (expandedRows.ContainsKey(item))
         {
@@ -245,12 +245,12 @@
         }
     }
 
-    private bool IsRowExpanded(UserFind item)
+    private bool IsRowExpanded(FindDto item)
     {
         return expandedRows.ContainsKey(item) && expandedRows[item];
     }
 
-    private string GetRowClass(UserFind item)
+    private string GetRowClass(FindDto item)
     {
         return IsRowExpanded(item) ? "expanded" : "";
     }

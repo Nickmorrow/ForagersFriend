@@ -13,19 +13,19 @@ namespace DataAccess.Models
         public UserFindsCommentXref UserFindsCommentXref { get; set; }
 
     }
-
+    // To Do: parent/child commentIds for replies
     public class UserFindsCommentXref
     {
         [Key]
         public Guid UcxId { get; set; }
         public Guid UcxUsrId { get; set; }
-        [ForeignKey("comxUserId")]
+        [ForeignKey("UcxUsrId")]
         public User User { get; set; }
         public Guid UcxUscId { get; set; }
-        [ForeignKey("comxComId")]
+        [ForeignKey("UcxUscId")]
         public UserFindsComment UserFindsComment { get; set; }
         public Guid UcxUsfId { get; set; }
-        [ForeignKey("comxFindId")]
+        [ForeignKey("UcxUsfId")]
         public UserFind UserFind { get; set; }
 
     }

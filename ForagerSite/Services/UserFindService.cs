@@ -5,6 +5,8 @@ using ForagerSite.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ForagerSite.Services
 {
@@ -20,155 +22,146 @@ namespace ForagerSite.Services
             _dbContextFactory = dbContextFactory;
             _config = config;
         }
-        
+
         public async Task<UserFindsViewModel> GetUserFindsViewModel(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
-            var userWithFinds = await context.Users
+            var user = await context.Users
                 .Include(u => u.UserSecurity)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserFindLocation)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserImages)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserFindsCommentXrefs)
-                        .ThenInclude(xref => xref.UserFindsComment)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserFindsCommentXrefs)
-                        .ThenInclude(xref => xref.User)
-                            .ThenInclude(commentUser => commentUser.UserSecurity)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UsrId == userId);
 
-            if (userWithFinds == null)
+            if (user == null)
             {
                 return new UserFindsViewModel();
             }
 
-            //var userFindDtos = userWithFinds.UserFinds.Select(uf => new FindDto
-            //{
-            //    findId = uf.findId,
-            //    findName = uf.findName,
-            //    SpeciesName = uf.SpeciesName,
-            //    SpeciesType = uf.SpeciesType,
-            //    findDate = uf.findDate,
-            //    description = uf.description
-            //    // Map other necessary fields, excluding User-related fields
-            //}).ToList();
+            var userFinds = await context.UserFinds
+                .Where(uf => uf.UsfUsrId == userId)
+                .Include(uf => uf.UserFindLocation)
+                .Include(uf => uf.UserImages)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.UserFindsComment)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.User)
+                        .ThenInclude(commentUser => commentUser.UserSecurity)
+                .AsNoTracking()
+                .ToListAsync();
 
             var userViewModel = new UserFindsViewModel
             {
-                userId = userWithFinds.UsrId,
-                userName = userWithFinds.UserSecurity.UssUsername,
-                finds = userWithFinds.UserFinds.ToList(),
-                findLocations = userWithFinds.UserFinds
-                                        .Select(uf => uf.UserFindLocation)
-                                        .Where(ufl => ufl != null)
-                                        .ToList(),
-                images = userWithFinds.UserFinds
-                                 .SelectMany(uf => uf.UserImages)
-                                 .ToList(),
-                findsCommentXrefs = userWithFinds.UserFinds
-                                            .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                            .ToList(),
-                findsComments = userWithFinds.UserFinds
-                                        .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                        .Select(xref => xref.UserFindsComment)
-                                        .Where(comment => comment != null)
-                                        .ToList(),
-                CommentUsers = userWithFinds.UserFinds
-                                   .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                   .Select(xref => xref.User)
-                                   .Where(commentUser => commentUser != null)
-                                   .ToList(),
-                CommentUserSecurities = userWithFinds.UserFinds
-                                            .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                            .Select(xref => xref.User.UserSecurity)
-                                            .Where(us => us != null)
-                                            .ToList()
+                userId = user.UsrId,
+                userName = user.UserSecurity.UssUsername,
+                finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
+                commentUserNames = userFinds
+                    .SelectMany(uf => uf.UserFindsCommentXrefs)
+                    .Select(xref => xref.User.UserSecurity)
+                    .Where(us => us != null)
+                    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
             };
 
             foreach (var find in userViewModel.finds)
             {
-                string oldPw = find.User.UserSecurity.UssPassword;
-                find.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
-            }
-            foreach (var xref in userViewModel.findsCommentXrefs)
-            {
-                string oldPw = xref.User.UserSecurity.UssPassword;
-                xref.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
-            }
+                find.findLocation = userFinds
+                    .Where(uf => uf.UsFId == find.findId)
+                    .Select(uf => uf.UserFindLocation)
+                    .Where(ufl => ufl != null)
+                    .Select(ufl => new FindLocationDto(ufl))
+                    .FirstOrDefault();
+                find.findImages = userFinds
+                    .Where(uf => uf.UsFId == find.findId)
+                    .SelectMany(uf => uf.UserImages)
+                    .Select(ui => new ImageDto(ui))
+                    .ToList();
+                find.findsCommentXrefs = userFinds
+                    .Where(uf => uf.UsFId == find.findId)
+                    .SelectMany(uf => uf.UserFindsCommentXrefs)
+                    .Select(xref => new FindsCommentXrefDto(xref))
+                    .ToList();
 
+                foreach (var xref in find.findsCommentXrefs)
+                {
+                    var matchingComment = user.UserFindsCommentXrefs
+                        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
+                        .Select(ufcx => ufcx.UserFindsComment)
+                        .FirstOrDefault();
+                    var xrefComment = new FindCommentDto(matchingComment);
+
+                    xref.findsComment = xrefComment;
+                }
+            }
             return userViewModel;
         }
         public async Task<List<UserFindsViewModel>> GetUserFindsViewModels(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
-            var userWithFinds = await context.Users
+            var user = await context.Users
                 .Include(u => u.UserSecurity)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserFindLocation)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserImages)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserFindsCommentXrefs)
-                        .ThenInclude(xref => xref.UserFindsComment)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserFindsCommentXrefs)
-                        .ThenInclude(xref => xref.User)
-                            .ThenInclude(commentUser => commentUser.UserSecurity)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UsrId == userId);
 
-            if (userWithFinds == null)
+            if (user == null)
             {
                 return new List<UserFindsViewModel>();
             }
 
+            var userFinds = await context.UserFinds
+                .Where(uf => uf.UsfUsrId == userId)
+                .Include(uf => uf.UserFindLocation)
+                .Include(uf => uf.UserImages)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.UserFindsComment)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.User)
+                        .ThenInclude(commentUser => commentUser.UserSecurity)
+                .AsNoTracking()
+                .ToListAsync();
+
             var userViewModel = new UserFindsViewModel
             {
-                userId = userWithFinds.UsrId,
-                userName = userWithFinds.UserSecurity.UssUsername,
-                finds = userWithFinds.UserFinds.ToList(),
-                findLocations = userWithFinds.UserFinds
-                                        .Select(uf => uf.UserFindLocation)
-                                        .Where(ufl => ufl != null)
-                                        .ToList(),
-                images = userWithFinds.UserFinds
-                                 .SelectMany(uf => uf.UserImages)
-                                 .ToList(),
-                findsCommentXrefs = userWithFinds.UserFinds
-                                            .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                            .ToList(),
-                findsComments = userWithFinds.UserFinds
-                                        .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                        .Select(xref => xref.UserFindsComment)
-                                        .Where(comment => comment != null)
-                                        .ToList(),
-                CommentUsers = userWithFinds.UserFinds
-                                   .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                   .Select(xref => xref.User)
-                                   .Where(commentUser => commentUser != null)
-                                   .ToList(),
-                CommentUserSecurities = userWithFinds.UserFinds
-                                            .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                            .Select(xref => xref.User.UserSecurity)
-                                            .Where(us => us != null)
-                                            .ToList()
+                userId = user.UsrId,
+                userName = user.UserSecurity.UssUsername,
+                finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
+                commentUserNames = userFinds
+                    .SelectMany(uf => uf.UserFindsCommentXrefs)
+                    .Select(xref => xref.User.UserSecurity)
+                    .Where(us => us != null)
+                    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
             };
 
             foreach (var find in userViewModel.finds)
             {
-                string oldPw = find.User.UserSecurity.UssPassword;
-                find.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
+                find.findLocation = userFinds
+                    .Where(uf => uf.UsFId == find.findId)
+                    .Select(uf => uf.UserFindLocation)
+                    .Where(ufl => ufl != null)
+                    .Select(ufl => new FindLocationDto(ufl))
+                    .FirstOrDefault();
+                find.findImages = userFinds
+                    .Where(uf => uf.UsFId == find.findId)
+                    .SelectMany(uf => uf.UserImages)
+                    .Select(ui => new ImageDto(ui))
+                    .ToList();
+                find.findsCommentXrefs = userFinds
+                    .Where(uf => uf.UsFId == find.findId)
+                    .SelectMany(uf => uf.UserFindsCommentXrefs)
+                    .Select(xref => new FindsCommentXrefDto(xref))
+                    .ToList();
+
+                foreach (var xref in find.findsCommentXrefs)
+                {
+                    var matchingComment = user.UserFindsCommentXrefs
+                        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
+                        .Select(ufcx => ufcx.UserFindsComment)
+                        .FirstOrDefault();
+                    var xrefComment = new FindCommentDto(matchingComment);
+
+                    xref.findsComment = xrefComment;
+                }
             }
-            foreach (var xref in userViewModel.findsCommentXrefs)
-            {
-                string oldPw = xref.User.UserSecurity.UssPassword;
-                xref.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(oldPw);
-            }
+
 
             return new List<UserFindsViewModel> { userViewModel };
         }
@@ -177,70 +170,75 @@ namespace ForagerSite.Services
         {
             using var context = _dbContextFactory.CreateDbContext();
 
-            var usersWithFinds = await context.Users
+            var users = await context.Users
                 .Include(u => u.UserSecurity)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserFindLocation) 
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserImages)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserFindsCommentXrefs)
-                        .ThenInclude(xref => xref.UserFindsComment)
-                .Include(u => u.UserFinds)
-                    .ThenInclude(uf => uf.UserFindsCommentXrefs)
-                        .ThenInclude(xref => xref.User)
-                            .ThenInclude(commentUser => commentUser.UserSecurity)
                 .AsNoTracking()
                 .ToListAsync();
 
-            var userViewModelsList = usersWithFinds.Select(user =>
+            var userIds = users.Select(u => u.UsrId).ToList();
+
+            var userFinds = await context.UserFinds
+                .Where(uf => userIds.Contains(uf.UsfUsrId))
+                .Include(uf => uf.UserFindLocation)
+                .Include(uf => uf.UserImages)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.UserFindsComment)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.User)
+                        .ThenInclude(commentUser => commentUser.UserSecurity)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var userViewModelsList = new List<UserFindsViewModel>();    
+
+            foreach (var user in users)
             {
-                if (!string.IsNullOrEmpty(user.UserSecurity.UssPassword))
-                {
-                    user.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(user.UserSecurity.UssPassword);
-                }
+                var userFindsForUser = userFinds.Where(uf => uf.UsfUsrId == user.UsrId).ToList();
 
-                foreach (var xref in user.UserFinds.SelectMany(uf => uf.UserFindsCommentXrefs))
-                {
-                    if (!string.IsNullOrEmpty(xref.User?.UserSecurity?.UssPassword))
-                    {
-                        xref.User.UserSecurity.UssPassword = new PasswordEncryptionUtility().Encrypt(xref.User.UserSecurity.UssPassword);
-                    }
-                }
-
-                return new UserFindsViewModel
+                var userViewModel = new UserFindsViewModel
                 {
                     userId = user.UsrId,
                     userName = user.UserSecurity.UssUsername,
-                    finds = user.UserFinds.ToList(),
-                    findLocations = user.UserFinds
-                                            .Select(uf => uf.UserFindLocation)
-                                            .Where(ufl => ufl != null)
-                                            .ToList(),
-                    images = user.UserFinds
-                                     .SelectMany(uf => uf.UserImages)
-                                     .ToList(),
-                    findsCommentXrefs = user.UserFinds
-                                                .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                                .ToList(),
-                    findsComments = user.UserFinds
-                                            .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                            .Select(xref => xref.UserFindsComment)
-                                            .Where(comment => comment != null)
-                                            .ToList(),
-                    CommentUsers = user.UserFinds
-                                       .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                       .Select(xref => xref.User)
-                                       .Where(commentUser => commentUser != null)
-                                       .ToList(),
-                    CommentUserSecurities = user.UserFinds
-                                                .SelectMany(uf => uf.UserFindsCommentXrefs)
-                                                .Select(xref => xref.User.UserSecurity)
-                                                .Where(us => us != null)
-                                                .ToList()
+                    finds = userFindsForUser.Select(uf => new FindDto(uf)).ToList(),
+                    commentUserNames = userFindsForUser
+                        .SelectMany(uf => uf.UserFindsCommentXrefs)
+                        .Select(xref => xref.User.UserSecurity)
+                        .Where(us => us != null)
+                        .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
                 };
-            }).ToList();
 
+                foreach (var find in userViewModel.finds)
+                {
+                    find.findLocation = userFinds
+                        .Where(uf => uf.UsFId == find.findId)
+                        .Select(uf => uf.UserFindLocation)
+                        .Where(ufl => ufl != null)
+                        .Select(ufl => new FindLocationDto(ufl))
+                        .FirstOrDefault();
+                    find.findImages = userFinds
+                        .Where(uf => uf.UsFId == find.findId)
+                        .SelectMany(uf => uf.UserImages)
+                        .Select(ui => new ImageDto(ui))
+                        .ToList();
+                    find.findsCommentXrefs = userFinds
+                        .Where(uf => uf.UsFId == find.findId)
+                        .SelectMany(uf => uf.UserFindsCommentXrefs)
+                        .Select(xref => new FindsCommentXrefDto(xref))
+                        .ToList();
+                    foreach (var xref in find.findsCommentXrefs)
+                    {
+                        var matchingComment = user.UserFindsCommentXrefs
+                            .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
+                            .Select(ufcx => ufcx.UserFindsComment)
+                            .FirstOrDefault();
+                        var xrefComment = new FindCommentDto(matchingComment);
+
+                        xref.findsComment = xrefComment;
+                    }
+                }
+                userViewModelsList.Add(userViewModel);
+            }
+                                                     
             return userViewModelsList;
         }
 
@@ -296,8 +294,6 @@ namespace ForagerSite.Services
 
             var mapViewModel = new UserFindsViewModel();
 
-            //mapViewModel.user = user;
-            //mapViewModel.userSecurity = userSec;
             mapViewModel.userId = userId;
             mapViewModel.userName = userName;
 
@@ -315,7 +311,7 @@ namespace ForagerSite.Services
                 UsfDescription = description,
                 UsfFindDate = DateTime.Now,
             };
-            mapViewModel.finds.Add(userFind);
+            mapViewModel.finds.Add(new FindDto(userFind));
 
             context.UserFinds.Add(userFind);
             await context.SaveChangesAsync();
@@ -326,7 +322,7 @@ namespace ForagerSite.Services
                 UslLongitude = lng,
                 UslUsfId = userFind.UsFId
             };
-            mapViewModel.findLocations.Add(userFindLocation);
+            mapViewModel.finds[0].findLocation = new FindLocationDto(userFindLocation);
 
             context.UserFindLocations.Add(userFindLocation);
             await context.SaveChangesAsync();
@@ -339,7 +335,7 @@ namespace ForagerSite.Services
                     UsiUsfId = userFind.UsFId,
                     UsiImageData = image
                 };
-                mapViewModel.images.Add(userImage);
+                mapViewModel.finds[0].findImages.Add(new ImageDto(userImage));
 
                 context.UserImages.Add(userImage);
                 await context.SaveChangesAsync();
@@ -369,8 +365,6 @@ namespace ForagerSite.Services
             using var context = _dbContextFactory.CreateDbContext();
             var mapViewModel = new UserFindsViewModel();
 
-            //mapViewModel.user = user;
-            //mapViewModel.userSecurity = userSec;
             mapViewModel.userId = userId;
             mapViewModel.userName = userName;
 
@@ -391,7 +385,7 @@ namespace ForagerSite.Services
             userFind.UsfDescription = description;
 
             context.UserFinds.Update(userFind);
-            mapViewModel.finds.Add(userFind);
+            mapViewModel.finds.Add(new FindDto(userFind));
 
             var userFindLocation = await context.UserFindLocations.FirstOrDefaultAsync(ufl => ufl.UslUsfId == findId);
             if (userFindLocation == null)
@@ -403,12 +397,13 @@ namespace ForagerSite.Services
             userFindLocation.UslLongitude = lng;
 
             context.UserFindLocations.Update(userFindLocation);
-            mapViewModel.findLocations.Add(userFindLocation);
+            mapViewModel.finds[0].findLocation = new FindLocationDto(userFindLocation);
 
             // Manage image URLs
             var existingImages = await context.UserImages.Where(ui => ui.UsiUsfId == findId).ToListAsync();
             var existingImageUrls = existingImages.Select(ui => ui.UsiImageData).ToList();
-            mapViewModel.images.AddRange(existingImages);
+            var existingImageDtos = existingImages.Select(ui => new ImageDto(ui)).ToList();
+            mapViewModel.finds[0].findImages.AddRange(existingImageDtos);
 
             // Delete old image URLs from the database
             if (deletedFileUrls != null)
@@ -417,7 +412,8 @@ namespace ForagerSite.Services
                 {
                     var imageToDelete = existingImages.First(ui => ui.UsiImageData == urlToDelete);
                     context.UserImages.Remove(imageToDelete);
-                    mapViewModel.images.Remove(imageToDelete);
+                    var imageDtoToDelete = existingImageDtos.First(ui => ui.imageData == urlToDelete);
+                    mapViewModel.finds[0].findImages.Remove(imageDtoToDelete);
                 }
             }           
             // Add new image URLs to the database
@@ -425,16 +421,13 @@ namespace ForagerSite.Services
             {
                 foreach (var urlToAdd in uploadedFileUrls)
                 {
-                    context.UserImages.Add(new UserImage
+                    var addedImage = new UserImage
                     {
                         UsiUsfId = findId,
                         UsiImageData = urlToAdd
-                    });
-                    mapViewModel.images.Add(new UserImage
-                    {
-                        UsiUsfId = findId,
-                        UsiImageData = urlToAdd
-                    });
+                    };
+                    context.UserImages.Add(addedImage);                   
+                    mapViewModel.finds[0].findImages.Add(new ImageDto(addedImage));                   
                 }
             }           
             await context.SaveChangesAsync();
@@ -450,13 +443,11 @@ namespace ForagerSite.Services
             var images = await context.UserImages.Where(ui => ui.UsiUsfId == findId).ToListAsync();
 
             var viewModelCopy = new UserFindsViewModel();
-            //viewModelCopy.user = user;
-            //viewModelCopy.userSecurity = userSec;
             viewModelCopy.userId = userId;
             viewModelCopy.userName = userName;
-            viewModelCopy.finds.Add(userFind);
-            viewModelCopy.findLocations.Add(userFindLocation);
-            viewModelCopy.images.AddRange(images);
+            viewModelCopy.finds.Add(new FindDto(userFind));
+            viewModelCopy.finds[0].findLocation = new FindLocationDto(userFindLocation);
+            viewModelCopy.finds[0].findImages = images.Select(ui => new ImageDto(ui)).ToList();
 
             foreach (var image in images)
             {
