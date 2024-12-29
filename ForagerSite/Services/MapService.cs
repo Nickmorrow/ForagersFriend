@@ -32,24 +32,15 @@ namespace ForagerSite.Services
         public void AddViewModel(Guid userId, UserFindsViewModel viewModel)
         {
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
-
             existingViewModel.finds.Add(viewModel.finds[0]);
-            existingViewModel.findLocations.Add(viewModel.findLocations[0]);
-            existingViewModel.images.AddRange(viewModel.images);
 
             var backupVmlMy = MyViewModels.FirstOrDefault(vm => vm.userId == userId); // Backup Vm My filter
-
             backupVmlMy.finds.Add(viewModel.finds[0]);
-            backupVmlMy.findLocations.Add(viewModel.findLocations[0]);
-            backupVmlMy.images.AddRange(viewModel.images);
 
             if (AllViewModels.Count > 0) // Backup Vm All filter
             {
                 var backupVmlAll = AllViewModels.FirstOrDefault(vm => vm.userId == userId);
-
-                backupVmlAll.finds.Add(viewModel.finds[0]);
-                backupVmlAll.findLocations.Add(viewModel.findLocations[0]);
-                backupVmlAll.images.AddRange(viewModel.images);
+                backupVmlAll.finds.Add(viewModel.finds[0]);              
             }
         }
         public void UpdateViewModel(Guid userId, UserFindsViewModel viewModel)
@@ -61,11 +52,12 @@ namespace ForagerSite.Services
                 existingViewModel.finds.Remove(existingViewModel.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
                 existingViewModel.finds.Add(viewModel.finds[0]);
 
-                existingViewModel.findLocations.Remove(existingViewModel.findLocations.Where(fl => fl.locFindId == viewModel.finds[0].findId).FirstOrDefault());
-                existingViewModel.findLocations.Add(viewModel.findLocations[0]);
+                existingViewModel.commentUserNames.Clear();
+                foreach (var kvp in viewModel.commentUserNames)
+                {
+                    existingViewModel.commentUserNames[kvp.Key] = kvp.Value;
+                }
 
-                existingViewModel.images.RemoveAll(fi => fi.imgFindId == viewModel.finds[0].findId);
-                existingViewModel.images.AddRange(viewModel.images);
             }
             // Backup Vm My filter
             var backupVmlMy = MyViewModels.FirstOrDefault(vm => vm.userId == userId);
@@ -73,12 +65,10 @@ namespace ForagerSite.Services
             {
                 backupVmlMy.finds.Remove(backupVmlMy.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
                 backupVmlMy.finds.Add(viewModel.finds[0]);
-
-                backupVmlMy.findLocations.Remove(backupVmlMy.findLocations.Where(fl => fl.locFindId == viewModel.finds[0].findId).FirstOrDefault());
-                backupVmlMy.findLocations.Add(viewModel.findLocations[0]);
-
-                backupVmlMy.images.RemoveAll(fi => fi.imgFindId == viewModel.finds[0].findId);
-                backupVmlMy.images.AddRange(viewModel.images);
+                foreach (var kvp in viewModel.commentUserNames)
+                {
+                    backupVmlMy.commentUserNames[kvp.Key] = kvp.Value;
+                }
             }
             // Backup Vm All filter
             if (existingViewModel != null)
@@ -89,12 +79,11 @@ namespace ForagerSite.Services
 
                     backupVmlAll.finds.Remove(backupVmlAll.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
                     backupVmlAll.finds.Add(viewModel.finds[0]);
+                    foreach (var kvp in viewModel.commentUserNames)
+                    {
+                        backupVmlAll.commentUserNames[kvp.Key] = kvp.Value;
+                    }
 
-                    backupVmlAll.findLocations.Remove(backupVmlAll.findLocations.Where(fl => fl.locFindId == viewModel.finds[0].findId).FirstOrDefault());
-                    backupVmlAll.findLocations.Add(viewModel.findLocations[0]);
-
-                    backupVmlAll.images.RemoveAll(fi => fi.imgFindId == viewModel.finds[0].findId);
-                    backupVmlAll.images.AddRange(viewModel.images);
                 }
             }
         }
@@ -107,21 +96,19 @@ namespace ForagerSite.Services
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
 
             existingViewModel.finds.Remove(existingViewModel.finds.Where(f => f.findId == findId).FirstOrDefault());
-            existingViewModel.findLocations.Remove(existingViewModel.findLocations.Where(fl => fl.locFindId == findId).FirstOrDefault());
-            existingViewModel.images.RemoveAll(fi => fi.imgFindId == findId);
+            existingViewModel.commentUserNames.Clear();
 
             var backupVmMy = MyViewModels.FirstOrDefault(vm => vm.userId == userId);
 
             backupVmMy.finds.Remove(backupVmMy.finds.Where(f => f.findId == findId).FirstOrDefault());
-            backupVmMy.findLocations.Remove(backupVmMy.findLocations.Where(fl => fl.locFindId == findId).FirstOrDefault());
-            backupVmMy.images.RemoveAll(fi => fi.imgFindId == findId);
+            backupVmMy.commentUserNames.Clear();
 
             if (AllViewModels.Count > 0)
             {
                 var backupVmAll = AllViewModels.FirstOrDefault(vm => vm.userId == userId);
+
                 backupVmAll.finds.Remove(backupVmAll.finds.Where(f => f.findId == findId).FirstOrDefault());
-                backupVmAll.findLocations.Remove(backupVmAll.findLocations.Where(fl => fl.locFindId == findId).FirstOrDefault());
-                backupVmAll.images.RemoveAll(fi => fi.imgFindId == findId);
+                backupVmAll.commentUserNames.Clear();
             }
         }
 
@@ -135,13 +122,13 @@ namespace ForagerSite.Services
 
             Guid findGuid;
             Guid findUserGuid;
-            var selectedFind = new UserFind();
+            
             var selectedVm = new UserFindsViewModel();
             var selectedVms = new List<UserFindsViewModel>();
 
             if (Guid.TryParse(findId, out findGuid) && Guid.TryParse(findUserId, out findUserGuid))
             {
-                selectedFind = CurrentViewModels
+                var selectedFind = CurrentViewModels
                 .FirstOrDefault(vm => vm.userId == findUserGuid)
                 .finds
                 .FirstOrDefault(f => f.findId == findGuid);
@@ -149,16 +136,11 @@ namespace ForagerSite.Services
                 selectedVm.finds.Add(selectedFind);
                 selectedVm.userId = findUserGuid;
                 selectedVm.userName = findUserName;
-                selectedVm.findLocations = CurrentViewModels
-                    .FirstOrDefault(vm => vm.userId == findUserGuid)
-                    .findLocations
-                    .Where(l => l.locFindId == findGuid)
-                    .ToList();
-                selectedVm.images = CurrentViewModels
-                    .FirstOrDefault(vm => vm.userId == findUserGuid)
-                    .images
-                    .Where(i => i.imgFindId == findGuid)
-                    .ToList();
+                
+                foreach (var kvp in CurrentViewModels.FirstOrDefault(vm => vm.userId == findUserGuid).commentUserNames)
+                {
+                    selectedVm.commentUserNames[kvp.Key] = kvp.Value;
+                }
                 selectedVms.Add(selectedVm);
             }
             CurrentViewModels = VmUtilities.Copy(selectedVms);

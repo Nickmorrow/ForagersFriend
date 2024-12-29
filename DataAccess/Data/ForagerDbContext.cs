@@ -29,11 +29,11 @@ namespace DataAccess.Data
             modelBuilder.Entity<User>().ToTable("Users");
             modelBuilder.Entity<UserSecurity>().ToTable("UserSecurity");
             modelBuilder.Entity<UserMessage>().ToTable("UserMessages");
-            modelBuilder.Entity<UserFind>().ToTable("finds");
+            modelBuilder.Entity<UserFind>().ToTable("UserFinds");
             modelBuilder.Entity<UserFindLocation>().ToTable("UserFindLocation");
             modelBuilder.Entity<UserImage>().ToTable("UserImages");
             modelBuilder.Entity<UserFindsComment>().ToTable("UserFindsComments");
-            modelBuilder.Entity<UserFindsCommentXref>().ToTable("findsCommentXref");
+            modelBuilder.Entity<UserFindsCommentXref>().ToTable("UserFindsCommentXref");
 
             modelBuilder.Entity<User>()
                 .HasOne(u => u.UserSecurity)
@@ -63,13 +63,13 @@ namespace DataAccess.Data
                 .WithOne(ui => ui.UserFind)
                 .HasForeignKey(ui => ui.UsiUsfId);
 
-            // One-to-Many: UserFind -> findsCommentXref
+            // One-to-Many: UserFind -> UserFindsCommentXref
             modelBuilder.Entity<UserFind>()
                 .HasMany(uf => uf.UserFindsCommentXrefs)
                 .WithOne(xref => xref.UserFind)
                 .HasForeignKey(xref => xref.UcxUsfId);
 
-            // One-to-One: findsCommentXref -> UserFindsComment
+            // One-to-One: findsCommentXref -> findsComment
             modelBuilder.Entity<UserFindsCommentXref>()
                 .HasOne(xref => xref.UserFindsComment)
                 .WithOne(usc => usc.UserFindsCommentXref)
@@ -81,7 +81,7 @@ namespace DataAccess.Data
                 .WithMany(u => u.UserFindsCommentXrefs)
                 .HasForeignKey(xref => xref.UcxUsrId);
 
-            // One-to-One: findsCommentXref -> UserFindsComment
+            // One-to-One: findsCommentXref -> findsComment
             modelBuilder.Entity<UserFindsCommentXref>()
                 .HasOne(xref => xref.UserFindsComment)
                 .WithOne(usc => usc.UserFindsCommentXref)

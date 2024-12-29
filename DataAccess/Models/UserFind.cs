@@ -9,7 +9,7 @@ namespace DataAccess.Models
         public Guid UsFId { get; set; }
         public string UsfName { get; set; }
         public Guid UsfUsrId { get; set; }
-        [ForeignKey("findUserId")]
+        [ForeignKey("UsfUsrId")]
         public User User { get; set; }
         public DateTime UsfFindDate { get; set; }
         public string UsfSpeciesName { get; set; }

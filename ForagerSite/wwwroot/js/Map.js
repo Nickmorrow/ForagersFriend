@@ -144,25 +144,25 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
 
         var currentViewModel = viewModel;
 
-        viewModel.userFindLocations.forEach(location => {
+        viewModel.finds.forEach(find => {
 
-            if (location.UslLatitude !== undefined && location.UslLongitude !== undefined) {
-                var lat = parseFloat(location.UslLatitude);
-                var lng = parseFloat(location.UslLongitude);
+            if (find.findLocation.latitude !== undefined && find.findLocation.longitude !== undefined) {
+                var lat = parseFloat(find.findLocation.latitude);
+                var lng = parseFloat(find.findLocation.longitude);
 
                 if (!isNaN(lat) && !isNaN(lng)) {
                     var marker = L.marker([lat, lng]).addTo(window.map);
-                    var find = viewModel.userFinds.find(find => find.UsFId === location.UslUsfId);
+                    //var find = viewModel.finds.find(find => find.findId === location.locFindId);
 
-                    if (find && find.UsFId) {
+                    if (find && find.findId) {
 
-                        var findId = find.UsFId;
+                        var findId = find.findId;
 
                         let imageHtml = '';
-                        if (find.UserImages && find.UserImages.length > 0) {
-                            imageHtml = find.UserImages.map(image => {
-                                if (image && image.UsiImageData && typeof image.UsiImageData === 'string') {
-                                    const fullUrl = `https://localhost:7007${image.UsiImageData}`;
+                        if (find.findImages && find.findImages.length > 0) {
+                            imageHtml = find.findImages.map(image => {
+                                if (image && image.imageData && typeof image.imageData === 'string') {
+                                    const fullUrl = `https://localhost:7007${image.imageData}`;
                                     return `<img src="${fullUrl}" alt="Image" style="max-width: 100%; height: auto; margin-bottom: 5px;">`;
                                 } else {
                                     console.error('Invalid image data:', image);
@@ -170,10 +170,10 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                                 }
                             }).join('');
                         }
-                        if (find.UserImages && find.UserImages.length > 0) {
-                            const image = find.UserImages[0]; // Access the first image
-                            if (image && image.UsiImageData && typeof image.UsiImageData === 'string') {
-                                const fullUrl = `https://localhost:7007${image.UsiImageData}`;
+                        if (find.findImages && find.findImages.length > 0) {
+                            const image = find.findImages[0]; // Access the first image
+                            if (image && image.imageData && typeof image.imageData === 'string') {
+                                const fullUrl = `https://localhost:7007${image.imageData}`;
                                 imageHtml = `<img src="${fullUrl}" alt="Image" style="max-width: 100%; height: auto; margin-bottom: 5px;">`;
                             } else {
                                 console.error('Invalid image data:', image);
@@ -183,17 +183,17 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                             imageHtml = ''; // Handle case when no images are present
                         }
                         var popupContent = templateHtml
-                            .replace('{UsfName}', find.UsfName || '')
-                            .replace('{UssUsername}', viewModel.userName || '')
-                            .replace('{UsfSpeciesName}', find.UsfSpeciesName || '')
+                            .replace('{findName}', find.findName || '')
+                            .replace('{username}', viewModel.userName || '')
+                            .replace('{speciesName}', find.speciesName || '')
                             .replace('{Images}', imageHtml)
-                            .replace('{UsfSpeciesType}', find.UsfSpeciesType || '')
-                            .replace('{UsfUseCategory}', find.UsfUseCategory || '')
-                            .replace('{UsfFeatures}', find.UsfFeatures || '')
-                            .replace('{UsfLookAlikes}', find.UsfLookAlikes || '')
-                            .replace('{UsfHarvestMethod}', find.UsfHarvestMethod || '')
-                            .replace('{UsfTastesLike}', find.UsfTastesLike || '')
-                            .replace('{UsfDescription}', find.UsfDescription || '')
+                            .replace('{speciesType}', find.speciesType || '')
+                            .replace('{useCategory}', find.useCategory || '')
+                            .replace('{features}', find.features || '')
+                            .replace('{lookAlikes}', find.lookAlikes || '')
+                            .replace('{harvestMethod}', find.harvestMethod || '')
+                            .replace('{tastesLike}', find.tastesLike || '')
+                            .replace('{description}', find.description || '')
                             .replace('id="details-button"', `onclick="getDetails('${findId}', '${currentUserId}', '${mapFilter}', '${viewModel.userId}', '${viewModel.userName}', '${userName}')"`);
                         if (viewModel.userId === currentUserId) {
                             const serializedViewModel = JSON.stringify(currentViewModel).replace(/"/g, '&quot;');
@@ -211,7 +211,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                         console.error("Find or UsFId is undefined:", find, location);
                     }
                 } else {
-                    console.error("Latitude or Longitude is not a valid number:", location.UslLatitude, location.UslLongitude);
+                    console.error("Latitude or Longitude is not a valid number:", find.location.UslLatitude, find.location.UslLongitude);
                 }
             } else {
                 console.error("Latitude or Longitude is undefined:", location);
@@ -291,7 +291,7 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName, serial
     }
     const currentViewModel = JSON.parse(serializedViewModel);
     console.log(currentViewModel);
-    var find = currentViewModel.userFinds.find(find => find.UsFId === findId);
+    var find = currentViewModel.finds.find(find => find.findId === findId);
 
     var markerData = markers[findId];
     if (!markerData) {
@@ -318,15 +318,15 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName, serial
            
             if (form) {
                 // Populate the form with existing data
-                form.querySelector('#UsfName').value = find.UsfName || '';
-                form.querySelector('#UsfSpeciesName').value = find.UsfSpeciesName || '';
-                form.querySelector('#UsfSpeciesType').value = find.UsfSpeciesType || '';
-                form.querySelector('#UsfUseCategory').value = find.UsfUseCategory || '';
-                form.querySelector('#UsfFeatures').value = find.UsfFeatures || '';
-                form.querySelector('#UsfLookAlikes').value = find.UsfLookAlikes || '';
-                form.querySelector('#UsfHarvestMethod').value = find.UsfHarvestMethod || '';
-                form.querySelector('#UsfTastesLike').value = find.UsfTastesLike || '';
-                form.querySelector('#UsfDescription').value = find.UsfDescription || '';
+                form.querySelector('#findName').value = find.findName || '';
+                form.querySelector('#speciesName').value = find.speciesName || '';
+                form.querySelector('#speciesType').value = find.speciesType || '';
+                form.querySelector('#useCategory').value = find.useCategory || '';
+                form.querySelector('#features').value = find.features || '';
+                form.querySelector('#lookAlikes').value = find.lookAlikes || '';
+                form.querySelector('#harvestMethod').value = find.harvestMethod || '';
+                form.querySelector('#tastesLike').value = find.tastesLike || '';
+                form.querySelector('#description').value = find.description || '';
 
                 // Load the existing images into the gallery
                 const imageGallery = form.querySelector('#existingImageGallery');
@@ -334,10 +334,10 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName, serial
 
                 var deletedImageUrls = [];
 
-                if (find.UserImages && find.UserImages.length > 0) {
-                    find.UserImages.forEach(image => {
-                        if (image && image.UsiImageData && typeof image.UsiImageData === 'string') {
-                            console.log('Image URL:', `https://localhost:7007${image.UsiImageData}`); // Debug log for image URL
+                if (find.findImages && find.findImages.length > 0) {
+                    find.findImages.forEach(image => {
+                        if (image && image.imageData && typeof image.imageData === 'string') {
+                            console.log('Image URL:', `https://localhost:7007${image.imageData}`); // Debug log for image URL
 
                             const imageDiv = document.createElement('div');
                             imageDiv.style.display = 'inline-block';
@@ -345,7 +345,7 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName, serial
                             imageDiv.style.marginRight = '10px';
 
                             const img = document.createElement('img');
-                            img.src = `https://localhost:7007${image.UsiImageData}`;
+                            img.src = `https://localhost:7007${image.imageData}`;
                             img.style.maxWidth = '100px';
                             img.style.marginBottom = '5px';
                             img.alt = 'Image';
@@ -360,8 +360,8 @@ window.updateFind = function (findId, currentUserId, mapFilter, userName, serial
                             removeButton.addEventListener('click', function () {
                                 imageDiv.remove(); // Remove from UI
                                 event.stopPropagation();
-                                deleteImage(userName, image.UsiImageData);
-                                var deletedImageUrl = image.UsiImageData;
+                                deleteImage(userName, image.imageData);
+                                var deletedImageUrl = image.imageData;
                                 deletedImageUrls.push(deletedImageUrl);// Delete image from server & DB
                             });
 

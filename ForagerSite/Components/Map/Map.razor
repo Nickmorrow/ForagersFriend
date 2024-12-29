@@ -114,15 +114,15 @@
                         {                                                          
                             <tr style="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
                             <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.findName</td>
-                                @if (find.UserImages != null && find.UserImages.Any())
+                                @if (find.findImages != null && find.findImages.Any())
                                 {
-                                    <td><img src="@find.UserImages.FirstOrDefault().ImageData" style="max-width: 100px;" /></td>
+                                    <td><img src="@find.findImages.FirstOrDefault().imageData" style="max-width: 100px;" /></td>
                                 }
                                 else
                                 {
                                     <td>No image available</td> <!-- or any fallback content -->
                                 }
-                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.SpeciesType</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.speciesType</td>
                             <td style="padding: 10px; border-bottom: 1px solid #ddd;">Discovered by: @vm.userName</td>
                         </tr>
                             @if (IsRowExpanded(find))
@@ -131,7 +131,7 @@
                                     <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">
                                         <div style="padding-left: 20px;">
                                             <p><strong>Discovered: </strong><span>@find.findDate.ToString("MMMM dd, yyyy")</span></p>
-                                            <p><strong>Species Name: </strong><span>@find.SpeciesName</span></p>
+                                            <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
                                             <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
                                             <p><strong>Distinguishing Features: </strong><span>@find.features</span></p>
                                             <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>
@@ -173,17 +173,17 @@
 <div id="find-form-container" style="display: none;">
     <form id="UserFindForm">
         <label for="findName">Name:</label>
-        <input type="text" id="UsfName" name="findName"><br>
+        <input type="text" id="findName" name="findName"><br>
 
         <label for="speciesName">Species Name:</label>
-        <input type="text" id="UsfSpeciesName" name="speciesName"><br>
+        <input type="text" id="speciesName" name="speciesName"><br>
 
         <label for="imageUpload">Images:</label>
         <input type="file" class="form-control" id="imageUpload" name="imageUpload" multiple accept=".png, .jpg, .jpeg" ><br>
         <div id="imagePreview" style="margin-top: 5px;"></div>
 
         <label for="speciesType">Species Type:</label>
-        <select id="UsfSpeciesType" class="dropdown-item"name="speciesType" >
+        <select id="speciesType" class="dropdown-item"name="speciesType" >
             <option value="tree">Tree</option>
             <option value="mushroom">Mushroom</option>
             <option value="fruit">Fruit</option>
@@ -191,26 +191,26 @@
         </select>
 
         <label for="useCategory">Use Category:</label>
-        <select id="UsfUseCategory" class="dropdown-item" name="useCategory">
+        <select id="useCategory" class="dropdown-item" name="useCategory">
             <option value="medicinal">Medicinal</option>
             <option value="gourmet">Gourmet</option>
             <option value="crafting">Crafting</option>
         </select>
 
         <label for="features">Distinguishing Features:</label>
-        <input type="text" id="UsfFeatures" name="features"><br>
+        <input type="text" id="features" name="features"><br>
 
         <label for="lookalikes">Dangerous Lookalikes:</label>
-        <input type="text" id="UsfLookAlikes" name="lookalikes"><br>
+        <input type="text" id="lookAlikes" name="lookalikes"><br>
 
         <label for="harvestMethod">Harvest Method:</label>
-        <input type="text" id="UsfHarvestMethod" name="harvestMethod"><br>
+        <input type="text" id="harvestMethod" name="harvestMethod"><br>
 
         <label for="tastesLike">Tastes Like:</label>
-        <input type="text" id="UsfTastesLike" name="tastesLike"><br>
+        <input type="text" id="tastesLike" name="tastesLike"><br>
 
         <label for="description">Notes:</label>
-        <input type="text" id="UsfDescription" name="description"><br>
+        <input type="text" id="description" name="description"><br>
 
         <button type="button" id="saveButton" >Save</button>
     </form>
@@ -219,10 +219,10 @@
 <div id="update-form-container" style="display: none;">
     <form id="UpdateFindForm">
         <label for="findName">Name:</label>
-        <input type="text" id="UsfName" name="findName" value=""><br>
+        <input type="text" id="findName" name="findName" value=""><br>
 
         <label for="speciesName">Species Name:</label>
-        <input type="text" id="UsfSpeciesName" name="speciesName" value=""><br>
+        <input type="text" id="speciesName" name="speciesName" value=""><br>
 
         <div id="existingImageGallery">
 
@@ -233,7 +233,7 @@
         <div id="newImagePreview"></div> 
 
         <label for="speciesType">Species Type:</label>
-        <select id="UsfSpeciesType" class="dropdown-item" name="speciesType">
+        <select id="speciesType" class="dropdown-item" name="speciesType">
             <option value="tree">Tree</option>
             <option value="mushroom">Mushroom</option>
             <option value="fruit">Fruit</option>
@@ -241,46 +241,46 @@
         </select>
 
         <label for="useCategory">Use Category:</label>
-        <select id="UsfUseCategory" class="dropdown-item" name="useCategory">
+        <select id="useCategory" class="dropdown-item" name="useCategory">
             <option value="medicinal">Medicinal</option>
             <option value="gourmet">Gourmet</option>
             <option value="crafting">Crafting</option>
         </select>
 
         <label for="features">Distinguishing Features:</label>
-        <input type="text" id="UsfFeatures" name="features" value=""><br>
+        <input type="text" id="features" name="features" value=""><br>
 
         <label for="lookalikes">Dangerous Lookalikes:</label>
-        <input type="text" id="UsfLookAlikes" name="lookalikes" value=""><br>
+        <input type="text" id="lookAlikes" name="lookalikes" value=""><br>
 
         <label for="harvestMethod">Harvest Method:</label>
-        <input type="text" id="UsfHarvestMethod" name="harvestMethod" value=""><br>
+        <input type="text" id="harvestMethod" name="harvestMethod" value=""><br>
 
         <label for="tastesLike">Tastes Like:</label>
-        <input type="text" id="UsfTastesLike" name="tastesLike" value=""><br>
+        <input type="text" id="tastesLike" name="tastesLike" value=""><br>
 
         <label for="description">Notes:</label>
-        <input type="text" id="UsfDescription" name="description" value=""><br>
+        <input type="text" id="description" name="description" value=""><br>
 
         <button type="button" id="updateButton">Save</button>
     </form>
 </div>
 
 <div id="find-popup-template" style="display: none;">
-    <p><strong>Name:</strong> {UsfName}</p>
-    <p><strong>Discovered by:</strong> {UssUsername}</p>
-    <p><strong>Species Name:</strong> {UsfSpeciesName}</p>
+    <p><strong>Name:</strong> {findName}</p>
+    <p><strong>Discovered by:</strong> {username}</p>
+    <p><strong>Species Name:</strong> {speciesName}</p>
     <div id="photo-gallery">
         {Images}
     </div>
     @* <p><strong>Discovered:</strong> {Date}</p> *@
-    <p><strong>Species Type:</strong> {UsfSpeciesType}</p>
-    <p><strong>Use Category:</strong> {UsfUseCategory}</p>
-    <p><strong>Distinguishing Features:</strong> {UsfFeatures}</p>
-    <p><strong>Dangerous Lookalikes:</strong> {UsfLookAlikes}</p>
-    <p><strong>Harvest Method:</strong> {UsfHarvestMethod}</p>
-    <p><strong>Tastes Like:</strong> {UsfTastesLike}</p>
-    <p><strong>Notes:</strong> {UsfDescription}</p>
+    <p><strong>Species Type:</strong> {speciesType}</p>
+    <p><strong>Use Category:</strong> {useCategory}</p>
+    <p><strong>Distinguishing Features:</strong> {features}</p>
+    <p><strong>Dangerous Lookalikes:</strong> {lookAlikes}</p>
+    <p><strong>Harvest Method:</strong> {harvestMethod}</p>
+    <p><strong>Tastes Like:</strong> {tastesLike}</p>
+    <p><strong>Notes:</strong> {description}</p>
     <div style="display: flex; 10px">
         <button type="button" id="details-button" class="form-control">View Details</button>
         <button type="button" id="edit-button" class="form-control">Edit</button>
@@ -306,7 +306,7 @@
 
     private bool isAdvancedSearchVisible = false;
 
-    private Dictionary<UserFind, bool> expandedRows = new Dictionary<UserFind, bool>();
+    private Dictionary<FindDto, bool> expandedRows = new Dictionary<FindDto, bool>();
 
     private bool isLoading = true;
 
@@ -513,28 +513,13 @@
                 vm.finds = vm.finds
                 .Where(f =>
                     (string.IsNullOrEmpty(selectedSpeciesType) ||
-                     f.SpeciesType.Equals(selectedSpeciesType, StringComparison.OrdinalIgnoreCase))
+                     f.speciesType.Equals(selectedSpeciesType, StringComparison.OrdinalIgnoreCase))
                     && (string.IsNullOrEmpty(selectedUseCategory) ||
                         f.useCategory.Equals(selectedUseCategory, StringComparison.OrdinalIgnoreCase))
                     && (string.IsNullOrEmpty(findSearchTerm) ||
                         f.findName.Contains(findSearchTerm, StringComparison.OrdinalIgnoreCase))
                 )
                 .ToList();
-
-                var validFindIds = vm.finds.Select(f => f.findId).ToList();
-                var filteredLocations = new List<UserFindLocation>();
-
-                foreach (Guid id in validFindIds)
-                {
-                    var matchingLocation = vm.findLocations
-                        .FirstOrDefault(loc => loc.locFindId == id);
-
-                    if (matchingLocation != null)
-                    {
-                        filteredLocations.Add(matchingLocation);
-                    }
-                }
-                vm.findLocations = filteredLocations;
             }
         }
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
@@ -549,7 +534,7 @@
 
     private bool userFindsExpanded;
 
-    private void ToggleRowExpansion(UserFind item)
+    private void ToggleRowExpansion(FindDto item)
     {
         if (expandedRows.ContainsKey(item))
         {
@@ -561,12 +546,12 @@
         }
     }
 
-    private bool IsRowExpanded(UserFind item)
+    private bool IsRowExpanded(FindDto item)
     {
         return expandedRows.ContainsKey(item) && expandedRows[item];
     }
 
-    private string GetRowClass(UserFind item)
+    private string GetRowClass(FindDto item)
     {
         return IsRowExpanded(item) ? "expanded" : "";
     }
@@ -579,11 +564,8 @@
         var uf = ufvm.finds
             .FirstOrDefault(f => f.findId == findId);
 
-        var location = ufvm.findLocations
-            .FirstOrDefault(l => l.locFindId == uf.findId);
-
-        double latitude = location.latitude;
-        double longitude = location.longitude;
+        double latitude = uf.findLocation.latitude;
+        double longitude = uf.findLocation.longitude;
 
         await JSRuntime.InvokeVoidAsync("centerMapOnFind", latitude, longitude);
     }
