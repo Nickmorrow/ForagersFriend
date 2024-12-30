@@ -208,7 +208,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                         marker.bindPopup(popupContent);
                         markers[findId] = { marker: marker, lat: lat, lng: lng, originalPopupContent: popupContent };
                     } else {
-                        console.error("Find or UsFId is undefined:", find, location);
+                        console.error("Find or findId is undefined:", find, location);
                     }
                 } else {
                     console.error("Latitude or Longitude is not a valid number:", find.location.UslLatitude, find.location.UslLongitude);

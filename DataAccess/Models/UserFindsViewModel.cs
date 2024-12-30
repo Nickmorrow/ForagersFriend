@@ -61,14 +61,14 @@ namespace DataAccess.Models
         public List<FindDto> finds { get; set; }
 
         //            UssUsrId          username
-        public Dictionary<Guid, string> commentUserNames { get; set; }
+        //public Dictionary<Guid, string> commentUserNames { get; set; }
 
         public UserFindsViewModel()
         {
             userId = Guid.Empty;
             userName = string.Empty;
             finds = new List<FindDto>();
-            commentUserNames = new();
+            //commentUserNames = new();
         }
 
         public bool IsEmpty()
@@ -157,9 +157,10 @@ namespace DataAccess.Models
     {
         public Guid comId { get; set; }
         public string comment { get; set; }
-        public int? commentScore { get; set; }
+        public int? commentScore { get; set; } = 0;
         public DateTime commentDate { get; set; }
-        //public FindsCommentXrefDto findsCommentXref { get; set; }
+        public Guid? UscParentCommentId { get; set; }
+        public UserFindsComment? ParentComment { get; set; }
         public FindCommentDto() { }
         public FindCommentDto(UserFindsComment comment)
         {
@@ -187,7 +188,7 @@ namespace DataAccess.Models
             comxUserId = xref.UcxUsrId;
             comxComId = xref.UcxUscId;
             comxFindId = xref.UcxUsfId;
-            //findsComment = new FindCommentDto(xref.findsComment);
+            findsComment = new FindCommentDto(xref.UserFindsComment);
         }
     }
 }

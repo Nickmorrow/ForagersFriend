@@ -15,14 +15,21 @@ namespace ForagerSite.Services
 
         private IDbContextFactory<ForagerDbContext> _dbContextFactory;
 
-        private readonly IConfiguration _config;
-
+        private readonly IConfiguration _config;        
         public UserFindService(IDbContextFactory<ForagerDbContext> dbContextFactory, IConfiguration config)
         {
             _dbContextFactory = dbContextFactory;
             _config = config;
         }
 
+        public async Task<Dictionary<Guid, string>> GetCommentUserNames()
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+            return await context.Users
+                .Include(u => u.UserSecurity)
+                .AsNoTracking()
+                .ToDictionaryAsync(u => u.UsrId, u => u.UserSecurity.UssUsername);
+        }
         public async Task<UserFindsViewModel> GetUserFindsViewModel(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -54,11 +61,11 @@ namespace ForagerSite.Services
                 userId = user.UsrId,
                 userName = user.UserSecurity.UssUsername,
                 finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
-                commentUserNames = userFinds
-                    .SelectMany(uf => uf.UserFindsCommentXrefs)
-                    .Select(xref => xref.User.UserSecurity)
-                    .Where(us => us != null)
-                    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
+                //userNamesKvp = userFinds
+                //    .SelectMany(uf => uf.UserFindsCommentXrefs)
+                //    .Select(xref => xref.User.UserSecurity)
+                //    .Where(us => us != null)
+                //    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
             };
 
             foreach (var find in userViewModel.finds)
@@ -80,16 +87,16 @@ namespace ForagerSite.Services
                     .Select(xref => new FindsCommentXrefDto(xref))
                     .ToList();
 
-                foreach (var xref in find.findsCommentXrefs)
-                {
-                    var matchingComment = user.UserFindsCommentXrefs
-                        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
-                        .Select(ufcx => ufcx.UserFindsComment)
-                        .FirstOrDefault();
-                    var xrefComment = new FindCommentDto(matchingComment);
+                //foreach (var xref in find.findsCommentXrefs)
+                //{
+                //    var matchingComment = user.UserFindsCommentXrefs
+                //        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
+                //        .Select(ufcx => ufcx.UserFindsComment)
+                //        .FirstOrDefault();
+                //    var xrefComment = new FindCommentDto(matchingComment);
 
-                    xref.findsComment = xrefComment;
-                }
+                //    xref.findsComment = xrefComment;
+                //}
             }
             return userViewModel;
         }
@@ -124,11 +131,11 @@ namespace ForagerSite.Services
                 userId = user.UsrId,
                 userName = user.UserSecurity.UssUsername,
                 finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
-                commentUserNames = userFinds
-                    .SelectMany(uf => uf.UserFindsCommentXrefs)
-                    .Select(xref => xref.User.UserSecurity)
-                    .Where(us => us != null)
-                    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
+                //userNamesKvp = userFinds
+                //    .SelectMany(uf => uf.UserFindsCommentXrefs)
+                //    .Select(xref => xref.User.UserSecurity)
+                //    .Where(us => us != null)
+                //    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
             };
 
             foreach (var find in userViewModel.finds)
@@ -150,16 +157,16 @@ namespace ForagerSite.Services
                     .Select(xref => new FindsCommentXrefDto(xref))
                     .ToList();
 
-                foreach (var xref in find.findsCommentXrefs)
-                {
-                    var matchingComment = user.UserFindsCommentXrefs
-                        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
-                        .Select(ufcx => ufcx.UserFindsComment)
-                        .FirstOrDefault();
-                    var xrefComment = new FindCommentDto(matchingComment);
+                //foreach (var xref in find.findsCommentXrefs)
+                //{
+                //    var matchingComment = user.UserFindsCommentXrefs
+                //        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
+                //        .Select(ufcx => ufcx.UserFindsComment)
+                //        .FirstOrDefault();
+                //    var xrefComment = new FindCommentDto(matchingComment);
 
-                    xref.findsComment = xrefComment;
-                }
+                //    xref.findsComment = xrefComment;
+                //}
             }
 
 
@@ -200,11 +207,11 @@ namespace ForagerSite.Services
                     userId = user.UsrId,
                     userName = user.UserSecurity.UssUsername,
                     finds = userFindsForUser.Select(uf => new FindDto(uf)).ToList(),
-                    commentUserNames = userFindsForUser
-                        .SelectMany(uf => uf.UserFindsCommentXrefs)
-                        .Select(xref => xref.User.UserSecurity)
-                        .Where(us => us != null)
-                        .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
+                    //userNamesKvp = userFindsForUser
+                    //    .SelectMany(uf => uf.UserFindsCommentXrefs)
+                    //    .Select(xref => xref.User.UserSecurity)
+                    //    .Where(us => us != null)
+                    //    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
                 };
 
                 foreach (var find in userViewModel.finds)
@@ -225,16 +232,16 @@ namespace ForagerSite.Services
                         .SelectMany(uf => uf.UserFindsCommentXrefs)
                         .Select(xref => new FindsCommentXrefDto(xref))
                         .ToList();
-                    foreach (var xref in find.findsCommentXrefs)
-                    {
-                        var matchingComment = user.UserFindsCommentXrefs
-                            .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
-                            .Select(ufcx => ufcx.UserFindsComment)
-                            .FirstOrDefault();
-                        var xrefComment = new FindCommentDto(matchingComment);
+                    //foreach (var xref in find.findsCommentXrefs)
+                    //{
+                    //    var matchingComment = user.UserFindsCommentXrefs
+                    //        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
+                    //        .Select(ufcx => ufcx.UserFindsComment)
+                    //        .FirstOrDefault();
+                    //    var xrefComment = new FindCommentDto(matchingComment);
 
-                        xref.findsComment = xrefComment;
-                    }
+                    //    xref.findsComment = xrefComment;
+                    //}
                 }
                 userViewModelsList.Add(userViewModel);
             }
@@ -272,6 +279,39 @@ namespace ForagerSite.Services
             //    .FirstOrDefaultAsync(uf => uf.findId == findId);
 
             //return await context.UserFinds.FirstOrDefaultAsync(uf => uf.findId == findId);
+        }
+
+        public async Task<FindsCommentXrefDto> AddComment(string comment, Guid findId, Guid userId)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+
+            var userComment = new UserFindsComment
+            {
+                UscComment = comment,
+                UscCommentDate = DateTime.Now
+            };
+            context.UserFindsComments.Add(userComment);
+            await context.SaveChangesAsync();
+
+            var userCommentXref = new UserFindsCommentXref
+            {
+                UcxUsrId = userId,
+                UcxUscId = userComment.UscId,
+                UcxUsfId = findId
+            };
+            context.UserFindsCommentXrefs.Add(userCommentXref);
+            await context.SaveChangesAsync();
+
+            var commentDto = new FindCommentDto(userComment);
+            var xrefDto = new FindsCommentXrefDto
+            {
+                comXId = userCommentXref.UcxId,
+                comxUserId = userCommentXref.UcxUsrId,
+                comxFindId = userCommentXref.UcxUsfId,
+                comxComId = userCommentXref.UcxUscId,
+                findsComment = commentDto
+            };
+            return xrefDto;
         }
 
         public async Task<UserFindsViewModel> CreateFind(

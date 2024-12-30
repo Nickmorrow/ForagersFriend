@@ -3,12 +3,15 @@ using ForagerSite.Utilities;
 using ForagerSite.Services;
 using Microsoft.JSInterop;
 using Newtonsoft.Json;
+using DataAccess.Data;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace ForagerSite.Services
 {
     public class MapService
-    {
+    {       
+
         public static readonly List<string> MapFilters = new List<string>
         {
             "UserOnly", "AllUsers", "FriendUsers"
@@ -21,6 +24,7 @@ namespace ForagerSite.Services
         public List<UserFindsViewModel> MyViewModels { get; set; } = new();
         public List<UserFindsViewModel> AllViewModels { get; set; } = new();
         public List<UserFindsViewModel> CurrentViewModels { get; set; } = new();
+        public Dictionary<Guid, string> userNamesKvp { get; set; }
         public MapService(UserStateService userStateService, UserFindService userFindService)
         {
             _userStateService = userStateService;
@@ -28,7 +32,8 @@ namespace ForagerSite.Services
         }
 
         private void NotifyStateChanged() => OnChange?.Invoke();
-        private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading);       
+        private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading); 
+        
         public void AddViewModel(Guid userId, UserFindsViewModel viewModel)
         {
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
@@ -52,11 +57,11 @@ namespace ForagerSite.Services
                 existingViewModel.finds.Remove(existingViewModel.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
                 existingViewModel.finds.Add(viewModel.finds[0]);
 
-                existingViewModel.commentUserNames.Clear();
-                foreach (var kvp in viewModel.commentUserNames)
-                {
-                    existingViewModel.commentUserNames[kvp.Key] = kvp.Value;
-                }
+                //existingViewModel.userNamesKvp.Clear();
+                //foreach (var kvp in viewModel.userNamesKvp)
+                //{
+                //    existingViewModel.userNamesKvp[kvp.Key] = kvp.Value;
+                //}
 
             }
             // Backup Vm My filter
@@ -65,10 +70,10 @@ namespace ForagerSite.Services
             {
                 backupVmlMy.finds.Remove(backupVmlMy.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
                 backupVmlMy.finds.Add(viewModel.finds[0]);
-                foreach (var kvp in viewModel.commentUserNames)
-                {
-                    backupVmlMy.commentUserNames[kvp.Key] = kvp.Value;
-                }
+                //foreach (var kvp in viewModel.userNamesKvp)
+                //{
+                //    backupVmlMy.userNamesKvp[kvp.Key] = kvp.Value;
+                //}
             }
             // Backup Vm All filter
             if (existingViewModel != null)
@@ -79,10 +84,10 @@ namespace ForagerSite.Services
 
                     backupVmlAll.finds.Remove(backupVmlAll.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
                     backupVmlAll.finds.Add(viewModel.finds[0]);
-                    foreach (var kvp in viewModel.commentUserNames)
-                    {
-                        backupVmlAll.commentUserNames[kvp.Key] = kvp.Value;
-                    }
+                    //foreach (var kvp in viewModel.userNamesKvp)
+                    //{
+                    //    backupVmlAll.userNamesKvp[kvp.Key] = kvp.Value;
+                    //}
 
                 }
             }
@@ -96,19 +101,19 @@ namespace ForagerSite.Services
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
 
             existingViewModel.finds.Remove(existingViewModel.finds.Where(f => f.findId == findId).FirstOrDefault());
-            existingViewModel.commentUserNames.Clear();
+            //existingViewModel.userNamesKvp.Clear();
 
             var backupVmMy = MyViewModels.FirstOrDefault(vm => vm.userId == userId);
 
             backupVmMy.finds.Remove(backupVmMy.finds.Where(f => f.findId == findId).FirstOrDefault());
-            backupVmMy.commentUserNames.Clear();
+            //backupVmMy.userNamesKvp.Clear();
 
             if (AllViewModels.Count > 0)
             {
                 var backupVmAll = AllViewModels.FirstOrDefault(vm => vm.userId == userId);
 
                 backupVmAll.finds.Remove(backupVmAll.finds.Where(f => f.findId == findId).FirstOrDefault());
-                backupVmAll.commentUserNames.Clear();
+                //backupVmAll.userNamesKvp.Clear();
             }
         }
 
@@ -137,10 +142,10 @@ namespace ForagerSite.Services
                 selectedVm.userId = findUserGuid;
                 selectedVm.userName = findUserName;
                 
-                foreach (var kvp in CurrentViewModels.FirstOrDefault(vm => vm.userId == findUserGuid).commentUserNames)
-                {
-                    selectedVm.commentUserNames[kvp.Key] = kvp.Value;
-                }
+                //foreach (var kvp in CurrentViewModels.FirstOrDefault(vm => vm.userId == findUserGuid).userNamesKvp)
+                //{
+                //    selectedVm.userNamesKvp[kvp.Key] = kvp.Value;
+                //}
                 selectedVms.Add(selectedVm);
             }
             CurrentViewModels = VmUtilities.Copy(selectedVms);

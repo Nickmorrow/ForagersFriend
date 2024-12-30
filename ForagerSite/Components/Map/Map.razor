@@ -152,13 +152,60 @@
                                                 <p><span>Thumbs up</span></p>
                                                 <p><span>Thumbs down</span></p>
                                             </div>
-                                            <div>
-                                                <p><span>Comments</span></p>
-                                                <table>
-                                                    <tbody>
-                                                        <!-- Render comments here -->
-                                                    </tbody>
-                                                </table>
+                                            <div id="commentSection">
+                                                <div >
+                                                    <p><span style="cursor: pointer;" @onclick="ToggleExpandComments">Comments</span></p>
+                                                </div>
+                                                @if (expandComments)
+                                                {
+                                                    <table>
+                                                        <tbody>
+                                                            <tr>
+                                                                <td>
+                                                                    <div>
+                                                                            <label for="comment-form">Leave Comment</label>
+                                                                        <InputText id="comment-form" @bind-Value="userComment" placeholder="Enter Comment..." class="form-control" />                                                                                                                                           
+                                                                        <button class="form-control" @onclick="() => HandleCommentSubmit(find.findId, vm.userId)"> Submit</button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                            @if (find.findsCommentXrefs != null && find.findsCommentXrefs.Any())
+                                                            {
+
+                                                                @foreach (var xref in find.findsCommentXrefs)
+                                                                {
+                                                                    if (!xref.findsComment.UscParentCommentId.HasValue)
+                                                                    {
+                                                                        <tr>
+                                                                            <td>
+                                                                                <div>
+                                                                                    <p><a>@mapService.userNamesKvp.Where(cn => cn.Key == xref.comxUserId).FirstOrDefault().Value</a></p>
+                                                                                    <div>
+                                                                                        <p>@xref.findsComment.comment</p>
+                                                                                    </div>
+                                                                                    @* <p style ="cursor: pointer;" @onclick="() => ToggleRowExpansion(xref)" class="@GetRowClass(xref)">Replies</p> *@
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    }
+                                                                    else continue;
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                <tr>
+                                                                    <td>
+                                                                        <div>
+                                                                            <p>No comments</p>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+
+                                                }
+                                                    
                                             </div>
                                         </div>
                                     </td>
@@ -300,6 +347,7 @@
 <div></div>
 
 @code {
+    private string userComment = string.Empty;
 
     private DotNetObjectReference<MapService> _mapServiceReference;
 
@@ -315,9 +363,11 @@
 
     private bool isAdvancedSearchVisible = false;
 
-    private Dictionary<FindDto, bool> expandedRows = new Dictionary<FindDto, bool>();
+    private Dictionary<FindDto, bool> expandedRowsFinds = new Dictionary<FindDto, bool>();
 
     private bool isLoading = true;
+
+    private bool expandComments = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -331,6 +381,7 @@
                 try
                 {
                     _mapServiceReference = DotNetObjectReference.Create(mapService);
+                    mapService.userNamesKvp = await userFindService.GetCommentUserNames();
                     mapService.CurrentViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
                     mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
 
@@ -342,6 +393,10 @@
 
                     await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);
                     await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error fetching ViewModels: {ex.Message}");
                 }
                 finally
                 {
@@ -377,6 +432,29 @@
             isLoading = false;
         }
         StateHasChanged();
+    }
+
+    private void ToggleExpandComments()
+    {
+        expandComments = !expandComments;
+    }
+
+    private async Task HandleCommentSubmit(Guid findId, Guid vmId)
+    {
+        var userId = userStateService.CurrentUser.user.UsrId;
+        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+        var xref = await userFindService.AddComment(userComment, findId, userId);
+
+        var newViewModel = new UserFindsViewModel();
+        newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
+        newViewModel.finds.FirstOrDefault(f => f.findId == findId).findsCommentXrefs.Add(xref);
+        newViewModel.finds.FirstOrDefault(f => f.findId == findId).findsCommentXrefs = newViewModel.finds
+        .FirstOrDefault(f => f.findId == findId).findsCommentXrefs
+        .OrderBy(x => x.findsComment.commentDate)
+        .ToList();
+
+        mapService.UpdateViewModel(userId, newViewModel);
+        userComment = string.Empty;
     }
 
     private void OnAdvancedSearchToggled(ChangeEventArgs e)
@@ -543,21 +621,24 @@
 
     private bool userFindsExpanded;
 
-    private void ToggleRowExpansion(FindDto item)
-    {
-        if (expandedRows.ContainsKey(item))
+    private void ToggleRowExpansion(FindDto find = null)
+    {   
+        expandComments = false;
+
+        if (expandedRowsFinds.ContainsKey(find))
         {
-            expandedRows[item] = !expandedRows[item];
+            expandedRowsFinds[find] = !expandedRowsFinds[find];
         }
         else
         {
-            expandedRows[item] = true;
-        }
+            expandedRowsFinds.Clear();           
+            expandedRowsFinds[find] = true;
+        }      
     }
 
     private bool IsRowExpanded(FindDto item)
     {
-        return expandedRows.ContainsKey(item) && expandedRows[item];
+        return expandedRowsFinds.ContainsKey(item) && expandedRowsFinds[item];
     }
 
     private string GetRowClass(FindDto item)
