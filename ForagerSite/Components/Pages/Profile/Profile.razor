@@ -153,6 +153,16 @@
                                 
                                     @if (IsRowExpanded(find))
                                     {
+                                        <div>
+                                            <p><strong>Image Gallery:</strong></p>
+                                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                                @foreach (var image in find.findImages)
+                                                {
+                                                    <img src="@image.imageData" style="max-width: 100px;" />
+                                                }
+                                            </div>
+                                        </div>
+                                        <p><strong>Discovered: </strong><span>@find.findDate.ToString("MMMM dd, yyyy")</span></p>
                                         <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
                                         <p><strong>Species Type: </strong><span>@find.speciesType</span></p>
                                         <p><strong>Species Category: </strong><span>@find.useCategory</span></p>

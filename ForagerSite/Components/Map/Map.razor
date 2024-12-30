@@ -130,6 +130,15 @@
                                 <tr>
                                     <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">
                                         <div style="padding-left: 20px;">
+                                            <div>
+                                                <p><strong>Image Gallery:</strong></p>
+                                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                                    @foreach (var image in find.findImages)
+                                                    {
+                                                        <img src="@image.imageData" style="max-width: 100px;" />
+                                                    }
+                                                </div>
+                                            </div>
                                             <p><strong>Discovered: </strong><span>@find.findDate.ToString("MMMM dd, yyyy")</span></p>
                                             <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
                                             <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
