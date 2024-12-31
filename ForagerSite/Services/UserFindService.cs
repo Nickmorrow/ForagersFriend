@@ -59,6 +59,7 @@ namespace ForagerSite.Services
             var userViewModel = new UserFindsViewModel
             {
                 userId = user.UsrId,
+                profilePic = user.UserImage.UsiImageData,
                 userName = user.UserSecurity.UssUsername,
                 finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
                 //userNamesKvp = userFinds
@@ -105,6 +106,7 @@ namespace ForagerSite.Services
             using var context = _dbContextFactory.CreateDbContext();
 
             var user = await context.Users
+                .Include(u => u.UserImage)
                 .Include(u => u.UserSecurity)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UsrId == userId);
@@ -129,13 +131,9 @@ namespace ForagerSite.Services
             var userViewModel = new UserFindsViewModel
             {
                 userId = user.UsrId,
+                profilePic = user.UserImage.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl,
                 userName = user.UserSecurity.UssUsername,
                 finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
-                //userNamesKvp = userFinds
-                //    .SelectMany(uf => uf.UserFindsCommentXrefs)
-                //    .Select(xref => xref.User.UserSecurity)
-                //    .Where(us => us != null)
-                //    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
             };
 
             foreach (var find in userViewModel.finds)
@@ -205,6 +203,7 @@ namespace ForagerSite.Services
                 var userViewModel = new UserFindsViewModel
                 {
                     userId = user.UsrId,
+                    profilePic = user.UserImage.UsiImageData,
                     userName = user.UserSecurity.UssUsername,
                     finds = userFindsForUser.Select(uf => new FindDto(uf)).ToList(),
                     //userNamesKvp = userFindsForUser

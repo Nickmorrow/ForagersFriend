@@ -6,57 +6,10 @@ namespace DataAccess.Models
 {
     public class UserFindsViewModel
     {
-        //public Guid userId { get; set; }
-        //public string userName { get; set; }
-        //public List<UserFind> finds { get; set; }
-        //public List<UserFindLocation> findLocations { get; set; }
-        //public List<UserImage> images { get; set; }
-        //public List<UserFindsCommentXref> findsCommentXrefs { get; set; }
-        //public List<findsComment> findsComments { get; set; }
-        //public List<User> CommentUsers { get; set; }
-        //public List<UserSecurity> CommentUserSecurities { get; set; }
-
-        //public UserFindsViewModel()
-        //{
-        //    userId = Guid.NewGuid();
-        //    userName = string.Empty;
-        //    finds = new List<UserFind>();
-        //    findLocations = new List<UserFindLocation>();
-        //    images = new List<UserImage>();
-        //    findsCommentXrefs = new List<UserFindsCommentXref>();
-        //    findsComments = new List<findsComment>();
-        //    CommentUsers = new List<User>();
-        //    CommentUserSecurities = new List<UserSecurity>();
-        //}
-
-        //public UserFindsViewModel(Guid userId, string userName, List<UserFind> finds,
-        //    List<UserFindLocation> findLocations, List<UserImage> images)
-        //{
-        //    this.userId = userId;
-        //    this.userName = userName;
-        //    this.finds = finds;
-        //    this.findLocations = findLocations;
-        //    this.images = images;
-        //    this.findsCommentXrefs = new List<UserFindsCommentXref>();
-        //    this.findsComments = new List<findsComment>();
-        //    this.CommentUsers = new List<User>();
-        //    this.CommentUserSecurities = new List<UserSecurity>();
-        //}
-
-        //public bool IsEmpty()
-        //{
-        //    return userId == Guid.Empty &&
-        //           !string.IsNullOrEmpty(userName) &&
-        //           !finds.Any() &&
-        //           !findLocations.Any() &&
-        //           !images.Any() &&
-        //           !findsCommentXrefs.Any() &&
-        //           !findsComments.Any() &&
-        //           !CommentUsers.Any() &&
-        //           !CommentUserSecurities.Any();
-        //}
-
         public Guid userId { get; set; }
+
+        public static readonly string PlaceholderImageUrl = $"UserProfileImages/Shared/PlaceHolder.jpeg";
+        public string profilePic { get; set; }
         public string userName { get; set; }
         public List<FindDto> finds { get; set; }
 

@@ -179,7 +179,14 @@
                                                                         <tr>
                                                                             <td>
                                                                                 <div>
-                                                                                    <p><a>@mapService.userNamesKvp.Where(cn => cn.Key == xref.comxUserId).FirstOrDefault().Value</a></p>
+                                                                                    <div style="display: flex; gap: 20px;">
+                                                                                        <div>
+                                                                                                <img src="@mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == xref.comxUserId).profilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" />
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <p><a>@mapService.userNamesKvp.Where(cn => cn.Key == xref.comxUserId).FirstOrDefault().Value</a></p>
+                                                                                        </div>
+                                                                                    </div>
                                                                                     <div>
                                                                                         <p>@xref.findsComment.comment</p>
                                                                                     </div>
