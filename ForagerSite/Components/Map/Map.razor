@@ -123,7 +123,17 @@
                                     <td>No image available</td> <!-- or any fallback content -->
                                 }
                             <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.speciesType</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">Discovered by: @vm.userName</td>
+                                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+                                        Discovered by:
+                                        <div style="display: flex; gap: 20px;">
+                                            <div>
+                                                <img src="@vm.profilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" />
+                                            </div>
+                                            <div>
+                                                <p>@vm.userName</p>
+                                            </div>
+                                        </div>
+                                    </td>
                         </tr>
                             @if (IsRowExpanded(find))
                             {
