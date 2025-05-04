@@ -345,30 +345,31 @@ namespace ForagerSite.Services
                 comxUserId = userCommentXref.UcxUsrId,
                 comxFindId = userCommentXref.UcxUsfId,
                 comxComId = userCommentXref.UcxUscId,
-                findsComment = commentDto
+                findsComment = commentDto,
+                CommentUserProfilePic = context.UserImages?
+                    .Where(ui => ui.UsiUsrId == userCommentXref.UcxUsrId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
+                    .Select(ui => ui.UsiImageData)
+                    .FirstOrDefault() ?? UserFindsViewModel.PlaceholderImageUrl
             };
             return xrefDto;
         }
 
-        public async Task<UserFindsViewModel> DeleteComment(Guid comUserId, Guid xrefId, UserFindsViewModel vm)
+        public async Task<FindsCommentXrefDto> DeleteComment(Guid xrefId)
         {           
-            var deletedCommentXrefDto = vm.finds[0].findsCommentXrefs
-                .FirstOrDefault(xref => xref.comXId == xrefId && xref.comxUserId == comUserId);
-
-            vm.finds[0].findsCommentXrefs.Remove(deletedCommentXrefDto);
-
             using var context = _dbContextFactory.CreateDbContext();
             
             var deletedCommentXref = await context.UserFindsCommentXrefs
                 .Include(xref => xref.UserFindsComment)
-                .FirstOrDefaultAsync(xref => xref.UcxId == xrefId && xref.UcxUsrId == comUserId);
+                .FirstOrDefaultAsync(xref => xref.UcxId == xrefId);
 
             var deletedComment = deletedCommentXref.UserFindsComment;
             context.UserFindsCommentXrefs.Remove(deletedCommentXref);
             context.UserFindsComments.Remove(deletedComment);
             await context.SaveChangesAsync();
 
-            return vm;
+            var deletedCommentXrefDto = new FindsCommentXrefDto(deletedCommentXref);
+
+            return deletedCommentXrefDto;
         }
 
         public async Task<UserFindsViewModel> CreateFind(

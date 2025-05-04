@@ -50,6 +50,7 @@ namespace ForagerSite.Services
         }
         public void UpdateViewModel(Guid userId, UserFindsViewModel viewModel)
         {
+            var currentUserId = _userStateService.CurrentUser.user.UsrId;
             // Update Vm
             var existingViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
             if (existingViewModel != null)
@@ -65,16 +66,19 @@ namespace ForagerSite.Services
 
             }
             // Backup Vm My filter
-            var backupVmlMy = MyViewModels.FirstOrDefault(vm => vm.userId == userId);
-            if (existingViewModel != null)
+            if (currentUserId == viewModel.userId)
             {
-                backupVmlMy.finds.Remove(backupVmlMy.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
-                backupVmlMy.finds.Add(viewModel.finds[0]);
-                //foreach (var kvp in viewModel.userNamesKvp)
-                //{
-                //    backupVmlMy.userNamesKvp[kvp.Key] = kvp.Value;
-                //}
-            }
+                var backupVmlMy = MyViewModels.FirstOrDefault(vm => vm.userId == userId);
+                if (existingViewModel != null)
+                {
+                    backupVmlMy.finds.Remove(backupVmlMy.finds.Where(f => f.findId == viewModel.finds[0].findId).FirstOrDefault());
+                    backupVmlMy.finds.Add(viewModel.finds[0]);
+                    //foreach (var kvp in viewModel.userNamesKvp)
+                    //{
+                    //    backupVmlMy.userNamesKvp[kvp.Key] = kvp.Value;
+                    //}
+                }
+            }           
             // Backup Vm All filter
             if (existingViewModel != null)
             {

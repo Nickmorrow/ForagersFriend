@@ -206,7 +206,7 @@
                                                                                     {
                                                                                         <div>
 @*                                                                                             <button class="form-control">Edit</button> *@
-                                                                                            <button class="form-control" @onclick="() => HandleCommentDelete(xref.comXId, xref.comxUserId)">Delete</button>
+                                                                                            <button class="form-control" @onclick="() => HandleCommentDelete(vm.userId, find.findId,  xref.comXId)">Delete</button>
                                                                                         </div>
                                                                                     }                                                                             
                                                                                     @* <p style ="cursor: pointer;" @onclick="() => ToggleRowExpansion(xref)" class="@GetRowClass(xref)">Replies</p> *@
@@ -480,16 +480,18 @@
         .ToList();
 
         mapService.UpdateViewModel(userId, newViewModel);
-        userComment = string.Empty;
+        userComment = string.Empty;    
     }
 
-    private async Task HandleCommentDelete(Guid xrefId, Guid comUserId)
+    private async Task HandleCommentDelete(Guid vmId, Guid findId, Guid xrefId)
     {
-        var vm = new UserFindsViewModel();
-        vm = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == comUserId);
+        var newViewModel = new UserFindsViewModel();
+        var deletedCommentXref = await userFindService.DeleteComment(xrefId);
 
-        var updatedViewModel = await userFindService.DeleteComment(comUserId, xrefId, vm);
-        mapService.UpdateViewModel(comUserId, updatedViewModel);      
+        newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
+        newViewModel.finds.FirstOrDefault(f => f.findId == findId).findsCommentXrefs.Remove(deletedCommentXref);
+
+        mapService.UpdateViewModel(vmId, newViewModel);      
     }
 
     private void OnAdvancedSearchToggled(ChangeEventArgs e)
