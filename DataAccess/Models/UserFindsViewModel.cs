@@ -133,6 +133,7 @@ namespace DataAccess.Models
         public FindCommentDto findsComment { get; set; } = new(); 
         public Guid comxFindId { get; set; }
         //public FindDto UserFind { get; set; }
+        public string CommentUserProfilePic { get; set; } 
 
         public FindsCommentXrefDto() { }
         public FindsCommentXrefDto(UserFindsCommentXref xref)

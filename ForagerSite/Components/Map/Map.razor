@@ -183,15 +183,17 @@
                                                             {
 
                                                                 @foreach (var xref in find.findsCommentXrefs)
-                                                                {
-                                                                    if (!xref.findsComment.UscParentCommentId.HasValue)
-                                                                    {
+                                                                {                                                                    
+
+                                                                    @* if (!xref.findsComment.UscParentCommentId.HasValue)
+                                                                    { *@
                                                                         <tr>
                                                                             <td>
                                                                                 <div>
                                                                                     <div style="display: flex; gap: 20px;">
                                                                                         <div>
-                                                                                                <img src="@mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == xref.comxUserId).profilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" />
+                                                                                                @* <img src="@mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == xref.comxUserId).profilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" /> *@
+                                                                                            <img src="@xref.CommentUserProfilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" />
                                                                                         </div>
                                                                                         <div>
                                                                                             <p><a>@mapService.userNamesKvp.Where(cn => cn.Key == xref.comxUserId).FirstOrDefault().Value</a></p>
@@ -200,12 +202,19 @@
                                                                                     <div>
                                                                                         <p>@xref.findsComment.comment</p>
                                                                                     </div>
+                                                                                        @if (xref.comxUserId == userStateService.CurrentUser.user.UsrId || find.findUserId == userStateService.CurrentUser.user.UsrId)
+                                                                                    {
+                                                                                        <div>
+@*                                                                                             <button class="form-control">Edit</button> *@
+                                                                                            <button class="form-control" @onclick="() => HandleCommentDelete(xref.comXId, xref.comxUserId)">Delete</button>
+                                                                                        </div>
+                                                                                    }                                                                             
                                                                                     @* <p style ="cursor: pointer;" @onclick="() => ToggleRowExpansion(xref)" class="@GetRowClass(xref)">Replies</p> *@
                                                                                 </div>
                                                                             </td>
                                                                         </tr>
-                                                                    }
-                                                                    else continue;
+                                                                    @* }
+                                                                    else continue; *@
                                                                 }
                                                             }
                                                             else
@@ -472,6 +481,15 @@
 
         mapService.UpdateViewModel(userId, newViewModel);
         userComment = string.Empty;
+    }
+
+    private async Task HandleCommentDelete(Guid xrefId, Guid comUserId)
+    {
+        var vm = new UserFindsViewModel();
+        vm = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == comUserId);
+
+        var updatedViewModel = await userFindService.DeleteComment(comUserId, xrefId, vm);
+        mapService.UpdateViewModel(comUserId, updatedViewModel);      
     }
 
     private void OnAdvancedSearchToggled(ChangeEventArgs e)

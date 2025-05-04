@@ -93,6 +93,14 @@ namespace ForagerSite.Services
                     .Select(xref => new FindsCommentXrefDto(xref))
                     .ToList();
 
+                foreach (var xref in find.findsCommentXrefs)
+                {
+                    var commentProficPic = context.UserImages
+                        .Where(ui => ui.UsiUsrId == xref.comxUserId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
+                        .FirstOrDefault();
+                    xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl;
+                }
+
                 //foreach (var xref in find.findsCommentXrefs)
                 //{
                 //    var matchingComment = user.UserFindsCommentXrefs
@@ -162,6 +170,14 @@ namespace ForagerSite.Services
                     .SelectMany(uf => uf.UserFindsCommentXrefs)
                     .Select(xref => new FindsCommentXrefDto(xref))
                     .ToList();
+
+                foreach (var xref in find.findsCommentXrefs)
+                {
+                    var commentProficPic = context.UserImages
+                        .Where(ui => ui.UsiUsrId == xref.comxUserId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
+                        .FirstOrDefault();
+                    xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl;
+                }
 
                 //foreach (var xref in find.findsCommentXrefs)
                 //{
@@ -243,6 +259,15 @@ namespace ForagerSite.Services
                         .SelectMany(uf => uf.UserFindsCommentXrefs)
                         .Select(xref => new FindsCommentXrefDto(xref))
                         .ToList();
+
+                    foreach (var xref in find.findsCommentXrefs)
+                    {
+                        var commentProficPic = context.UserImages
+                            .Where(ui => ui.UsiUsrId == xref.comxUserId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
+                            .FirstOrDefault();
+                        xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl;
+                    }
+
                     //foreach (var xref in find.findsCommentXrefs)
                     //{
                     //    var matchingComment = user.UserFindsCommentXrefs
@@ -323,6 +348,27 @@ namespace ForagerSite.Services
                 findsComment = commentDto
             };
             return xrefDto;
+        }
+
+        public async Task<UserFindsViewModel> DeleteComment(Guid comUserId, Guid xrefId, UserFindsViewModel vm)
+        {           
+            var deletedCommentXrefDto = vm.finds[0].findsCommentXrefs
+                .FirstOrDefault(xref => xref.comXId == xrefId && xref.comxUserId == comUserId);
+
+            vm.finds[0].findsCommentXrefs.Remove(deletedCommentXrefDto);
+
+            using var context = _dbContextFactory.CreateDbContext();
+            
+            var deletedCommentXref = await context.UserFindsCommentXrefs
+                .Include(xref => xref.UserFindsComment)
+                .FirstOrDefaultAsync(xref => xref.UcxId == xrefId && xref.UcxUsrId == comUserId);
+
+            var deletedComment = deletedCommentXref.UserFindsComment;
+            context.UserFindsCommentXrefs.Remove(deletedCommentXref);
+            context.UserFindsComments.Remove(deletedComment);
+            await context.SaveChangesAsync();
+
+            return vm;
         }
 
         public async Task<UserFindsViewModel> CreateFind(
