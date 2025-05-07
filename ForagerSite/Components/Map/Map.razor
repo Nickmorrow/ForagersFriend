@@ -466,12 +466,13 @@
     }
 
     private async Task HandleCommentSubmit(Guid findId, Guid vmId)
-    {
+    {        
         var userId = userStateService.CurrentUser.user.UsrId;
         var userName = userStateService.CurrentUser.userSecurity.UssUsername;
         var xref = await userFindService.AddComment(userComment, findId, userId);
 
         var newViewModel = new UserFindsViewModel();
+
         newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
         newViewModel.finds.FirstOrDefault(f => f.findId == findId).findsCommentXrefs.Add(xref);
         newViewModel.finds.FirstOrDefault(f => f.findId == findId).findsCommentXrefs = newViewModel.finds
@@ -479,19 +480,25 @@
         .OrderBy(x => x.findsComment.commentDate)
         .ToList();
 
-        mapService.UpdateViewModel(userId, newViewModel);
+        mapService.UpdateViewModels(userId, newViewModel);
         userComment = string.Empty;    
     }
 
     private async Task HandleCommentDelete(Guid vmId, Guid findId, Guid xrefId)
     {
+        
         var newViewModel = new UserFindsViewModel();
-        var deletedCommentXref = await userFindService.DeleteComment(xrefId);
+        //var deletedCommentXref = await userFindService.DeleteComment(xrefId);
+        await userFindService.DeleteComment(xrefId);
 
+        var deletedCommentXref = mapService.CurrentViewModels
+            .SelectMany(vm => vm.finds)
+            .SelectMany(f => f.findsCommentXrefs)
+            .FirstOrDefault(x => x.comXId == xrefId);
         newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
         newViewModel.finds.FirstOrDefault(f => f.findId == findId).findsCommentXrefs.Remove(deletedCommentXref);
-
-        mapService.UpdateViewModel(vmId, newViewModel);      
+        
+        mapService.UpdateViewModels(vmId, newViewModel);      
     }
 
     private void OnAdvancedSearchToggled(ChangeEventArgs e)

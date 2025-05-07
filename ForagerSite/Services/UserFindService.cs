@@ -354,7 +354,7 @@ namespace ForagerSite.Services
             return xrefDto;
         }
 
-        public async Task<FindsCommentXrefDto> DeleteComment(Guid xrefId)
+        public async Task DeleteComment(Guid xrefId)
         {           
             using var context = _dbContextFactory.CreateDbContext();
             
@@ -367,9 +367,9 @@ namespace ForagerSite.Services
             context.UserFindsComments.Remove(deletedComment);
             await context.SaveChangesAsync();
 
-            var deletedCommentXrefDto = new FindsCommentXrefDto(deletedCommentXref);
+            //var deletedCommentXrefDto = new FindsCommentXrefDto(deletedCommentXref);
 
-            return deletedCommentXrefDto;
+            //return deletedCommentXrefDto;
         }
 
         public async Task<UserFindsViewModel> CreateFind(
@@ -533,7 +533,7 @@ namespace ForagerSite.Services
             return mapViewModel;
         }
 
-        public async Task<UserFindsViewModel> DeleteFind(Guid findId, Guid userId, string userName)
+        public async Task DeleteFind(Guid findId, Guid userId, string userName)
         {
             using var context = _dbContextFactory.CreateDbContext();
             var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
@@ -541,15 +541,6 @@ namespace ForagerSite.Services
             var images = await context.UserImages.Where(ui => ui.UsiUsfId == findId).ToListAsync();
             var userFindCommentXrefs = await context.UserFindsCommentXrefs.Where(xref => xref.UcxUsfId == findId).ToListAsync();
             var userFindComments = await context.UserFindsCommentXrefs.Where(xref => xref.UcxUsfId == findId).ToListAsync();
-
-            var viewModelCopy = new UserFindsViewModel();
-            viewModelCopy.userId = userId;
-            viewModelCopy.userName = userName;
-            viewModelCopy.finds.Add(new FindDto(userFind));
-            viewModelCopy.finds[0].findLocation = new FindLocationDto(userFindLocation);
-            viewModelCopy.finds[0].findImages = images.Select(ui => new ImageDto(ui)).ToList();
-            viewModelCopy.finds[0].findsCommentXrefs = userFindCommentXrefs.Select(xref => new FindsCommentXrefDto(xref)).ToList();
-            var userFindCommentsCopy = userFindComments.Select(ufc => new FindCommentDto(ufc.UserFindsComment)).ToList();
 
             foreach (var image in images)
             {
@@ -578,7 +569,6 @@ namespace ForagerSite.Services
                 context.UserFinds.Remove(userFind);               
             }
             await context.SaveChangesAsync();
-            return viewModelCopy;
         }
 
 
