@@ -4,6 +4,6 @@ namespace ForagerSite.Services
 {
     public interface IEmailService
     {
-        Task SendPasswordResetEmailAsync(string email, string resetLink);
+        Task SendPasswordResetEmail(string email, string resetLink);
     }
 }

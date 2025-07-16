@@ -32,7 +32,7 @@
 //            var token = await _passwordResetService.GeneratePasswordResetTokenAsync(user);
 //            var resetLink = Url.Action("ResetPassword", "Account", new { token }, Request.Scheme);
 
-//            await _emailService.SendPasswordResetEmailAsync(user.Email, resetLink);
+//            await _emailService.SendPasswordResetEmail(user.Email, resetLink);
 
 //            return Ok("Recovery email sent");
 //        }

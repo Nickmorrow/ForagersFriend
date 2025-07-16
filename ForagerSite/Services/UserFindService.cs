@@ -77,18 +77,18 @@ namespace ForagerSite.Services
             foreach (var find in userViewModel.finds)
             {
                 find.findLocation = userFinds
-                    .Where(uf => uf.UsFId == find.findId)
+                    .Where(uf => uf.UsfId == find.findId)
                     .Select(uf => uf.UserFindLocation)
                     .Where(ufl => ufl != null)
                     .Select(ufl => new FindLocationDto(ufl))
                     .FirstOrDefault();
                 find.findImages = userFinds
-                    .Where(uf => uf.UsFId == find.findId)
+                    .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserImages)
                     .Select(ui => new ImageDto(ui))
                     .ToList();
                 find.findsCommentXrefs = userFinds
-                    .Where(uf => uf.UsFId == find.findId)
+                    .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserFindsCommentXrefs)
                     .Select(xref => new FindsCommentXrefDto(xref))
                     .ToList();
@@ -155,18 +155,18 @@ namespace ForagerSite.Services
             foreach (var find in userViewModel.finds)
             {
                 find.findLocation = userFinds
-                    .Where(uf => uf.UsFId == find.findId)
+                    .Where(uf => uf.UsfId == find.findId)
                     .Select(uf => uf.UserFindLocation)
                     .Where(ufl => ufl != null)
                     .Select(ufl => new FindLocationDto(ufl))
                     .FirstOrDefault();
                 find.findImages = userFinds
-                    .Where(uf => uf.UsFId == find.findId)
+                    .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserImages)
                     .Select(ui => new ImageDto(ui))
                     .ToList();
                 find.findsCommentXrefs = userFinds
-                    .Where(uf => uf.UsFId == find.findId)
+                    .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserFindsCommentXrefs)
                     .Select(xref => new FindsCommentXrefDto(xref))
                     .ToList();
@@ -244,18 +244,18 @@ namespace ForagerSite.Services
                 foreach (var find in userViewModel.finds)
                 {
                     find.findLocation = userFinds
-                        .Where(uf => uf.UsFId == find.findId)
+                        .Where(uf => uf.UsfId == find.findId)
                         .Select(uf => uf.UserFindLocation)
                         .Where(ufl => ufl != null)
                         .Select(ufl => new FindLocationDto(ufl))
                         .FirstOrDefault();
                     find.findImages = userFinds
-                        .Where(uf => uf.UsFId == find.findId)
+                        .Where(uf => uf.UsfId == find.findId)
                         .SelectMany(uf => uf.UserImages)
                         .Select(ui => new ImageDto(ui))
                         .ToList();
                     find.findsCommentXrefs = userFinds
-                        .Where(uf => uf.UsFId == find.findId)
+                        .Where(uf => uf.UsfId == find.findId)
                         .SelectMany(uf => uf.UserFindsCommentXrefs)
                         .Select(xref => new FindsCommentXrefDto(xref))
                         .ToList();
@@ -300,7 +300,7 @@ namespace ForagerSite.Services
             using var context = _dbContextFactory.CreateDbContext();
 
             var userFind = await context.UserFinds
-                .FirstOrDefaultAsync(uf => uf.UsFId == findId);
+                .FirstOrDefaultAsync(uf => uf.UsfId == findId);
             if (userFind != null)
             {
                 userFind.UserImages = await context.UserImages
@@ -418,7 +418,7 @@ namespace ForagerSite.Services
             {
                 UslLatitude = lat,
                 UslLongitude = lng,
-                UslUsfId = userFind.UsFId
+                UslUsfId = userFind.UsfId
             };
             mapViewModel.finds[0].findLocation = new FindLocationDto(userFindLocation);
 
@@ -430,7 +430,7 @@ namespace ForagerSite.Services
                 var userImage = new UserImage
                 {
                     UsiUsrId = userId,
-                    UsiUsfId = userFind.UsFId,
+                    UsiUsfId = userFind.UsfId,
                     UsiImageData = image
                 };
                 mapViewModel.finds[0].findImages.Add(new ImageDto(userImage));
@@ -438,7 +438,7 @@ namespace ForagerSite.Services
                 context.UserImages.Add(userImage);
                 await context.SaveChangesAsync();
             }
-            mapViewModel.finds[0].findId = userFind.UsFId;
+            mapViewModel.finds[0].findId = userFind.UsfId;
             return mapViewModel;
         }
 
@@ -466,7 +466,7 @@ namespace ForagerSite.Services
             mapViewModel.userId = userId;
             mapViewModel.userName = userName;
 
-            var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
+            var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsfId == findId);
             if (userFind == null)
             {
                 throw new Exception("User find not found");
@@ -536,8 +536,8 @@ namespace ForagerSite.Services
         public async Task DeleteFind(Guid findId, Guid userId, string userName)
         {
             using var context = _dbContextFactory.CreateDbContext();
-            var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsFId == findId);
-            var userFindLocation = await context.UserFindLocations.FirstOrDefaultAsync(ufl => ufl.UslUsfId == userFind.UsFId);
+            var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsfId == findId);
+            var userFindLocation = await context.UserFindLocations.FirstOrDefaultAsync(ufl => ufl.UslUsfId == userFind.UsfId);
             var images = await context.UserImages.Where(ui => ui.UsiUsfId == findId).ToListAsync();
             var userFindCommentXrefs = await context.UserFindsCommentXrefs.Where(xref => xref.UcxUsfId == findId).ToListAsync();
             var userFindComments = await context.UserFindsCommentXrefs.Where(xref => xref.UcxUsfId == findId).ToListAsync();

@@ -417,8 +417,8 @@
                             Formatting = Formatting.Indented
                         });
 
-                    await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);
                     await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
+                    await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);                   
                 }
                 catch (Exception ex)
                 {
@@ -442,11 +442,19 @@
     private void ViewDetails(bool loading)
     {
         isLoading = loading;
+
         try
         {
-            if (mapService.CurrentViewModels[0].finds[0] != null)
+            var viewModels = mapService.CurrentViewModels;
+
+            if (viewModels != null && viewModels.Count > 0 &&
+                viewModels[0].finds != null && viewModels[0].finds.Count > 0)
             {
-                ToggleRowExpansion(mapService.CurrentViewModels[0].finds[0]);
+                ToggleRowExpansion(viewModels[0].finds[0]);
+            }
+            else
+            {
+                Console.WriteLine("🛑 ViewDetails skipped: no viewModels or finds available.");
             }
         }
         catch (Exception ex)
@@ -457,8 +465,10 @@
         {
             isLoading = false;
         }
+
         StateHasChanged();
     }
+
 
     private void ToggleExpandComments()
     {

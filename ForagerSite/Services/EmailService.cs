@@ -14,7 +14,7 @@ namespace ForagerSite.Services
             _smtpClient = smtpClient;
         }
 
-        public async Task SendPasswordResetEmailAsync(string email, string resetLink)
+        public async Task SendPasswordResetEmail(string email, string resetLink)
         {
             var mailMessage = new MailMessage("your-email@example.com", email)
             {

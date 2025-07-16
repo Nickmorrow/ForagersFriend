@@ -55,7 +55,7 @@ namespace DataAccess.Models
         public FindDto() { }    
         public FindDto(UserFind userFind)
         {
-            findId = userFind.UsFId;
+            findId = userFind.UsfId;
             findUserId = userFind.UsfUsrId;
             findName = userFind.UsfName;
             speciesName = userFind.UsfSpeciesName;

@@ -6,7 +6,7 @@ namespace DataAccess.Models
     public class UserFind
     {
         [Key]
-        public Guid UsFId { get; set; }
+        public Guid UsfId { get; set; }
         public string UsfName { get; set; }
         public Guid UsfUsrId { get; set; }
         [ForeignKey("UsfUsrId")]

@@ -49,8 +49,14 @@ namespace ForagerSite.Services
         {
             using (var context = _dbContextFactory.CreateDbContext())
             {
-                return await context.Users
-                    .AnyAsync(u => u.UsrEmail == email && u.UsrId != user.UsrId);
+                var query = context.Users.AsQueryable();
+
+                if (user != null)
+                {
+                    query = query.Where(u => u.UsrId != user.UsrId);
+                }
+
+                return await query.AnyAsync(u => u.UsrEmail == email);
             }
         }       
         

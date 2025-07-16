@@ -20,8 +20,13 @@ namespace DataAccess.Models
     {
         [Key]
         public Guid UsrId { get; set; }
+
+        [Required(ErrorMessage = "Name is required.")]
         public string? UsrName { get; set; }
         public string? UsrBio { get; set; }
+
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email address.")]
         public string UsrEmail { get; set; }
         public int? UsrFindsNum { get; set; }
         public int? UsrExpScore { get; set; }
@@ -43,7 +48,11 @@ namespace DataAccess.Models
         public Guid UssUsrId { get; set; }
         [ForeignKey("UssUsrId")]
         public User User { get; set; }
+
+        [Required(ErrorMessage = "Username is required.")]
         public string UssUsername { get; set; }
+
+        [Required(ErrorMessage = "Password is required.")]
         public string UssPassword { get; set; }
         public DateTime? UssLastLoginDate { get; set; }
         public DateTime? UssLastLogoffDate { get; set; }
