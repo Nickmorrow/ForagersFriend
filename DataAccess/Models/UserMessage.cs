@@ -22,6 +22,10 @@ namespace DataAccess.Models
         [ForeignKey("UsmRecipientId")]
         public Guid UsmRecipientId { get; set; }
 
+        [Required]
+        [MaxLength(20)]
+        public string UsmStatus { get; set; } = "unread";
+
     }
 
 

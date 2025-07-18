@@ -37,6 +37,7 @@ CREATE TABLE UserMessages (
 
     UsmSenderId UNIQUEIDENTIFIER NOT NULL,
     UsmRecipientId UNIQUEIDENTIFIER NOT NULL,
+    UsmStatus NVARCHAR(20) NOT NULL DEFAULT 'unread',
 
     CONSTRAINT FK_UserMessages_User FOREIGN KEY (UsmUsrId) REFERENCES Users(UsrId),
     CONSTRAINT FK_UserMessages_Sender FOREIGN KEY (UsmSenderId) REFERENCES Users(UsrId),
