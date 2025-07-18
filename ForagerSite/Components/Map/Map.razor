@@ -490,7 +490,7 @@
         .OrderBy(x => x.findsComment.commentDate)
         .ToList();
 
-        mapService.UpdateViewModels(userId, newViewModel);
+        mapService.UpdateViewModels(vmId, newViewModel);
         userComment = string.Empty;    
     }
 
