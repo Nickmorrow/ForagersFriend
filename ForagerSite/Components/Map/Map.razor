@@ -134,7 +134,7 @@
                                                 </div>
                                             </div>
                                         </td>
-                            </tr>
+                                </tr>
                                 @if (IsRowExpanded(find))
                                 {
                                     <tr>
@@ -772,13 +772,23 @@
 
         if (expandedRowsFinds.ContainsKey(find))
         {
-            expandedRowsFinds[find] = !expandedRowsFinds[find];
+            bool wasExpanded = expandedRowsFinds[find];
+            expandedRowsFinds[find] = !wasExpanded;
+
+            // 🧹 Clear replies if we just collapsed this find
+            if (wasExpanded)
+            {
+                expandedRepliesMap.Clear();
+            }
         }
         else
         {
-            expandedRowsFinds.Clear();           
+            expandedRowsFinds.Clear();
             expandedRowsFinds[find] = true;
-        }      
+
+            // 🧹 Clear replies when expanding a new find
+            expandedRepliesMap.Clear();
+        }
     }
 
     private bool IsRowExpanded(FindDto item)
