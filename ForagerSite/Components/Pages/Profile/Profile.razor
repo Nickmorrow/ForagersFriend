@@ -1,6 +1,7 @@
 ﻿@page "/Profile"
 @using ForagerSite.Services
 @using DataAccess.Models
+@using Utilities
 @rendermode InteractiveServer
 @inject UserService userService
 @inject UserStateService userStateService
@@ -416,7 +417,6 @@
             errors.Add($"Error generating preview: {ex.Message}");
         }
     }
-
     private async Task SaveProfilePic()
     {
         if (errors.Any())
@@ -425,80 +425,122 @@
         }
 
         var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-        var file = uploadedFile; // Assume the file was saved during HandleFileChange
-        var fileExtension = Path.GetExtension(file.Name).ToLowerInvariant();
 
-        try
+        var newUrl = await PhotoUploadHelper.UploadProfilePic(errors, userName, uploadedFile, config, userService, userVm);
+
+        if (string.IsNullOrEmpty(newUrl))
+            return;
+
+        profileImageUrl = newUrl;
+
+        if (errors.Contains("Error uploading file"))
         {
-            string newFileName = Path.ChangeExtension(Path.GetRandomFileName(), fileExtension);
-            string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
-            string filePath = Path.Combine(userDirectory, newFileName);
-
-            if (!Directory.Exists(userDirectory))
-            {
-                Directory.CreateDirectory(userDirectory);
-            }
-            // Remove existing files if the directory exists
-            if (Directory.Exists(userDirectory))
-            {
-                var existingFiles = Directory.GetFiles(userDirectory);
-                foreach (var existingFile in existingFiles)
-                {
-                    File.Delete(existingFile);
-                }
-            }
-            // Save the new file
-            await using var fs = new FileStream(filePath, FileMode.Create);
-            await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
-
-            // Generate file URL and update database
-            string fileUrl = $"/UserProfileImages/{userName}/{newFileName}";
-            await userService.UploadProfilePicUrl(userVm.user, fileUrl);
-
-            editProfilePic = false;
-            uploadedFile = null;
-            previewUrl = null;
-            errors.Clear();
-            profileImageUrl = await GetProfileImageUrl();
+            return; // Prevent saving if there are errors
         }
-        catch (Exception ex)
-        {
-            errors.Add($"Error uploading file: {ex.Message}");
-        }
+
+        editProfilePic = false;
+        uploadedFile = null;
+        previewUrl = null;
+        errors.Clear();
+        profileImageUrl = await GetProfileImageUrl();
+
     }
+    // private async Task SaveProfilePic()
+    // {
+    //     if (errors.Any())
+    //     {
+    //         return; // Prevent saving if there are validation errors
+    //     }
 
+    //     var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+    //     var file = uploadedFile; // Assume the file was saved during HandleFileChange
+    //     var fileExtension = Path.GetExtension(file.Name).ToLowerInvariant();
+
+    //     try
+    //     {
+    //         string newFileName = Path.ChangeExtension(Path.GetRandomFileName(), fileExtension);
+    //         string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
+    //         string filePath = Path.Combine(userDirectory, newFileName);
+
+    //         if (!Directory.Exists(userDirectory))
+    //         {
+    //             Directory.CreateDirectory(userDirectory);
+    //         }
+    //         // Remove existing files if the directory exists
+    //         if (Directory.Exists(userDirectory))
+    //         {
+    //             var existingFiles = Directory.GetFiles(userDirectory);
+    //             foreach (var existingFile in existingFiles)
+    //             {
+    //                 File.Delete(existingFile);
+    //             }
+    //         }
+    //         // Save the new file
+    //         await using var fs = new FileStream(filePath, FileMode.Create);
+    //         await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
+
+    //         // Generate file URL and update database
+    //         string fileUrl = $"/UserProfileImages/{userName}/{newFileName}";
+    //         await userService.UploadProfilePicUrl(userVm.user, fileUrl);
+
+    //         editProfilePic = false;
+    //         uploadedFile = null;
+    //         previewUrl = null;
+    //         errors.Clear();
+    //         profileImageUrl = await GetProfileImageUrl();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errors.Add($"Error uploading file: {ex.Message}");
+    //     }
+    // }
     private async Task DeleteProfilePic()
     {
 
         var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-        var file = uploadedFile; // Assume the file was saved during HandleFileChange
 
-        try
-        {
-            string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
+        PhotoUploadHelper.DeleteProfilePic(errors, userName, uploadedFile, config, userService, userVm);
 
-            // Remove existing files if the directory exists
-            if (Directory.Exists(userDirectory))
-            {
-                var existingFiles = Directory.GetFiles(userDirectory);
-                foreach (var existingFile in existingFiles)
-                {
-                    File.Delete(existingFile);
-                }
-            }
-            await userService.DeleteProfilePicUrl(userVm.user);
+        editProfilePic = false;
+        uploadedFile = null;
+        previewUrl = null;
+        errors.Clear();
+        profileImageUrl = await GetProfileImageUrl();
+        
 
-            editProfilePic = false;
-            uploadedFile = null;
-            previewUrl = null;
-            errors.Clear();
-            profileImageUrl = await GetProfileImageUrl();
-        }
-        catch (Exception ex)
-        {
-
-            errors.Add($"Error uploading file: {ex.Message}");
-        }
     }
+    // private async Task DeleteProfilePic()
+    // {
+
+    //     var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+    //     var file = uploadedFile; // Assume the file was saved during HandleFileChange
+
+    //     try
+    //     {
+    //         string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
+
+    //         // Remove existing files if the directory exists
+    //         if (Directory.Exists(userDirectory))
+    //         {
+    //             var existingFiles = Directory.GetFiles(userDirectory);
+    //             foreach (var existingFile in existingFiles)
+    //             {
+    //                 File.Delete(existingFile);
+    //             }
+    //         }
+    //         await userService.DeleteProfilePicUrl(userVm.user);
+
+    //         editProfilePic = false;
+    //         uploadedFile = null;
+    //         previewUrl = null;
+    //         errors.Clear();
+    //         profileImageUrl = await GetProfileImageUrl();
+    //     }
+    //     catch (Exception ex)
+    //     {
+
+    //         errors.Add($"Error uploading file: {ex.Message}");
+    //     }
+    // }
 #endregion
 }

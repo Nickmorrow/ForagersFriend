@@ -1,0 +1,119 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using System.ComponentModel.DataAnnotations
+@using ForagerSite.Services
+@inject UserStateService userStateService
+
+<EditForm Model="findModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label for="findName">Name:</label>
+        <InputText id="findName" @bind-Value="findModel.FindName" />
+    </div>
+
+    <div>
+        <label for="speciesName">Species Name:</label>
+        <InputText id="speciesName" @bind-Value="findModel.SpeciesName" />
+    </div>
+
+    <div>
+        <label for="speciesType">Species Type:</label>
+        <InputSelect id="speciesType" @bind-Value="findModel.SpeciesType">
+            <option value="">Select Type</option>
+            <option value="tree">Tree</option>
+            <option value="mushroom">Mushroom</option>
+            <option value="fruit">Fruit</option>
+            <option value="herb">Herb</option>
+        </InputSelect>
+    </div>
+
+    <div>
+        <label for="useCategory">Use Category:</label>
+        <InputSelect id="useCategory" @bind-Value="findModel.UseCategory">
+            <option value="">Select Category</option>
+            <option value="medicinal">Medicinal</option>
+            <option value="gourmet">Gourmet</option>
+            <option value="crafting">Crafting</option>
+        </InputSelect>
+    </div>
+
+    <div>
+        <label for="features">Distinguishing Features:</label>
+        <InputText id="features" @bind-Value="findModel.Features" />
+    </div>
+
+    <div>
+        <label for="lookAlikes">Dangerous Lookalikes:</label>
+        <InputText id="lookAlikes" @bind-Value="findModel.LookAlikes" />
+    </div>
+
+    <div>
+        <label for="harvestMethod">Harvest Method:</label>
+        <InputText id="harvestMethod" @bind-Value="findModel.HarvestMethod" />
+    </div>
+
+    <div>
+        <label for="tastesLike">Tastes Like:</label>
+        <InputText id="tastesLike" @bind-Value="findModel.TastesLike" />
+    </div>
+
+    <div>
+        <label for="description">Notes:</label>
+        <InputTextArea id="description" @bind-Value="findModel.Description" />
+    </div>
+
+    <div>
+        <label>Images:</label>
+        <ImageUploader OnImagesUploaded="OnImagesUploaded" />
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            @foreach (var preview in imagePreviews)
+            {
+                <img src="@preview" style="max-width: 100px; max-height: 100px;" />
+            }
+        </div>
+    </div>
+
+    <button type="submit">Save</button>
+</EditForm>
+
+@code {
+    private FindCreateDto findModel = new();
+
+    private List<string> imagePreviews = new();
+
+    [Parameter] public EventCallback<FindCreateDto> OnFindCreated { get; set; }
+
+    private async Task OnImagesUploaded(List<string> base64Images)
+    {
+        imagePreviews = base64Images;
+        findModel.ImageBase64Strings = base64Images;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        // Add default values like user ID, etc.
+        var userId = userStateService.CurrentUser.user.UsrId;
+        findModel.UserId = userId;
+
+        await OnFindCreated.InvokeAsync(findModel);
+
+        findModel = new();
+        imagePreviews.Clear();
+    }
+
+    public class FindCreateDto
+    {
+        [Required] public string FindName { get; set; }
+        public string SpeciesName { get; set; }
+        [Required] public string SpeciesType { get; set; }
+        [Required] public string UseCategory { get; set; }
+        public string Features { get; set; }
+        public string LookAlikes { get; set; }
+        public string HarvestMethod { get; set; }
+        public string TastesLike { get; set; }
+        public string Description { get; set; }
+        public Guid UserId { get; set; }
+        public List<string> ImageBase64Strings { get; set; } = new();
+    }
+}
