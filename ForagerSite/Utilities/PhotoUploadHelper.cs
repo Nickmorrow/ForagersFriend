@@ -15,6 +15,47 @@ namespace ForagerSite.Utilities
         {
             ".jpg", ".jpeg", ".png"
         };
+
+        public static async Task<(string? PreviewUrl, IBrowserFile? UploadedFile)> GeneratePreviewAsync(InputFileChangeEventArgs e, List<string> errors)
+        {
+            errors.Clear();
+
+            var file = e.File;
+
+            if (e.FileCount > 1)
+            {
+                errors.Add($"Error: Attempting to upload {e.FileCount} images, but only 1 is allowed.");
+                return (null, null);
+            }
+
+            if (file.Size > maxFileSize)
+            {
+                errors.Add($"File size exceeds the maximum allowed limit of {maxFileSize / (1024 * 1024)} MB.");
+                return (null, null);
+            }
+
+            var fileExtension = Path.GetExtension(file.Name).ToLowerInvariant();
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                errors.Add("Only image files (JPG, JPEG, PNG) are allowed.");
+                return (null, null);
+            }
+
+            try
+            {
+                using var stream = file.OpenReadStream(maxFileSize);
+                var buffer = new byte[file.Size];
+                await stream.ReadAsync(buffer, 0, (int)file.Size);
+                var previewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+                return (previewUrl, file);
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"Error generating preview: {ex.Message}");
+                return (null, null);
+            }
+        }
+
         public static async Task<string?> UploadProfilePic(List<string> errors, string userName, IBrowserFile? uploadedFile, IConfiguration config, UserService userService, UserViewModel userVm)
         {
             if (errors.Any())

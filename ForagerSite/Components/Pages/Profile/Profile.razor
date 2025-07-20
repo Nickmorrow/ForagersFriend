@@ -379,44 +379,48 @@
             errors.Add($"Error saving changes: {ex.Message}"); 
         } 
     }
-
     private async Task HandleFileChange(InputFileChangeEventArgs e)
     {
-        errors.Clear();
-
-        uploadedFile = e.File;
-
-        if (e.FileCount > maxAllowedFiles)
-        {
-            errors.Add($"Error: Attempting to upload {e.FileCount} images, but only {maxAllowedFiles} image is allowed");
-            return;
-        }
-
-        if (uploadedFile.Size > maxFileSize)
-        {
-            errors.Add($"File size exceeds the maximum allowed limit of {maxFileSize / (1024 * 1024)} MB.");
-            return;
-        }
-
-        var fileExtension = Path.GetExtension(uploadedFile.Name).ToLowerInvariant();
-        if (!allowedExtensions.Contains(fileExtension))
-        {
-            errors.Add("Only image files (JPG and PNG) are allowed.");
-            return;
-        }
-
-        try
-        {
-            using var stream = uploadedFile.OpenReadStream(maxFileSize);
-            var buffer = new byte[uploadedFile.Size];
-            await stream.ReadAsync(buffer, 0, (int)uploadedFile.Size);
-            previewUrl = $"data:{uploadedFile.ContentType};base64,{Convert.ToBase64String(buffer)}";
-        }
-        catch (Exception ex)
-        {
-            errors.Add($"Error generating preview: {ex.Message}");
-        }
+        (previewUrl, uploadedFile) = await PhotoUploadHelper.GeneratePreviewAsync(e, errors);
     }
+
+    // private async Task HandleFileChange(InputFileChangeEventArgs e)
+    // {
+    //     errors.Clear();
+
+    //     uploadedFile = e.File;
+
+    //     if (e.FileCount > maxAllowedFiles)
+    //     {
+    //         errors.Add($"Error: Attempting to upload {e.FileCount} images, but only {maxAllowedFiles} image is allowed");
+    //         return;
+    //     }
+
+    //     if (uploadedFile.Size > maxFileSize)
+    //     {
+    //         errors.Add($"File size exceeds the maximum allowed limit of {maxFileSize / (1024 * 1024)} MB.");
+    //         return;
+    //     }
+
+    //     var fileExtension = Path.GetExtension(uploadedFile.Name).ToLowerInvariant();
+    //     if (!allowedExtensions.Contains(fileExtension))
+    //     {
+    //         errors.Add("Only image files (JPG and PNG) are allowed.");
+    //         return;
+    //     }
+
+    //     try
+    //     {
+    //         using var stream = uploadedFile.OpenReadStream(maxFileSize);
+    //         var buffer = new byte[uploadedFile.Size];
+    //         await stream.ReadAsync(buffer, 0, (int)uploadedFile.Size);
+    //         previewUrl = $"data:{uploadedFile.ContentType};base64,{Convert.ToBase64String(buffer)}";
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errors.Add($"Error generating preview: {ex.Message}");
+    //     }
+    // }
     private async Task SaveProfilePic()
     {
         if (errors.Any())
