@@ -112,8 +112,8 @@ namespace DataAccess.Models
         public string comment { get; set; }
         public int? commentScore { get; set; } = 0;
         public DateTime commentDate { get; set; }
-        public Guid? UscParentCommentId { get; set; }
-        public UserFindsComment? ParentComment { get; set; }
+        public Guid? parentCommentId { get; set; }
+        //public UserFindsComment? ParentComment { get; set; }
         public FindCommentDto() { }
         public FindCommentDto(UserFindsComment comment)
         {
@@ -121,6 +121,7 @@ namespace DataAccess.Models
             this.comment = comment.UscComment;
             commentScore = comment.UscCommentScore;
             commentDate = comment.UscCommentDate;
+            parentCommentId = comment.UscParentCommentId;
         }
 
     }

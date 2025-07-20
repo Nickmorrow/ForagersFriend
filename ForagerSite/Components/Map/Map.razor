@@ -89,165 +89,241 @@
         @* <div id="map" style="height: 800px; width: 100%;"></div> *@
         <div id="map" style="flex: 2; height: 100%;"></div>
 
-        <div id="finds-grid" style="flex: 1; overflow-y: auto; border: 1px solid #ccc; background-color: #f9f9f9;">
-        @if (isLoading)
-        {
-            <div class="loading-indicator">
-                <p>Loading...</p>
-            </div>
-        }
-        else if (mapService.CurrentViewModels != null && mapService.CurrentViewModels.Any())
-        {
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="background-color: #e2e2e2; position: sticky; top: 0;">
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Find Name</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;"></th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">Species</th>
-                        <th style="padding: 10px; border-bottom: 1px solid #ddd;">User</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var vm in mapService.CurrentViewModels)
-                    {
-                        foreach (var find in vm.finds)
-                        {                                                          
-                            <tr style="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
-                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.findName</td>
-                                @if (find.findImages != null && find.findImages.Any())
-                                {
-                                    <td><img src="@find.findImages.FirstOrDefault().imageData" style="max-width: 100px;" /></td>
-                                }
-                                else
-                                {
-                                    <td>No image available</td> <!-- or any fallback content -->
-                                }
-                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.speciesType</td>
-                                    <td style="padding: 10px; border-bottom: 1px solid #ddd;">
-                                        Discovered by:
-                                        <div style="display: flex; gap: 20px;">
-                                            <div>
-                                                <img src="@vm.profilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" />
-                                            </div>
-                                            <div>
-                                                <p>@vm.userName</p>
-                                            </div>
-                                        </div>
-                                    </td>
+        <div id="finds-grid" style="flex: 1; overflow-y: auto; border: 1px solid #ccc; background-color: #f9f9f9;"> @* Finds Grid *@
+            @if (isLoading)
+            {
+                <div class="loading-indicator">
+                    <p>Loading...</p>
+                </div>
+            }
+            else if (mapService.CurrentViewModels != null && mapService.CurrentViewModels.Any()) 
+            {
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #e2e2e2; position: sticky; top: 0;">
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Find Name</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;"></th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">Species</th>
+                            <th style="padding: 10px; border-bottom: 1px solid #ddd;">User</th>
                         </tr>
-                            @if (IsRowExpanded(find))
-                            {
-                                <tr>
-                                    <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">
-                                        <div style="padding-left: 20px;">
-                                            <div>
-                                                <p><strong>Image Gallery:</strong></p>
-                                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                                    @foreach (var image in find.findImages)
-                                                    {
-                                                        <img src="@image.imageData" style="max-width: 100px;" />
-                                                    }
+                    </thead>
+                    <tbody>
+                        @foreach (var vm in mapService.CurrentViewModels)
+                        {
+                            foreach (var find in vm.finds)
+                            {                                                          
+                                <tr style="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
+                                <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.findName</td>
+                                    @if (find.findImages != null && find.findImages.Any())
+                                    {
+                                        <td><img src="@find.findImages.FirstOrDefault().imageData" style="max-width: 100px;" /></td>
+                                    }
+                                    else
+                                    {
+                                        <td>No image available</td> <!-- or any fallback content -->
+                                    }
+                                <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.speciesType</td>
+                                        <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+                                            Discovered by:
+                                            <div style="display: flex; gap: 20px;">
+                                                <div>
+                                                    <img src="@vm.profilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" />
+                                                </div>
+                                                <div>
+                                                    <p>@vm.userName</p>
                                                 </div>
                                             </div>
-                                            <p><strong>Discovered: </strong><span>@find.findDate.ToString("MMMM dd, yyyy")</span></p>
-                                            <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
-                                            <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
-                                            <p><strong>Distinguishing Features: </strong><span>@find.features</span></p>
-                                            <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>
-                                            <p><strong>Harvest Method: </strong><span>@find.harvestMethod</span></p>
-                                            <p><strong>Tastes like: </strong><span>@find.tastesLike</span></p>
-                                            <p><strong>Notes: </strong><span>@find.description</span></p>
-                                            <p><a href="#" @onclick="() => ViewOnMap(vm.userId, find.findId)">View on map</a></p>
-                                            <div>
-                                                <p><span>Thumbs up</span></p>
-                                                <p><span>Thumbs down</span></p>
-                                            </div>
-                                            <div id="commentSection">
-                                                <div >
-                                                    <p><span style="cursor: pointer;" @onclick="ToggleExpandComments">Comments</span></p>
+                                        </td>
+                            </tr>
+                                @if (IsRowExpanded(find))
+                                {
+                                    <tr>
+                                        <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">
+                                            <div style="padding-left: 20px;">
+                                                <div>
+                                                    <p><strong>Image Gallery:</strong></p>
+                                                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                                        @foreach (var image in find.findImages)
+                                                        {
+                                                            <img src="@image.imageData" style="max-width: 100px;" />
+                                                        }
+                                                    </div>
                                                 </div>
-                                                @if (expandComments)
+                                                <p><strong>Discovered: </strong><span>@find.findDate.ToString("MMMM dd, yyyy")</span></p>
+                                                @if (!string.IsNullOrWhiteSpace(find.speciesName))
                                                 {
-                                                    <table>
-                                                        <tbody>
-                                                            <tr>
-                                                                <td>
-                                                                    <div>
-                                                                            <label for="comment-form">Leave Comment</label>
-                                                                        <InputText id="comment-form" @bind-Value="userComment" placeholder="Enter Comment..." class="form-control" />                                                                                                                                           
-                                                                        <button class="form-control" @onclick="() => HandleCommentSubmit(find.findId, vm.userId)"> Submit</button>
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                            @if (find.findsCommentXrefs != null && find.findsCommentXrefs.Any())
-                                                            {
+                                                    <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
+                                                }
 
-                                                                @foreach (var xref in find.findsCommentXrefs)
-                                                                {                                                                    
+                                                <p><strong>Species Type: </strong><span>@find.speciesType</span></p>
+                                                <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
 
-                                                                    @* if (!xref.findsComment.UscParentCommentId.HasValue)
-                                                                    { *@
-                                                                        <tr>
-                                                                            <td>
-                                                                                <div>
-                                                                                    <div style="display: flex; gap: 20px;">
-                                                                                        <div>
-                                                                                                @* <img src="@mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == xref.comxUserId).profilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" /> *@
-                                                                                            <img src="@xref.CommentUserProfilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" />
-                                                                                        </div>
-                                                                                        <div>
-                                                                                            <p><a>@mapService.userNamesKvp.Where(cn => cn.Key == xref.comxUserId).FirstOrDefault().Value</a></p>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <p>@xref.findsComment.comment</p>
-                                                                                    </div>
-                                                                                        @if (xref.comxUserId == userStateService.CurrentUser.user.UsrId || find.findUserId == userStateService.CurrentUser.user.UsrId)
-                                                                                    {
-                                                                                        <div>
-@*                                                                                             <button class="form-control">Edit</button> *@
-                                                                                            <button class="form-control" @onclick="() => HandleCommentDelete(vm.userId, find.findId,  xref.comXId)">Delete</button>
-                                                                                        </div>
-                                                                                    }                                                                             
-                                                                                    @* <p style ="cursor: pointer;" @onclick="() => ToggleRowExpansion(xref)" class="@GetRowClass(xref)">Replies</p> *@
-                                                                                </div>
-                                                                            </td>
-                                                                        </tr>
-                                                                    @* }
-                                                                    else continue; *@
-                                                                }
-                                                            }
-                                                            else
-                                                            {
+                                                @if (!string.IsNullOrWhiteSpace(find.features))
+                                                {
+                                                    <p><strong>Distinguishing Features: </strong><span>@find.features</span></p>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(find.lookAlikes))
+                                                {
+                                                    <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(find.harvestMethod))
+                                                {
+                                                    <p><strong>Harvest Method: </strong><span>@find.harvestMethod</span></p>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(find.tastesLike))
+                                                {
+                                                    <p><strong>Tastes like: </strong><span>@find.tastesLike</span></p>
+                                                }
+
+                                                @if (!string.IsNullOrWhiteSpace(find.description))
+                                                {
+                                                    <p><strong>Notes: </strong><span>@find.description</span></p>
+                                                }
+                                                <p><a href="#" @onclick="() => ViewOnMap(vm.userId, find.findId)">View on map</a></p>
+                                                <div>
+                                                    <p><span>Thumbs up</span></p>
+                                                    <p><span>Thumbs down</span></p>
+                                                </div>
+                                                <div id="commentSection">
+                                                    <div >
+                                                        <p><span style="cursor: pointer;" @onclick="ToggleExpandComments">Comments</span></p>
+                                                    </div>
+                                                    @if (expandComments)
+                                                    {
+                                                        <table>
+                                                            <tbody>
                                                                 <tr>
                                                                     <td>
                                                                         <div>
-                                                                            <p>No comments</p>
+                                                                                <label for="comment-form">Leave Comment</label>
+                                                                            <InputText id="comment-form" @bind-Value="userComment" placeholder="Enter Comment..." class="form-control" />                                                                                                                                           
+                                                                            <button class="form-control" @onclick="() => HandleCommentSubmit(find.findId, vm.userId)"> Submit</button>
                                                                         </div>
                                                                     </td>
                                                                 </tr>
-                                                            }
-                                                        </tbody>
-                                                    </table>
+                                                                @if (find.findsCommentXrefs != null && find.findsCommentXrefs.Any())
+                                                                {
 
-                                                }
+                                                                    @foreach (var xref in find.findsCommentXrefs)
+                                                                    {                                                                    
+
+                                                                        if (!xref.findsComment.parentCommentId.HasValue)
+                                                                        {
+                                                                            <tr>
+                                                                                <td colspan="4"> <!-- Use colspan if needed -->
+                                                                                    <div>
+                                                                                        <div style="display: flex; gap: 20px;">
+                                                                                            <div>
+                                                                                                <img src="@xref.CommentUserProfilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" />
+                                                                                            </div>
+                                                                                            <div>
+                                                                                                <p>
+                                                                                                    <a>@mapService.userNamesKvp.Where(cn => cn.Key == xref.comxUserId).FirstOrDefault().Value</a>
+                                                                                                </p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <p>@xref.findsComment.comment</p>
+                                                                                        </div>
+
+                                                                                        @if (xref.comxUserId == userStateService.CurrentUser.user.UsrId || find.findUserId == userStateService.CurrentUser.user.UsrId)
+                                                                                        {
+                                                                                            <div>
+                                                                                                <button class="form-control" @onclick="() => HandleCommentDelete(vm.userId, find.findId, xref.comXId)">Delete</button>
+                                                                                            </div>
+                                                                                        }
+
+                                                                                        <p>
+                                                                                            <span style="cursor: pointer;" @onclick="() => ToggleReplyExpansion(xref.findsComment.comId)">Replies</span>
+                                                                                        </p>
+
+                                                                                        @if (IsReplyExpanded(xref.findsComment.comId))
+                                                                                        {
+                                                                                            <div>
+                                                                                                <InputText @bind-Value="userCommentReply" placeholder="Reply..." class="form-control" />
+                                                                                                <button class="form-control" @onclick="() => HandleCommentSubmit(find.findId, vm.userId, xref.findsComment.comId)">Reply</button>
+
+                                                                                            </div>
+
+                                                                                            @if (find.findsCommentXrefs.Where(x => x.findsComment.parentCommentId.HasValue && x.findsComment.parentCommentId == xref.findsComment.comId).Any())
+                                                                                            {
+                                                                                                <table>
+                                                                                                    <tbody>
+                                                                                                        @foreach (var reply in find.findsCommentXrefs.Where(x => x.findsComment.parentCommentId.HasValue && x.findsComment.parentCommentId == xref.findsComment.comId))                                                                                            
+                                                                                                        {
+                                                                                                            <tr>
+                                                                                                                <td>
+                                                                                                                    <div>
+                                                                                                                        <div style="display: flex; gap: 20px;">
+                                                                                                                            <div>
+                                                                                                                                <img src="@reply.CommentUserProfilePic" alt="Profile Picture" style="max-width: 50px; border-radius: 50%;" />
+                                                                                                                            </div>
+                                                                                                                            <div>
+                                                                                                                                <p>
+                                                                                                                                    <a>@mapService.userNamesKvp.Where(cn => cn.Key == reply.comxUserId).FirstOrDefault().Value</a>
+                                                                                                                                </p>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                        <div>
+                                                                                                                            <p>@reply.findsComment.comment</p>
+                                                                                                                        </div>
+                                                                                                                        @if (reply.comxUserId == userStateService.CurrentUser.user.UsrId || find.findUserId == userStateService.CurrentUser.user.UsrId)
+                                                                                                                        {
+                                                                                                                            <div>
+                                                                                                                                <button class="form-control" @onclick="() => HandleCommentDelete(vm.userId, find.findId, reply.comXId)">Delete</button>
+                                                                                                                            </div>
+                                                                                                                        }
+                                                                                                                    </div>
+                                                                                                                </td>
+                                                                                                            </tr>
+                                                                                                        }
+                                                                                                    </tbody>
+                                                                                                </table>
+                                                                                            }
+                                                                                        
+                                                                                        }
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>
+
+                                                                        }
+                                                                        else continue;
+                                                                    }
+                                                                }
+                                                                else
+                                                                {
+                                                                    <tr>
+                                                                        <td>
+                                                                            <div>
+                                                                                <p>No comments</p>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                }
+                                                            </tbody>
+                                                        </table>
+
+                                                    }
                                                     
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                </tr>
+                                        </td>
+                                    </tr>
+                                }
                             }
                         }
-                    }
-                </tbody>
-            </table>
-        }
-        else
-        {
-            <div class="no-data-indicator">
-                <p>No data available.</p>
-            </div>
-        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="no-data-indicator">
+                    <p>No data available.</p>
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -351,18 +427,18 @@
 <div id="find-popup-template" style="display: none;">
     <p><strong>Name:</strong> {findName}</p>
     <p><strong>Discovered by:</strong> {username}</p>
-    <p><strong>Species Name:</strong> {speciesName}</p>
+    @* <p><strong>Species Name:</strong> {speciesName}</p> *@
     <div id="photo-gallery">
         {Images}
     </div>
     @* <p><strong>Discovered:</strong> {Date}</p> *@
     <p><strong>Species Type:</strong> {speciesType}</p>
     <p><strong>Use Category:</strong> {useCategory}</p>
-    <p><strong>Distinguishing Features:</strong> {features}</p>
+@*     <p><strong>Distinguishing Features:</strong> {features}</p>
     <p><strong>Dangerous Lookalikes:</strong> {lookAlikes}</p>
     <p><strong>Harvest Method:</strong> {harvestMethod}</p>
     <p><strong>Tastes Like:</strong> {tastesLike}</p>
-    <p><strong>Notes:</strong> {description}</p>
+    <p><strong>Notes:</strong> {description}</p> *@
     <div style="display: flex; 10px">
         <button type="button" id="details-button" class="form-control">View Details</button>
         <button type="button" id="edit-button" class="form-control">Edit</button>
@@ -374,6 +450,8 @@
 
 @code {
     private string userComment = string.Empty;
+
+    private string userCommentReply = string.Empty;
 
     private DotNetObjectReference<MapService> _mapServiceReference;
 
@@ -389,11 +467,15 @@
 
     private bool isAdvancedSearchVisible = false;
 
-    private Dictionary<FindDto, bool> expandedRowsFinds = new Dictionary<FindDto, bool>();
+    private Dictionary<FindDto, bool> expandedRowsFinds = new();
+
+    private Dictionary<Guid, bool> expandedRepliesMap = new();
 
     private bool isLoading = true;
 
     private bool expandComments = false;
+
+    private bool expandReplies = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -454,7 +536,7 @@
             }
             else
             {
-                Console.WriteLine("🛑 ViewDetails skipped: no viewModels or finds available.");
+                Console.WriteLine("ViewDetails skipped: no viewModels or finds available.");
             }
         }
         catch (Exception ex)
@@ -469,17 +551,25 @@
         StateHasChanged();
     }
 
-
     private void ToggleExpandComments()
     {
         expandComments = !expandComments;
     }
 
-    private async Task HandleCommentSubmit(Guid findId, Guid vmId)
+    private async Task HandleCommentSubmit(Guid findId, Guid vmId, Guid? comId = null)
     {        
         var userId = userStateService.CurrentUser.user.UsrId;
         var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-        var xref = await userFindService.AddComment(userComment, findId, userId);
+        var xref = new FindsCommentXrefDto();
+
+        if (!comId.HasValue)
+        {
+            xref = await userFindService.AddComment(userComment, findId, userId);
+        }
+        else
+        {
+            xref = await userFindService.AddComment(userCommentReply, findId, userId, comId);
+        }
 
         var newViewModel = new UserFindsViewModel();
 
@@ -491,7 +581,8 @@
         .ToList();
 
         mapService.UpdateViewModels(vmId, newViewModel);
-        userComment = string.Empty;    
+        userComment = string.Empty;
+        userCommentReply = string.Empty;
     }
 
     private async Task HandleCommentDelete(Guid vmId, Guid findId, Guid xrefId)
@@ -675,7 +766,7 @@
 
     private bool userFindsExpanded;
 
-    private void ToggleRowExpansion(FindDto find = null)
+    private void ToggleRowExpansion(FindDto find)
     {   
         expandComments = false;
 
@@ -700,6 +791,30 @@
         return IsRowExpanded(item) ? "expanded" : "";
     }
 
+    private void ToggleReplyExpansion(Guid commentId)
+    {
+        if (expandedRepliesMap.ContainsKey(commentId))
+        {
+            expandedRepliesMap[commentId] = !expandedRepliesMap[commentId];
+        }
+        else
+        {
+            expandedRepliesMap.Clear(); // Only one expanded at a time
+            expandedRepliesMap[commentId] = true;
+        }
+    }
+
+    private bool IsReplyExpanded(Guid commentId)
+    {
+        return expandedRepliesMap.ContainsKey(commentId) && expandedRepliesMap[commentId];
+    }
+
+    private string GetReplyRowClass(Guid commentId)
+    {
+        return IsReplyExpanded(commentId) ? "expanded" : "";
+    }
+
+    
     private async Task ViewOnMap(Guid userId, Guid findId)
     {
         var ufvm = mapService.CurrentViewModels

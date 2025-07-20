@@ -86,7 +86,10 @@ namespace ForagerSite.Services
                 selectedVm.finds.Add(selectedFind);
                 selectedVm.userId = findUserGuid;
                 selectedVm.userName = findUserName;
-                
+                selectedVm.profilePic = CurrentViewModels
+                    .FirstOrDefault(vm => vm.userId == findUserGuid)
+                    .profilePic;
+
                 //foreach (var kvp in CurrentViewModels.FirstOrDefault(vm => vm.userId == findUserGuid).userNamesKvp)
                 //{
                 //    selectedVm.userNamesKvp[kvp.Key] = kvp.Value;

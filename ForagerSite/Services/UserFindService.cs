@@ -317,14 +317,15 @@ namespace ForagerSite.Services
             //return await context.UserFinds.FirstOrDefaultAsync(uf => uf.findId == findId);
         }
 
-        public async Task<FindsCommentXrefDto> AddComment(string comment, Guid findId, Guid userId)
+        public async Task<FindsCommentXrefDto> AddComment(string comment, Guid findId, Guid userId, Guid? comId = null)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
             var userComment = new UserFindsComment
             {
                 UscComment = comment,
-                UscCommentDate = DateTime.Now
+                UscCommentDate = DateTime.Now,
+                UscParentCommentId = comId.HasValue ? comId.Value : null
             };
             context.UserFindsComments.Add(userComment);
             await context.SaveChangesAsync();

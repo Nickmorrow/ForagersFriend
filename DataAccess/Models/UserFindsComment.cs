@@ -12,9 +12,9 @@ namespace DataAccess.Models
         public DateTime UscCommentDate { get; set; }
         public UserFindsCommentXref UserFindsCommentXref { get; set; }
         public Guid? UscParentCommentId { get; set; }
-        [ForeignKey("UscParentCommentId")]
-        public UserFindsComment ParentComment { get; set; }
-        public ICollection<UserFindsComment> Replies { get; set; } = new List<UserFindsComment>();
+        //[ForeignKey("parentCommentId")]
+        //public UserFindsComment ParentComment { get; set; }
+        //public ICollection<UserFindsComment> Replies { get; set; } = new List<UserFindsComment>();
 
     }
 
