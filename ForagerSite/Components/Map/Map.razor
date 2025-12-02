@@ -4,6 +4,7 @@
 @using ForagerSite.Services
 @using DataAccess.Models
 @using Utilities
+@using ForagerSite.Components.Find
 @rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
 @inject IConfiguration config
@@ -108,6 +109,14 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @if (showCreateForm)
+                        {
+                            <tr>
+                                <td>
+                                    <FindCreateForm OnClose="CloseCreateForm" OnCreated="CloseCreateForm" />
+                                </td>
+                            </tr>                            
+                        }
                         @foreach (var vm in mapService.CurrentViewModels)
                         {
                             foreach (var find in vm.finds)
@@ -439,7 +448,7 @@
     <p><strong>Harvest Method:</strong> {harvestMethod}</p>
     <p><strong>Tastes Like:</strong> {tastesLike}</p>
     <p><strong>Notes:</strong> {description}</p> *@
-    <div style="display: flex; 10px">
+    <div style="display: flex; ">
         <button type="button" id="details-button" class="form-control">View Details</button>
         <button type="button" id="edit-button" class="form-control">Edit</button>
         <button type="button" id="delete-button" class="form-control">Delete</button>
@@ -449,6 +458,7 @@
 <div></div>
 
 @code {
+    #region Fields
     private string userComment = string.Empty;
 
     private string userCommentReply = string.Empty;
@@ -476,6 +486,9 @@
     private bool expandComments = false;
 
     private bool expandReplies = false;
+
+    private bool showCreateForm = false;
+    #endregion
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -519,8 +532,20 @@
     {
         mapService.OnChange += StateHasChanged;
         mapService.OnLoadingChange += ViewDetails;
+        mapService.OnCreateFormRequested += HandleCreateFormRequested;
+
     }
 
+    private void CloseCreateForm()
+    {
+        showCreateForm = false;
+    }
+
+    private void HandleCreateFormRequested()
+    {
+        showCreateForm = true;
+        InvokeAsync(StateHasChanged); // ✅ Refresh UI safely
+    }
     private void ViewDetails(bool loading)
     {
         isLoading = loading;
@@ -844,6 +869,8 @@
         _mapServiceReference?.Dispose();
         mapService.OnChange -= StateHasChanged;
         mapService.OnLoadingChange -= ViewDetails;
+        mapService.OnCreateFormRequested -= HandleCreateFormRequested;
+
     }
 
 

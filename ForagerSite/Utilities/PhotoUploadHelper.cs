@@ -7,7 +7,7 @@ namespace ForagerSite.Utilities
 {
     public static class PhotoUploadHelper
     {
-        private static readonly long maxFileSize = 100 * 1024 * 1024;
+        private static readonly long maxFileSize = 10 * 1024 * 1024;
 
         private static readonly int maxFileCountFind = 4;
 

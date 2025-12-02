@@ -62,76 +62,118 @@ window.setDotNetObjectReference = function (reference) {
 
 window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, userName) {
     //Create new find
+    //window.map.on('click', function (e) {
+    //    if (window.tempMarker) {
+    //        window.map.removeLayer(window.tempMarker);
+    //        window.tempMarker = null;
+    //    }
+
+    //    let tempId = 'temp-' + Date.now();
+    //    window.tempMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
+
+    //    const formHtml = document.getElementById('find-form-container').innerHTML;
+    //    const popupContent = formHtml.replace(/UserFindForm/g, `UserFindForm_${tempId}`);
+
+    //    setTimeout(() => {
+    //        const saveButton = document.querySelector(`#UserFindForm_${tempId} #saveButton`);
+    //        if (saveButton) {
+    //            saveButton.addEventListener('click', () => {
+    //                createFind(tempId, e.latlng.lat, e.latlng.lng, currentUserId, mapFilter, userName);
+    //            });
+    //        }
+
+    //        const imageUploadInput = document.querySelector(`#UserFindForm_${tempId} #imageUpload`);
+    //        const imagePreviewContainer = document.querySelector(`#UserFindForm_${tempId} #imagePreview`);
+    //        imageUploadInput.addEventListener('change', function () {
+    //            let files = Array.from(imageUploadInput.files);
+    //            imagePreviewContainer.innerHTML = ''; // Clear existing previews
+
+    //            files.forEach((file, index) => {
+    //                const reader = new FileReader();
+    //                reader.onload = function (e) {
+    //                    // Create image preview
+    //                    const img = document.createElement('img');
+    //                    img.src = e.target.result;
+    //                    img.style.maxWidth = '100px';
+    //                    img.style.marginRight = '10px';
+
+    //                    // Create remove button
+    //                    const removeButton = document.createElement('button');
+    //                    removeButton.innerText = 'Remove';
+    //                    removeButton.type = 'button';
+    //                    removeButton.style.marginLeft = '5px';
+
+    //                    // Prevent map click event propagation
+    //                    removeButton.addEventListener('click', function (event) {
+    //                        event.stopPropagation(); // Stop the event from propagating to Leaflet
+
+    //                        img.remove(); // Remove image preview
+    //                        removeButton.remove(); // Remove button
+
+    //                        // Remove the file from the list and update the input
+    //                        files.splice(index, 1);
+    //                        const dataTransfer = new DataTransfer();
+    //                        files.forEach(file => dataTransfer.items.add(file)); // Re-add remaining files
+    //                        imageUploadInput.files = dataTransfer.files;
+    //                    });
+
+    //                    imagePreviewContainer.appendChild(img);
+    //                    imagePreviewContainer.appendChild(removeButton);
+    //                };
+    //                reader.readAsDataURL(file); // Read the file for preview
+    //            });
+    //        });
+
+    //    }, 10);
+
+    //    window.tempMarker.bindPopup(popupContent).openPopup();
+    //    window.tempMarker.on('popupclose', function () {
+    //        window.map.removeLayer(window.tempMarker);
+    //        window.tempMarker = null;
+    //    });
+    //});
     window.map.on('click', function (e) {
         if (window.tempMarker) {
             window.map.removeLayer(window.tempMarker);
             window.tempMarker = null;
         }
 
-        let tempId = 'temp-' + Date.now();
-        window.tempMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(window.map);
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
 
-        const formHtml = document.getElementById('find-form-container').innerHTML;
-        const popupContent = formHtml.replace(/UserFindForm/g, `UserFindForm_${tempId}`);
+        window.tempMarker = L.marker([lat, lng]).addTo(window.map);
 
-        setTimeout(() => {
-            const saveButton = document.querySelector(`#UserFindForm_${tempId} #saveButton`);
-            if (saveButton) {
-                saveButton.addEventListener('click', () => {
-                    createFind(tempId, e.latlng.lat, e.latlng.lng, currentUserId, mapFilter, userName);
-                });
-            }
-
-            const imageUploadInput = document.querySelector(`#UserFindForm_${tempId} #imageUpload`);
-            const imagePreviewContainer = document.querySelector(`#UserFindForm_${tempId} #imagePreview`);
-            imageUploadInput.addEventListener('change', function () {
-                let files = Array.from(imageUploadInput.files);
-                imagePreviewContainer.innerHTML = ''; // Clear existing previews
-
-                files.forEach((file, index) => {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        // Create image preview
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.style.maxWidth = '100px';
-                        img.style.marginRight = '10px';
-
-                        // Create remove button
-                        const removeButton = document.createElement('button');
-                        removeButton.innerText = 'Remove';
-                        removeButton.type = 'button';
-                        removeButton.style.marginLeft = '5px';
-
-                        // Prevent map click event propagation
-                        removeButton.addEventListener('click', function (event) {
-                            event.stopPropagation(); // Stop the event from propagating to Leaflet
-
-                            img.remove(); // Remove image preview
-                            removeButton.remove(); // Remove button
-
-                            // Remove the file from the list and update the input
-                            files.splice(index, 1);
-                            const dataTransfer = new DataTransfer();
-                            files.forEach(file => dataTransfer.items.add(file)); // Re-add remaining files
-                            imageUploadInput.files = dataTransfer.files;
-                        });
-
-                        imagePreviewContainer.appendChild(img);
-                        imagePreviewContainer.appendChild(removeButton);
-                    };
-                    reader.readAsDataURL(file); // Read the file for preview
-                });
-            });
-
-        }, 10);
+        const popupContent = `
+            <div>
+                <strong>Create New Find Here?</strong><br/>
+                <button id="open-create-form">Create Find</button>
+            </div>
+        `;
 
         window.tempMarker.bindPopup(popupContent).openPopup();
+
+        setTimeout(() => {
+            const button = document.getElementById("open-create-form");
+            if (button) {
+                button.addEventListener("click", function () {
+                    // ✅ Close popup before triggering .NET
+                    window.tempMarker.closePopup();
+
+                    if (window.dotNetObjectReference) {
+                        window.dotNetObjectReference.invokeMethodAsync("TriggerCreateForm")
+                            .catch(err => console.error("Error triggering create form:", err));
+                    }
+                });
+            }
+        }, 10);
+
         window.tempMarker.on('popupclose', function () {
             window.map.removeLayer(window.tempMarker);
             window.tempMarker = null;
         });
     });
+
+
     // Display all finds on map
     Object.keys(markers).forEach(key => {
         markers[key].marker.remove();

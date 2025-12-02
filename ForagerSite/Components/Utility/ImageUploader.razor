@@ -1,0 +1,78 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+
+<InputFile OnChange="HandleFileChange"
+           multiple
+           accept=".png,.jpg,.jpeg"
+           @key="fileInputKey" />
+
+@if (Errors?.Any() == true)
+{
+    <ul style="color: red;">
+        @foreach (var error in Errors)
+        {
+            <li>@error</li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter] public EventCallback<List<string>> OnImagesUploaded { get; set; }
+    [Parameter] public List<string> Errors { get; set; }
+
+    private const long MaxFileSize = 1024 * 1024 * 10; // 10 MB
+    private const int MaxAllowedFiles = 4;
+    private readonly string[] allowedExtensions = [".jpg", ".jpeg", ".png"];
+    private int inputResetCounter = 0;
+    private Guid fileInputKey = Guid.NewGuid();
+
+    public void ResetInput()
+    {
+        inputResetCounter++;
+    }
+
+    public void ResetFileInput()
+    {
+        fileInputKey = Guid.NewGuid(); // re-renders the input element
+        StateHasChanged();
+    }
+
+    private async Task HandleFileChange(InputFileChangeEventArgs e)
+    {
+        Errors.Clear();
+
+        if (e.FileCount > MaxAllowedFiles)
+        {
+            Errors.Add($"You can upload a maximum of {MaxAllowedFiles} images.");
+            return;
+        }
+
+        var imagePreviews = new List<string>();
+
+        foreach (var file in e.GetMultipleFiles(MaxAllowedFiles))
+        {
+            var ext = Path.GetExtension(file.Name).ToLowerInvariant();
+            if (!allowedExtensions.Contains(ext))
+            {
+                Errors.Add($"Unsupported file format: {ext}");
+                continue;
+            }
+
+            if (file.Size > MaxFileSize)
+            {
+                Errors.Add($"'{file.Name}' exceeds max file size of {MaxFileSize / (1024 * 1024)} MB.");
+                continue;
+            }
+
+            using var stream = file.OpenReadStream(MaxFileSize);
+            var buffer = new byte[file.Size];
+            await stream.ReadAsync(buffer, 0, (int)file.Size);
+            var base64 = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+            imagePreviews.Add(base64);
+        }
+
+        if (Errors.Count == 0)
+        {
+            await OnImagesUploaded.InvokeAsync(imagePreviews);
+        }
+    }
+}

@@ -2,6 +2,7 @@
 @using System.ComponentModel.DataAnnotations
 @using ForagerSite.Services
 @using ForagerSite.Utilities
+@using ForagerSite.Components.Utility
 @inject UserStateService userStateService
 @inject IConfiguration config
 
@@ -68,19 +69,21 @@
 
     <div>
         <label>Images:</label>
-        <ImageUploader OnImagesUploaded="OnImagesUploaded" />
-        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-            @for (int i = 0; i < imagePreviews.Count; i++)
-            {
-                <div style="position: relative; display: inline-block;">
-                    <img src="@imagePreviews[i]" style="max-width: 100px; max-height: 100px;" />
-                    <button type="button"
-                            @onclick="() => RemoveImage(i)"
-                            style="position: absolute; top: -5px; right: -5px; background-color: red; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer;">
-                        ✕
-                    </button>
-                </div>
-            }
+            <ImageUploader @ref="imageUploader" OnImagesUploaded="OnImagesUploaded" Errors="uploadErrors" />
+            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                @for (int i = 0; i < imagePreviews.Count; i++)
+                {
+                    var currentIndex = i;
+                    <div @key="imagePreviews[i]" style="position: relative; display: inline-block;">
+                        <img src="@imagePreviews[i]" style="max-width: 100px; max-height: 100px;" />
+                        <button type="button"
+                                @onclick="() => RemoveImage(currentIndex)"
+                                style="position: absolute; top: -5px; right: -5px;">
+                            ✕
+                        </button>
+                    </div>
+                }
+
         </div>
 
         @if (uploadErrors.Any())
@@ -96,7 +99,8 @@
     </div>
 
     <button type="submit">Save</button>
-</EditForm>
+    <button @onclick="OnClose">Cancel</button> 
+    </EditForm>
 </div>
 @code {
     private FindTemp findModel = new();
@@ -105,13 +109,43 @@
 
     private List<string> imagePreviews = new();
 
-    [Parameter] public EventCallback<FindTemp> OnFindCreated { get; set; }
+    private ImageUploader imageUploader;
+
+    [Parameter]
+    public EventCallback<FindTemp> OnFindCreated { get; set; }
+
+    [Parameter]
+    public EventCallback OnCreated { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    // [Parameter] 
+    // public List<string> Errors { get; set; }
+
+    // protected override void OnInitialized()
+    // {
+    //     Errors ??= new List<string>();
+    // }
+    private void ClearUploadedImages()
+    {
+        imagePreviews.Clear();
+        findModel.ImageBase64Strings.Clear();
+        uploadErrors.Clear();
+
+        imageUploader?.ResetFileInput();
+    }
+
 
     private async Task OnImagesUploaded(List<string> base64Images)
     {
-        imagePreviews = base64Images;
-        findModel.ImageBase64Strings = base64Images;
+        imagePreviews.Clear();
+        imagePreviews.AddRange(base64Images);
+
+        findModel.ImageBase64Strings.Clear();
+        findModel.ImageBase64Strings.AddRange(base64Images);
     }
+
 
     private void RemoveImage(int index)
     {
@@ -119,8 +153,16 @@
         {
             imagePreviews.RemoveAt(index);
             findModel.ImageBase64Strings.RemoveAt(index);
+
+            if (imagePreviews.Count == 0)
+            {
+                imageUploader?.ResetInput(); // 💥 This clears the file input
+            }
+
+            StateHasChanged();
         }
     }
+
 
     private async Task HandleValidSubmit()
     {

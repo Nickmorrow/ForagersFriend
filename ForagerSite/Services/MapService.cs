@@ -22,6 +22,7 @@ namespace ForagerSite.Services
         private readonly UserFindService _userFindService;
         public event Action OnChange;
         public event Action<bool> OnLoadingChange;
+        public event Action? OnCreateFormRequested;
         public List<UserFindsViewModel> MyViewModels { get; set; } = new();
         public List<UserFindsViewModel> AllViewModels { get; set; } = new();
         public List<UserFindsViewModel> CurrentViewModels { get; set; } = new();
@@ -60,6 +61,13 @@ namespace ForagerSite.Services
         public UserFindsViewModel GetViewModel(Guid userId)
         {
             return CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
+        }
+
+        [JSInvokable]
+        public Task TriggerCreateForm()
+        {
+            OnCreateFormRequested?.Invoke();
+            return Task.CompletedTask;
         }
 
         [JSInvokable("GetDetails")]
