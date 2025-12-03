@@ -113,10 +113,13 @@
                         {
                             <tr>
                                 <td>
-                                    <FindCreateForm OnClose="CloseCreateForm" OnCreated="CloseCreateForm" />
+                                    <FindCreateForm OnClose="CloseCreateForm"
+                                                    OnCreated="CloseCreateForm"
+                                                    OnFindCreated="HandleFindCreated" />
                                 </td>
-                            </tr>                            
+                            </tr>
                         }
+
                         @foreach (var vm in mapService.CurrentViewModels)
                         {
                             foreach (var find in vm.finds)
@@ -535,16 +538,41 @@
         mapService.OnCreateFormRequested += HandleCreateFormRequested;
 
     }
+    private async Task ReInitializeMap()
+    {
+        var user = userStateService.CurrentUser.user;
+        var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                Formatting = Formatting.Indented
+            });
 
+        await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
+        await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername); 
+    }
     private void CloseCreateForm()
     {
         showCreateForm = false;
+        mapService.pendingLat = null;
+        mapService.pendingLng = null;
     }
 
     private void HandleCreateFormRequested()
     {
         showCreateForm = true;
-        InvokeAsync(StateHasChanged); // ✅ Refresh UI safely
+        InvokeAsync(StateHasChanged); 
+    }
+    private async Task HandleFindCreated(FindCreateForm.FindTemp temp)
+    {
+        await mapService.CreateFind(temp.FindName, temp.SpeciesName, temp.SpeciesType,
+            temp.UseCategory, temp.Features, temp.LookAlikes, temp.HarvestMethod,
+            temp.TastesLike, temp.Description, mapService.pendingLat.Value, mapService.pendingLng.Value, temp.ImageUrls);
+
+        showCreateForm = false;
+        mapService.pendingLat = null;
+        mapService.pendingLng = null;
+
+        await ReInitializeMap();
     }
     private void ViewDetails(bool loading)
     {

@@ -160,7 +160,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
                     window.tempMarker.closePopup();
 
                     if (window.dotNetObjectReference) {
-                        window.dotNetObjectReference.invokeMethodAsync("TriggerCreateForm")
+                        window.dotNetObjectReference.invokeMethodAsync("TriggerCreateForm", lat, lng)
                             .catch(err => console.error("Error triggering create form:", err));
                     }
                 });

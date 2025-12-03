@@ -69,21 +69,20 @@
 
     <div>
         <label>Images:</label>
-            <ImageUploader @ref="imageUploader" OnImagesUploaded="OnImagesUploaded" Errors="uploadErrors" />
-            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                @for (int i = 0; i < imagePreviews.Count; i++)
-                {
-                    var currentIndex = i;
-                    <div @key="imagePreviews[i]" style="position: relative; display: inline-block;">
-                        <img src="@imagePreviews[i]" style="max-width: 100px; max-height: 100px;" />
-                        <button type="button"
-                                @onclick="() => RemoveImage(currentIndex)"
-                                style="position: absolute; top: -5px; right: -5px;">
-                            ✕
-                        </button>
-                    </div>
-                }
-
+        <ImageUploader @ref="imageUploader" OnImagesUploaded="OnImagesUploaded" Errors="uploadErrors" />
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            @for (int i = 0; i < imagePreviews.Count; i++)
+            {
+                var currentIndex = i;
+                <div @key="imagePreviews[i]" style="position: relative; display: inline-block;">
+                    <img src="@imagePreviews[i]" style="max-width: 100px; max-height: 100px;" />
+                    <button type="button"
+                            @onclick="() => RemoveImage(currentIndex)"
+                            style="position: absolute; top: -5px; right: -5px;">
+                        ✕
+                    </button>
+                </div>
+            }
         </div>
 
         @if (uploadErrors.Any())
@@ -109,6 +108,8 @@
 
     private List<string> imagePreviews = new();
 
+    private List<IBrowserFile> selectedFiles = new();
+
     private ImageUploader imageUploader;
 
     [Parameter]
@@ -120,63 +121,59 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
-    // [Parameter] 
-    // public List<string> Errors { get; set; }
+    private Task OnImagesUploaded(ImageUploadResult result)
+    {
+        uploadErrors.Clear();
 
-    // protected override void OnInitialized()
-    // {
-    //     Errors ??= new List<string>();
-    // }
+        imagePreviews = result.Previews ?? new List<string>();
+        selectedFiles = result.Files ?? new List<IBrowserFile>();
+
+        StateHasChanged();
+
+        return Task.CompletedTask;
+    }
+
     private void ClearUploadedImages()
     {
         imagePreviews.Clear();
-        findModel.ImageBase64Strings.Clear();
+        selectedFiles.Clear();
         uploadErrors.Clear();
 
         imageUploader?.ResetFileInput();
     }
-
-
-    private async Task OnImagesUploaded(List<string> base64Images)
-    {
-        imagePreviews.Clear();
-        imagePreviews.AddRange(base64Images);
-
-        findModel.ImageBase64Strings.Clear();
-        findModel.ImageBase64Strings.AddRange(base64Images);
-    }
-
 
     private void RemoveImage(int index)
     {
         if (index >= 0 && index < imagePreviews.Count)
         {
             imagePreviews.RemoveAt(index);
-            findModel.ImageBase64Strings.RemoveAt(index);
+
+            if (index < selectedFiles.Count)
+            {
+                selectedFiles.RemoveAt(index);
+            }
 
             if (imagePreviews.Count == 0)
             {
-                imageUploader?.ResetInput(); // 💥 This clears the file input
+                imageUploader?.ResetInput();
             }
 
             StateHasChanged();
         }
     }
 
-
     private async Task HandleValidSubmit()
     {
-        uploadErrors.Clear(); // ✅ Clear old errors first
+        uploadErrors.Clear(); 
 
         var userId = userStateService.CurrentUser.user.UsrId;
         var userName = userStateService.CurrentUser.userSecurity.UssUsername;
         findModel.UserId = userId;
 
-        var uploadedUrls = await PhotoUploadHelper.UploadFindImages(findModel.ImageBase64Strings, userName, config, uploadErrors);
+        var uploadedUrls = await PhotoUploadHelper.UploadFindImages(selectedFiles, userName, config, uploadErrors);
 
         if (uploadErrors.Any())
         {
-            // ❌ Don't save if there are errors
             return;
         }
 
@@ -193,16 +190,16 @@
     public class FindTemp
     {
         [Required] public string FindName { get; set; }
-        public string SpeciesName { get; set; }
-        [Required] public string SpeciesType { get; set; }
+        public string SpeciesName { get; set; } = "";
+        [Required] public string SpeciesType { get; set; } 
         [Required] public string UseCategory { get; set; }
-        public string Features { get; set; }
-        public string LookAlikes { get; set; }
-        public string HarvestMethod { get; set; }
-        public string TastesLike { get; set; }
-        public string Description { get; set; }
+        public string Features { get; set; } = "";
+        public string LookAlikes { get; set; } = "";
+        public string HarvestMethod { get; set; } = "";
+        public string TastesLike { get; set; } = "";
+        public string Description { get; set; } = "";
         public Guid UserId { get; set; }
-        public List<string> ImageBase64Strings { get; set; } = new();
+        //public List<string> ImageBase64Strings { get; set; } = new();
         public List<string> ImageUrls { get; set; } = new();
     }
 }

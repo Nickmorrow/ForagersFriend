@@ -120,64 +120,72 @@ namespace ForagerSite.Utilities
             }
             await userService.DeleteProfilePicUrl(userVm.user);
         }
-
-        public static async Task<List<string>> UploadFindImages(List<string> base64Images, string userName, IConfiguration config, List<string> errors)
+        public static async Task<List<string>> UploadFindImages(IReadOnlyList<IBrowserFile> files, string userName, IConfiguration config, List<string> errors)
         {
             var savedFileUrls = new List<string>();
-            var userDirectory = Path.Combine(config.GetValue<string>("FileStorageFind_Images"), userName);
 
-            if (base64Images.Count > maxFileCountFind)
+            if (files == null || files.Count == 0)
+                return savedFileUrls;
+
+            if (files.Count > maxFileCountFind)
             {
                 errors.Add($"You can upload a maximum of {maxFileCountFind} images.");
                 return savedFileUrls;
             }
 
+            var rootFolder = config.GetValue<string>("FileStorageFind_Images");
+            if (string.IsNullOrWhiteSpace(rootFolder))
+            {
+                errors.Add("FileStorageFind_Images is not configured.");
+                return savedFileUrls;
+            }
+
+            if (string.IsNullOrWhiteSpace(userName))
+            {
+                errors.Add("User name is missing.");
+                return savedFileUrls;
+            }
+
+            var userDirectory = Path.Combine(rootFolder, userName);
             if (!Directory.Exists(userDirectory))
             {
                 Directory.CreateDirectory(userDirectory);
             }
 
-            foreach (var base64Image in base64Images)
+            foreach (var file in files)
             {
                 try
                 {
-                    var header = base64Image.Split(',')[0];
-                    var imageBytes = Convert.FromBase64String(base64Image.Split(',')[1]);
-
-                    if (imageBytes.Length > maxFileSize)
+                    var ext = Path.GetExtension(file.Name).ToLowerInvariant();
+                    if (!allowedExtensions.Contains(ext))
                     {
-                        errors.Add("One or more images exceed the 5MB size limit.");
+                        errors.Add($"File '{file.Name}' has an invalid extension. Only .jpg, .jpeg, .png are allowed.");
                         continue;
                     }
 
-                    var extension = GetImageExtensionFromBase64(base64Image);
-                    if (!allowedExtensions.Contains(extension))
+                    if (file.Size > maxFileSize)
                     {
-                        errors.Add("Only .jpg, .jpeg, and .png formats are allowed.");
+                        errors.Add($"File '{file.Name}' exceeds the {maxFileSize / (1024 * 1024)} MB limit.");
                         continue;
                     }
 
-                    var fileName = Path.ChangeExtension(Path.GetRandomFileName(), extension);
-                    var filePath = Path.Combine(userDirectory, fileName);
+                    var newFileName = Path.ChangeExtension(Path.GetRandomFileName(), ext);
+                    var filePath = Path.Combine(userDirectory, newFileName);
 
-                    await File.WriteAllBytesAsync(filePath, imageBytes);
-                    savedFileUrls.Add($"/UserFindImages/{userName}/{fileName}");
+                    await using var readStream = file.OpenReadStream(maxFileSize);
+                    await using var writeStream = new FileStream(filePath, FileMode.Create);
+                    await readStream.CopyToAsync(writeStream);
+
+                    savedFileUrls.Add($"/FindImageUploads/{userName}/{newFileName}");
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"Error uploading image: {ex.Message}");
+                    errors.Add($"Error uploading '{file.Name}': {ex.Message}");
                 }
             }
 
             return savedFileUrls;
         }
 
-        private static string GetImageExtensionFromBase64(string base64)
-        {
-            if (base64.StartsWith("data:image/jpeg")) return ".jpg";
-            if (base64.StartsWith("data:image/png")) return ".png";
-            if (base64.StartsWith("data:image/jpg")) return ".jpg";
-            return ".unknown";
-        }
     }
 }

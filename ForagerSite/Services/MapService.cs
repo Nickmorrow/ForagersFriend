@@ -23,6 +23,8 @@ namespace ForagerSite.Services
         public event Action OnChange;
         public event Action<bool> OnLoadingChange;
         public event Action? OnCreateFormRequested;
+        public double? pendingLat;
+        public double? pendingLng;
         public List<UserFindsViewModel> MyViewModels { get; set; } = new();
         public List<UserFindsViewModel> AllViewModels { get; set; } = new();
         public List<UserFindsViewModel> CurrentViewModels { get; set; } = new();
@@ -63,9 +65,12 @@ namespace ForagerSite.Services
             return CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
         }
 
-        [JSInvokable]
-        public Task TriggerCreateForm()
+        [JSInvokable("TriggerCreateForm")]
+        public Task TriggerCreateForm(double lat, double lng)
         {
+            pendingLat = lat;
+            pendingLng = lng;
+
             OnCreateFormRequested?.Invoke();
             return Task.CompletedTask;
         }
@@ -116,8 +121,7 @@ namespace ForagerSite.Services
             return JsonConvert.SerializeObject(CurrentViewModels, settings);
         }
 
-        [JSInvokable("CreateFind")]
-        public async Task<string> CreateFind(
+        public async Task CreateFind(
         string name,
         string speciesName,
         string speciesType,
@@ -129,7 +133,6 @@ namespace ForagerSite.Services
         string description,
         double lat,
         double lng,
-        string mapFilter,
         List<string> uploadedFileUrls)
         {
             NotifyLoadingChanged(true);
@@ -161,20 +164,16 @@ namespace ForagerSite.Services
 
             UpdateViewModels(userId, currentViewModel);
 
-            List<UserFindsViewModel> updatedViewModels = mapFilter switch
-            {
-                "UserOnly" => CurrentViewModels.Where(vm => vm.userId == userId).ToList(),
-                "AllUsers" => CurrentViewModels.ToList(),
-                _ => new List<UserFindsViewModel>()
-            };
-            var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            };
+            //List<UserFindsViewModel> updatedViewModels = mapFilter switch
+            //{
+            //    "UserOnly" => CurrentViewModels.Where(vm => vm.userId == userId).ToList(),
+            //    "AllUsers" => CurrentViewModels.ToList(),
+            //    _ => new List<UserFindsViewModel>()
+            //};
+
             NotifyStateChanged();
             NotifyLoadingChanged(false);
 
-            return JsonConvert.SerializeObject(updatedViewModels, settings);
         }
 
 
