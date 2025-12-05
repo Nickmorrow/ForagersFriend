@@ -20,15 +20,19 @@ namespace ForagerSite.Services
         public string mapFilter = MapFilters[0];
         private readonly UserStateService _userStateService;
         private readonly UserFindService _userFindService;
+
         public event Action OnChange;
         public event Action<bool> OnLoadingChange;
         public event Action? OnCreateFormRequested;
+        public event Action<Guid>? OnMarkerSelected;
+
         public double? pendingLat;
         public double? pendingLng;
         public List<UserFindsViewModel> MyViewModels { get; set; } = new();
         public List<UserFindsViewModel> AllViewModels { get; set; } = new();
         public List<UserFindsViewModel> CurrentViewModels { get; set; } = new();
         public Dictionary<Guid, string> userNamesKvp { get; set; }
+
         public MapService(UserStateService userStateService, UserFindService userFindService)
         {
             _userStateService = userStateService;
@@ -65,6 +69,16 @@ namespace ForagerSite.Services
             return CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
         }
 
+        [JSInvokable("OnMarkerClicked")]
+        public Task OnMarkerClicked(string findId)
+        {
+            if (Guid.TryParse(findId, out var guid))
+            {
+                OnMarkerSelected?.Invoke(guid);
+            }
+            return Task.CompletedTask;
+        }
+
         [JSInvokable("TriggerCreateForm")]
         public Task TriggerCreateForm(double lat, double lng)
         {
@@ -73,53 +87,7 @@ namespace ForagerSite.Services
 
             OnCreateFormRequested?.Invoke();
             return Task.CompletedTask;
-        }
-
-        [JSInvokable("GetDetails")]
-        public async Task<string> GetDetails(string findId, string mapFilter, string findUserId, string findUserName)
-        {
-            NotifyLoadingChanged(true);
-
-            var userId = _userStateService.CurrentUser.user.UsrId;
-            var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
-
-            Guid findGuid;
-            Guid findUserGuid;
-            
-            var selectedVm = new UserFindsViewModel();
-            var selectedVms = new List<UserFindsViewModel>();
-
-            if (Guid.TryParse(findId, out findGuid) && Guid.TryParse(findUserId, out findUserGuid))
-            {
-                var selectedFind = CurrentViewModels
-                .FirstOrDefault(vm => vm.userId == findUserGuid)
-                .finds
-                .FirstOrDefault(f => f.findId == findGuid);
-
-                selectedVm.finds.Add(selectedFind);
-                selectedVm.userId = findUserGuid;
-                selectedVm.userName = findUserName;
-                selectedVm.profilePic = CurrentViewModels
-                    .FirstOrDefault(vm => vm.userId == findUserGuid)
-                    .profilePic;
-
-                //foreach (var kvp in CurrentViewModels.FirstOrDefault(vm => vm.userId == findUserGuid).userNamesKvp)
-                //{
-                //    selectedVm.userNamesKvp[kvp.Key] = kvp.Value;
-                //}
-                selectedVms.Add(selectedVm);
-            }
-            CurrentViewModels = VmUtilities.Copy(selectedVms);
-
-            var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            };
-            NotifyStateChanged(); 
-            NotifyLoadingChanged(false);
-
-            return JsonConvert.SerializeObject(CurrentViewModels, settings);
-        }
+        }        
 
         public async Task CreateFind(
         string name,
