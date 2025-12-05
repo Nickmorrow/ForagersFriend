@@ -381,101 +381,6 @@
     </div>
 </div>
 
-<div id="find-form-container" style="display: none;">
-    <form id="UserFindForm">
-        <label for="findName">Name:</label>
-        <input type="text" id="findName" name="findName"><br>
-
-        <label for="speciesName">Species Name:</label>
-        <input type="text" id="speciesName" name="speciesName"><br>
-
-        <label for="imageUpload">Images:</label>
-        <input type="file" class="form-control" id="imageUpload" name="imageUpload" multiple accept=".png, .jpg, .jpeg" ><br>
-        <div id="imagePreview" style="margin-top: 5px;"></div>
-
-        <label for="speciesType">Species Type:</label>
-        <select id="speciesType" class="dropdown-item"name="speciesType" >
-            <option value="tree">Tree</option>
-            <option value="mushroom">Mushroom</option>
-            <option value="fruit">Fruit</option>
-            <option value="herb">Herb</option>
-        </select>
-
-        <label for="useCategory">Use Category:</label>
-        <select id="useCategory" class="dropdown-item" name="useCategory">
-            <option value="medicinal">Medicinal</option>
-            <option value="gourmet">Gourmet</option>
-            <option value="crafting">Crafting</option>
-        </select>
-
-        <label for="features">Distinguishing Features:</label>
-        <input type="text" id="features" name="features"><br>
-
-        <label for="lookalikes">Dangerous Lookalikes:</label>
-        <input type="text" id="lookAlikes" name="lookalikes"><br>
-
-        <label for="harvestMethod">Harvest Method:</label>
-        <input type="text" id="harvestMethod" name="harvestMethod"><br>
-
-        <label for="tastesLike">Tastes Like:</label>
-        <input type="text" id="tastesLike" name="tastesLike"><br>
-
-        <label for="description">Notes:</label>
-        <input type="text" id="description" name="description"><br>
-
-        <button type="button" id="saveButton" >Save</button>
-    </form>
-</div>
-
-<div id="update-form-container" style="display: none;">
-    <form id="UpdateFindForm">
-        <label for="findName">Name:</label>
-        <input type="text" id="findName" name="findName" value=""><br>
-
-        <label for="speciesName">Species Name:</label>
-        <input type="text" id="speciesName" name="speciesName" value=""><br>
-
-        <div id="existingImageGallery">
-
-        </div>
-
-        <label for="imageUpload">Add Images:</label>
-        <input type="file" id="imageUpload" multiple accept="image/*"><br>
-        <div id="newImagePreview"></div> 
-
-        <label for="speciesType">Species Type:</label>
-        <select id="speciesType" class="dropdown-item" name="speciesType">
-            <option value="tree">Tree</option>
-            <option value="mushroom">Mushroom</option>
-            <option value="fruit">Fruit</option>
-            <option value="herb">Herb</option>
-        </select>
-
-        <label for="useCategory">Use Category:</label>
-        <select id="useCategory" class="dropdown-item" name="useCategory">
-            <option value="medicinal">Medicinal</option>
-            <option value="gourmet">Gourmet</option>
-            <option value="crafting">Crafting</option>
-        </select>
-
-        <label for="features">Distinguishing Features:</label>
-        <input type="text" id="features" name="features" value=""><br>
-
-        <label for="lookalikes">Dangerous Lookalikes:</label>
-        <input type="text" id="lookAlikes" name="lookalikes" value=""><br>
-
-        <label for="harvestMethod">Harvest Method:</label>
-        <input type="text" id="harvestMethod" name="harvestMethod" value=""><br>
-
-        <label for="tastesLike">Tastes Like:</label>
-        <input type="text" id="tastesLike" name="tastesLike" value=""><br>
-
-        <label for="description">Notes:</label>
-        <input type="text" id="description" name="description" value=""><br>
-
-        <button type="button" id="updateButton">Save</button>
-    </form>
-</div>
 
 <div id="find-popup-template" style="display: none;">
     <p><strong>Name:</strong> {findName}</p>
@@ -494,8 +399,8 @@
     <p><strong>Notes:</strong> {description}</p> *@
     <div style="display: flex; ">
         <button type="button" id="details-button" class="form-control">View Details</button>
-        <button type="button" id="edit-button" class="form-control">Edit</button>
-        <button type="button" id="delete-button" class="form-control">Delete</button>
+        @* <button type="button" id="edit-button" class="form-control">Edit</button>
+        <button type="button" id="delete-button" class="form-control">Delete</button> *@
     </div>
 </div>
 
