@@ -149,7 +149,21 @@
                                 </tr>
                                 @if (IsRowExpanded(find))
                                 {
-                                    <tr>
+                                    @if (showEditForm)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <FindEditForm @key="currentEditModel.FindId"
+                                                                Model="currentEditModel"    
+                                                                OnClose="CloseEditForm" 
+                                                                OnUpdated="CloseEditForm" 
+                                                                OnFindUpdated="HandleFindUpdated" />            
+                                            </td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr>
                                         <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">
                                             <div style="padding-left: 20px;">
                                                 <div>
@@ -199,6 +213,31 @@
                                                     <p><span>Thumbs up</span></p>
                                                     <p><span>Thumbs down</span></p>
                                                 </div>
+                                                @if (find.findUserId == userStateService.CurrentUser.user.UsrId)
+                                                {
+                                                    <div style="display: flex; gap: 10px;">
+                                                        <button class="btn btn-secondary" @onclick="() => 
+                                                        {
+                                                            currentEditModel = new FindEditForm.FindEditTemp
+                                                            {
+                                                                FindId = find.findId,
+                                                                FindName = find.findName,
+                                                                SpeciesName = find.speciesName,
+                                                                SpeciesType = find.speciesType,
+                                                                UseCategory = find.useCategory,
+                                                                Features = find.features,
+                                                                LookAlikes = find.lookAlikes,
+                                                                HarvestMethod = find.harvestMethod,
+                                                                TastesLike = find.tastesLike,
+                                                                Description = find.description,
+                                                                ExistingImageUrls = find.findImages.Select(img => img.imageData).ToList()
+                                                            };
+                                                            showEditForm = true;
+                                                        }">Edit</button>
+                                                        <button class="btn btn-danger" @onclick="() => mapService.DeleteFind(find.findId)">Delete</button>
+                                                    </div>
+                                                
+                                                }
                                                 <div id="commentSection">
                                                     <div >
                                                         <p><span style="cursor: pointer;" @onclick="ToggleExpandComments">Comments</span></p>
@@ -324,6 +363,8 @@
                                             </div>
                                         </td>
                                     </tr>
+                                    }
+                                    
                                 }
                             }
                         }
@@ -491,6 +532,11 @@
     private bool expandReplies = false;
 
     private bool showCreateForm = false;
+
+    private bool showEditForm = false;
+
+    private FindEditForm.FindEditTemp? currentEditModel;
+
     #endregion
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -550,6 +596,14 @@
         await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
         await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername); 
     }
+    private Task CloseEditForm()
+    {
+        showEditForm = false;
+        currentEditModel = null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
     private void CloseCreateForm()
     {
         showCreateForm = false;
@@ -571,6 +625,28 @@
         showCreateForm = false;
         mapService.pendingLat = null;
         mapService.pendingLng = null;
+
+        await ReInitializeMap();
+    }
+    private async Task HandleFindUpdated(FindEditForm.FindEditTemp temp)
+    {
+        await mapService.UpdateFind(
+            temp.FindId,
+            temp.FindName,
+            temp.SpeciesName ?? string.Empty,
+            temp.SpeciesType,
+            temp.UseCategory,
+            temp.Features ?? string.Empty,
+            temp.LookAlikes ?? string.Empty,
+            temp.HarvestMethod ?? string.Empty,
+            temp.TastesLike ?? string.Empty,
+            temp.Description ?? string.Empty,
+            temp.UploadedImageUrls,
+            temp.DeletedImageUrls
+        );
+
+        showEditForm = false;
+        currentEditModel = null;
 
         await ReInitializeMap();
     }
@@ -676,17 +752,16 @@
     {
         userSearchTerm = e.Value?.ToString().ToLower() ?? string.Empty;
 
-        // Only search if input is not empty
         if (!string.IsNullOrEmpty(userSearchTerm))
         {
             await FilterResults();
         }
         else
         {
-            filteredUserResults.Clear(); // Clear the results when input is empty
+            filteredUserResults.Clear(); 
         }
 
-        StateHasChanged(); // Ensure the UI updates
+        StateHasChanged(); 
     }
 
     private async Task FilterResults()
@@ -737,7 +812,7 @@
         isLoading = true;
         try
         {
-            if (!mapService.AllViewModels.Any()) //AllViewModels hasn't been set - make sql call
+            if (!mapService.AllViewModels.Any()) 
             {
                 try
                 {

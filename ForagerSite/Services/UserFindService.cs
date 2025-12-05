@@ -194,7 +194,6 @@ namespace ForagerSite.Services
 
             return new List<UserFindsViewModel> { userViewModel };
         }
-
         public async Task<List<UserFindsViewModel>> GetUserFindsViewModels()
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -284,7 +283,6 @@ namespace ForagerSite.Services
                                                      
             return userViewModelsList;
         }
-
         public async Task<List<UserFindLocation>> GetUserFindLocations(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -293,8 +291,6 @@ namespace ForagerSite.Services
                 .Where(ufl => ufl.UserFind.UsfUsrId == userId)
                 .ToListAsync();
         }
-
-
         public async Task<UserFind> GetFindById(Guid findId)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -354,7 +350,6 @@ namespace ForagerSite.Services
             };
             return xrefDto;
         }
-
         public async Task DeleteComment(Guid xrefId)
         {           
             using var context = _dbContextFactory.CreateDbContext();
@@ -372,7 +367,6 @@ namespace ForagerSite.Services
 
             //return deletedCommentXrefDto;
         }
-
         public async Task<UserFindsViewModel> CreateFind(
         string name,
         string speciesName,
@@ -442,7 +436,6 @@ namespace ForagerSite.Services
             mapViewModel.finds[0].findId = userFind.UsfId;
             return mapViewModel;
         }
-
         public async Task<UserFindsViewModel> UpdateFind(
             Guid findId,
             string name,
@@ -533,7 +526,6 @@ namespace ForagerSite.Services
             mapViewModel.finds[0].findId = findId;
             return mapViewModel;
         }
-
         public async Task DeleteFind(Guid findId, Guid userId, string userName)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -570,9 +562,6 @@ namespace ForagerSite.Services
                 context.UserFinds.Remove(userFind);               
             }
             await context.SaveChangesAsync();
-        }
-
-
-
+        } 
     }
 }

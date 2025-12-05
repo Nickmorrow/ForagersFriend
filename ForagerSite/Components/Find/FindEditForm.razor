@@ -1,5 +1,261 @@
-﻿<h3>FindEditForm</h3>
+﻿@using Microsoft.AspNetCore.Components.Forms
+@using System.ComponentModel.DataAnnotations
+@using ForagerSite.Services
+@using ForagerSite.Utilities
+@using ForagerSite.Components.Utility
+@using DataAccess.Models
+@inject UserStateService userStateService
+@inject IConfiguration config
+
+<EditForm Model="editModel" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label for="findName">Name:</label>
+        <p></p>
+        <InputText id="findName" @bind-Value="editModel.FindName" />
+    </div>
+
+    <div>
+        <label for="speciesName">Species Name:</label>
+        <InputText id="speciesName" @bind-Value="editModel.SpeciesName" />
+    </div>
+
+    <div>
+        <label for="speciesType">Species Type:</label>
+        <InputSelect id="speciesType" @bind-Value="editModel.SpeciesType">
+            <option value="">Select Type</option>
+            <option value="tree">Tree</option>
+            <option value="mushroom">Mushroom</option>
+            <option value="fruit">Fruit</option>
+            <option value="herb">Herb</option>
+        </InputSelect>
+    </div>
+
+    <div>
+        <label for="useCategory">Use Category:</label>
+        <InputSelect id="useCategory" @bind-Value="editModel.UseCategory">
+            <option value="">Select Category</option>
+            <option value="medicinal">Medicinal</option>
+            <option value="gourmet">Gourmet</option>
+            <option value="crafting">Crafting</option>
+        </InputSelect>
+    </div>
+
+    <div>
+        <label for="features">Distinguishing Features:</label>
+        <InputText id="features" @bind-Value="editModel.Features" />
+    </div>
+
+    <div>
+        <label for="lookAlikes">Dangerous Lookalikes:</label>
+        <InputText id="lookAlikes" @bind-Value="editModel.LookAlikes" />
+    </div>
+
+    <div>
+        <label for="harvestMethod">Harvest Method:</label>
+        <InputText id="harvestMethod" @bind-Value="editModel.HarvestMethod" />
+    </div>
+
+    <div>
+        <label for="tastesLike">Tastes Like:</label>
+        <InputText id="tastesLike" @bind-Value="editModel.TastesLike" />
+    </div>
+
+    <div>
+        <label for="description">Notes:</label>
+        <InputTextArea id="description" @bind-Value="editModel.Description" />
+    </div>
+
+    <div>
+        <label>Existing Images:</label>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            @for (int i = 0; i < existingImagePreviews.Count; i++)
+            {
+                var idx = i;
+                <div style="position:relative;display:inline-block;">
+                    <img src="@existingImagePreviews[i]" style="max-width:100px;max-height:100px;" />
+                    <button type="button"
+                            @onclick="() => RemoveExistingImage(idx)"
+                            style="position:absolute;top:-5px;right:-5px;">
+                        ✕
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div>
+        <label>New Images:</label>
+        <ImageUploader @ref="imageUploader"
+                       OnImagesUploaded="OnImagesUploaded"
+                       Errors="uploadErrors" />
+
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            @for (int i = 0; i < newImagePreviews.Count; i++)
+            {
+                var idx = i;
+                <div style="position:relative;display:inline-block;">
+                    <img src="@newImagePreviews[i]" style="max-width:100px;max-height:100px;" />
+                    <button type="button"
+                            @onclick="() => RemoveNewImage(idx)"
+                            style="position:absolute;top:-5px;right:-5px;">
+                        ✕
+                    </button>
+                </div>
+            }
+        </div>
+
+        @if (uploadErrors.Any())
+        {
+            <ul style="color:red;">
+                @foreach (var err in uploadErrors)
+                {
+                    <li>@err</li>
+                }
+            </ul>
+        }
+    </div>
+
+    <button type="submit">Save Changes</button>
+    <button type="button" @onclick="OnClose">Cancel</button>
+</EditForm>
 
 @code {
+    [Parameter]
+    public FindEditTemp Model { get; set; } = default!;
 
+    [Parameter]
+    public EventCallback<FindEditTemp> OnFindUpdated { get; set; }
+
+    [Parameter]
+    public EventCallback OnUpdated { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    private FindEditTemp editModel = new();
+
+    private List<string> uploadErrors = new();
+    private List<string> existingImagePreviews = new();
+    private List<string> newImagePreviews = new();
+    private List<IBrowserFile> newFiles = new();
+
+    private ImageUploader? imageUploader;
+
+    protected override void OnParametersSet()
+    {
+        if (Model is null)
+            return;
+
+        if (editModel.FindId != Model.FindId)
+        {
+            editModel = new FindEditTemp
+            {
+                FindId = Model.FindId,
+                FindName = Model.FindName,
+                SpeciesName = Model.SpeciesName,
+                SpeciesType = Model.SpeciesType,
+                UseCategory = Model.UseCategory,
+                Features = Model.Features,
+                LookAlikes = Model.LookAlikes,
+                HarvestMethod = Model.HarvestMethod,
+                TastesLike = Model.TastesLike,
+                Description = Model.Description,
+                UserId = Model.UserId,
+
+                ExistingImageUrls = new List<string>(Model.ExistingImageUrls ?? new()),
+                DeletedImageUrls = new List<string>(),
+                UploadedImageUrls = new List<string>()
+            };
+
+            existingImagePreviews = new List<string>(editModel.ExistingImageUrls);
+            newImagePreviews.Clear();
+            newFiles.Clear();
+            uploadErrors.Clear();
+        }
+    }
+
+
+    private Task OnImagesUploaded(ImageUploadResult result)
+    {
+        uploadErrors.Clear();
+        newImagePreviews = result.Previews ?? new List<string>();
+        newFiles = result.Files ?? new List<IBrowserFile>();
+
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void RemoveExistingImage(int index)
+    {
+        if (index >= 0 && index < existingImagePreviews.Count)
+        {
+            var url = existingImagePreviews[index];
+
+            existingImagePreviews.RemoveAt(index);
+
+            if (!editModel.DeletedImageUrls.Contains(url))
+            {
+                editModel.DeletedImageUrls.Add(url);
+            }
+
+            editModel.ExistingImageUrls.Remove(url);
+
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveNewImage(int index)
+    {
+        if (index >= 0 && index < newImagePreviews.Count)
+        {
+            newImagePreviews.RemoveAt(index);
+
+            if (index < newFiles.Count)
+                newFiles.RemoveAt(index);
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        uploadErrors.Clear();
+
+        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+
+        var newUrls = await PhotoUploadHelper.UploadFindImages(
+            newFiles, userName, config, uploadErrors);
+
+        if (uploadErrors.Any())
+            return;
+
+        editModel.UploadedImageUrls = newUrls;
+
+        await OnFindUpdated.InvokeAsync(editModel);
+    }
+
+    public class FindEditTemp
+    {
+        public Guid FindId { get; set; }
+
+        [Required] public string FindName { get; set; } = "";
+        public string? SpeciesName { get; set; }
+        [Required] public string SpeciesType { get; set; } = "";
+        [Required] public string UseCategory { get; set; } = "";
+        public string? Features { get; set; }
+        public string? LookAlikes { get; set; }
+        public string? HarvestMethod { get; set; }
+        public string? TastesLike { get; set; }
+        public string? Description { get; set; }
+
+        public Guid UserId { get; set; }
+
+        public List<string> ExistingImageUrls { get; set; } = new();
+        public List<string> DeletedImageUrls { get; set; } = new();
+        public List<string> UploadedImageUrls { get; set; } = new();
+    }
 }
+

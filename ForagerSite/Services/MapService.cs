@@ -164,22 +164,12 @@ namespace ForagerSite.Services
 
             UpdateViewModels(userId, currentViewModel);
 
-            //List<UserFindsViewModel> updatedViewModels = mapFilter switch
-            //{
-            //    "UserOnly" => CurrentViewModels.Where(vm => vm.userId == userId).ToList(),
-            //    "AllUsers" => CurrentViewModels.ToList(),
-            //    _ => new List<UserFindsViewModel>()
-            //};
-
             NotifyStateChanged();
             NotifyLoadingChanged(false);
 
         }
-
-
-        [JSInvokable("UpdateFind")]
-        public async Task<string> UpdateFind(
-        string findId,
+        public async Task UpdateFind(
+        Guid upFindId,
         string name,
         string speciesName,
         string speciesType,
@@ -189,73 +179,51 @@ namespace ForagerSite.Services
         string harvestMethod,
         string tastesLike,
         string description,
-        double lat,
-        double lng,
-        string mapFilter,
         List<string>? uploadedFileUrls,
         List<string>? deletedFileUrls)
         {            
             var userId = _userStateService.CurrentUser.user.UsrId;
             var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
 
-            Guid findGuid;
-            if (Guid.TryParse(findId, out findGuid))
-            {
-                NotifyLoadingChanged(true);
+            NotifyLoadingChanged(true);
 
-                var newUserFindViewModel =
-                await _userFindService.UpdateFind(
-                    findGuid,
-                    name,
-                    speciesName,
-                    speciesType,
-                    useCategory,
-                    features,
-                    lookalikes,
-                    harvestMethod,
-                    tastesLike,
-                    description,
-                    lat,
-                    lng,
-                    uploadedFileUrls,
-                    deletedFileUrls,
-                    userId,
-                    userName
-                );
+            FindLocationDto location = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId).finds.FirstOrDefault(f => f.findId == upFindId).findLocation;
 
-                var find = newUserFindViewModel.finds[0];
-                var currentViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
+            var newUserFindViewModel =
+            await _userFindService.UpdateFind(
+                upFindId,
+                name,
+                speciesName,
+                speciesType,
+                useCategory,
+                features,
+                lookalikes,
+                harvestMethod,
+                tastesLike,
+                description,
+                location.latitude,
+                location.longitude,
+                uploadedFileUrls,
+                deletedFileUrls,
+                userId,
+                userName
+            );
 
-                var originalIndex = currentViewModel.finds.FindIndex(f => f.findId == findGuid);
+            var find = newUserFindViewModel.finds[0];
+            var currentViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
 
-                int index = currentViewModel.finds.FindIndex(f => f.findId == find.findId);               
-                currentViewModel.finds[index] = find; 
+            var originalIndex = currentViewModel.finds.FindIndex(f => f.findId == upFindId);
+
+            int index = currentViewModel.finds.FindIndex(f => f.findId == find.findId);               
+            currentViewModel.finds[index] = find; 
                 
-                UpdateViewModels(userId, currentViewModel);
+            UpdateViewModels(userId, currentViewModel);
 
-                List<UserFindsViewModel> updatedViewModels = mapFilter switch
-                {
-                    "UserOnly" => CurrentViewModels.Where(vm => vm.userId == userId).ToList(),
-                    "AllUsers" => CurrentViewModels.ToList(),
-                    _ => new List<UserFindsViewModel>()
-                };
-                var settings = new JsonSerializerSettings
-                {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-                };
-                NotifyStateChanged();
-                NotifyLoadingChanged(false);
-                return JsonConvert.SerializeObject(updatedViewModels, settings);
-            }
-            else
-            {
-                throw new ArgumentException("Invalid GUID format", nameof(findId));
-            }
+            NotifyStateChanged();
+            NotifyLoadingChanged(false);
         }
 
-
-        [JSInvokable("DeleteFind")]
-        public async Task<string> DeleteFind(string findId, string mapFilter)
+        public async Task DeleteFind(Guid delFindId)
         {
             NotifyLoadingChanged(true);
 
@@ -263,29 +231,16 @@ namespace ForagerSite.Services
             var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
             var deletedFindVm = new UserFindsViewModel();
 
-            Guid findGuid;
-            if (Guid.TryParse(findId, out findGuid))
-                _userFindService.DeleteFind(findGuid, userId, userName);
-           
+            _userFindService.DeleteFind(delFindId, userId, userName);
+
             var currentViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
-            var find = currentViewModel.finds.FirstOrDefault(f => f.findId == findGuid);
+            var find = currentViewModel.finds.FirstOrDefault(f => f.findId == delFindId);
             currentViewModel.finds.Remove(find);
 
             UpdateViewModels(userId, currentViewModel);
 
-            List<UserFindsViewModel> updatedViewModels = mapFilter switch
-            {
-                "UserOnly" => CurrentViewModels.Where(vm => vm.userId == userId).ToList(),
-                "AllUsers" => CurrentViewModels.ToList(),
-                _ => new List<UserFindsViewModel>()
-            };
-            var settings = new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            };
             NotifyStateChanged();
             NotifyLoadingChanged(false);
-            return JsonConvert.SerializeObject(updatedViewModels, settings);
         }
     }
 }
