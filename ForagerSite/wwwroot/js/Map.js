@@ -223,4 +223,18 @@ window.scrollToFindRow = function (findId) {
     setTimeout(() => el.classList.remove('find-highlight'), 1500);
 };
 
+window.scrollToCreateForm = function () {
+    const el = document.getElementById('create-form-row');
+    if (!el) {
+        console.warn('create-form-row element not found');
+        return;
+    }
+
+    el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+};
+
+
 

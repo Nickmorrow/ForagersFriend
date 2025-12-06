@@ -111,7 +111,7 @@
                     <tbody>
                         @if (showCreateForm)
                         {
-                            <tr>
+                            <tr id="create-form-row">
                                 <td>
                                     <FindCreateForm OnClose="CloseCreateForm"
                                                     OnCreated="CloseCreateForm"
@@ -521,8 +521,16 @@
     private void HandleCreateFormRequested()
     {
         showCreateForm = true;
-        InvokeAsync(StateHasChanged); 
+
+        InvokeAsync(async () =>
+        {
+            StateHasChanged(); // render the row with id="create-form-row"
+
+            // now scroll to it
+            await JSRuntime.InvokeVoidAsync("scrollToCreateForm");
+        });
     }
+
     private async Task HandleFindCreated(FindCreateForm.FindTemp temp)
     {
         await mapService.CreateFind(temp.FindName, temp.SpeciesName, temp.SpeciesType,
