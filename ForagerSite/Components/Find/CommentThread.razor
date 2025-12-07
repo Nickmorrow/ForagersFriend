@@ -1,5 +1,244 @@
-﻿<h3>CommentThread</h3>
+﻿@using DataAccess.Models
+@using Microsoft.AspNetCore.Components
+@namespace ForagerSite.Components.Find
+
+<div id="commentSection">
+    <div>
+        <p>
+            <span style="cursor: pointer;" @onclick="ToggleExpandComments">
+                Comments
+            </span>
+        </p>
+    </div>
+
+    @if (expandComments)
+    {
+        <table>
+            <tbody>
+                <tr>
+                    <td>
+                        <div>
+                            <label for="@($"comment-form-{Find.findId}")">Leave Comment</label>
+                            <InputText id="@($"comment-form-{Find.findId}")"
+                                       @bind-Value="userComment"
+                                       placeholder="Enter Comment..."
+                                       class="form-control" />
+                            <button class="form-control" @onclick="SubmitRootComment">
+                                Submit
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+
+                @if (Find.findsCommentXrefs != null && Find.findsCommentXrefs.Any())
+                {
+                    @foreach (var xref in Find.findsCommentXrefs)
+                    {
+                        if (!xref.findsComment.parentCommentId.HasValue)
+                        {
+                            <tr>
+                                <td colspan="4">
+                                    <div>
+                                        <div style="display: flex; gap: 20px;">
+                                            <div>
+                                                <img src="@xref.CommentUserProfilePic"
+                                                     alt="Profile Picture"
+                                                     style="max-width: 50px; border-radius: 50%;" />
+                                            </div>
+                                            <div>
+                                                <p>
+                                                    <a>@GetUserName(xref.comxUserId)</a>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <p>@xref.findsComment.comment</p>
+                                        </div>
+
+                                        @if (CanDeleteComment(xref.comxUserId))
+                                        {
+                                            <div>
+                                                <button class="form-control"
+                                                        @onclick="() => DeleteComment(xref.comXId)">
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        }
+
+                                        <p>
+                                            <span style="cursor: pointer;"
+                                                  @onclick="() => ToggleReplyExpansion(xref.findsComment.comId)">
+                                                Replies
+                                            </span>
+                                        </p>
+
+                                        @if (IsReplyExpanded(xref.findsComment.comId))
+                                        {
+                                            <div>
+                                                <InputText @bind-Value="userCommentReply"
+                                                           placeholder="Reply..."
+                                                           class="form-control" />
+                                                <button class="form-control"
+                                                        @onclick="() => SubmitReply(xref.findsComment.comId)">
+                                                    Reply
+                                                </button>
+                                            </div>
+
+                                            @if (Find.findsCommentXrefs.Any(r =>
+                                                                    r.findsComment.parentCommentId.HasValue &&
+                                                                    r.findsComment.parentCommentId == xref.findsComment.comId))
+                                            {
+                                                <table>
+                                                    <tbody>
+                                                        @foreach (var reply in Find.findsCommentXrefs.Where(r =>
+                                                                                        r.findsComment.parentCommentId.HasValue &&
+                                                                                        r.findsComment.parentCommentId == xref.findsComment.comId))
+                                                        {
+                                                            <tr>
+                                                                <td>
+                                                                    <div>
+                                                                        <div style="display: flex; gap: 20px;">
+                                                                            <div>
+                                                                                <img src="@reply.CommentUserProfilePic"
+                                                                                     alt="Profile Picture"
+                                                                                     style="max-width: 50px; border-radius: 50%;" />
+                                                                            </div>
+                                                                            <div>
+                                                                                <p>
+                                                                                    <a>@GetUserName(reply.comxUserId)</a>
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <p>@reply.findsComment.comment</p>
+                                                                        </div>
+
+                                                                        @if (CanDeleteComment(reply.comxUserId))
+                                                                        {
+                                                                            <div>
+                                                                                <button class="form-control"
+                                                                                        @onclick="() => DeleteComment(reply.comXId)">
+                                                                                    Delete
+                                                                                </button>
+                                                                            </div>
+                                                                        }
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            }
+                                        }
+
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td>
+                            <div>
+                                <p>No comments</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
 
 @code {
+    // ----- parameters from parent -----
+    [Parameter] public FindDto Find { get; set; }
+    [Parameter] public Guid VmId { get; set; }
+    [Parameter] public Guid CurrentUserId { get; set; }
+    [Parameter] public Dictionary<Guid, string> UserNames { get; set; }
 
+    // delegates (NOT EventCallbacks)
+    [Parameter] public Func<Guid, Guid, Guid?, string, Task> OnSubmitComment { get; set; }
+    [Parameter] public Func<Guid, Guid, Guid, Task> OnDeleteComment { get; set; }
+
+    // ----- local UI state -----
+    private string userComment = string.Empty;
+    private string userCommentReply = string.Empty;
+    private bool expandComments = false;
+    private Dictionary<Guid, bool> expandedRepliesMap = new();
+
+    private void ToggleExpandComments()
+    {
+        expandComments = !expandComments;
+
+        if (!expandComments)
+        {
+            expandedRepliesMap.Clear();
+        }
+    }
+
+    private void ToggleReplyExpansion(Guid commentId)
+    {
+        if (expandedRepliesMap.ContainsKey(commentId))
+        {
+            expandedRepliesMap[commentId] = !expandedRepliesMap[commentId];
+        }
+        else
+        {
+            expandedRepliesMap.Clear();
+            expandedRepliesMap[commentId] = true;
+        }
+    }
+
+    private bool IsReplyExpanded(Guid commentId)
+    {
+        return expandedRepliesMap.TryGetValue(commentId, out var expanded) && expanded;
+    }
+
+    private string GetUserName(Guid userId)
+    {
+        if (UserNames != null && UserNames.TryGetValue(userId, out var name))
+        {
+            return name;
+        }
+
+        return "Unknown User";
+    }
+
+    private bool CanDeleteComment(Guid commentUserId)
+    {
+        return commentUserId == CurrentUserId || Find.findUserId == CurrentUserId;
+    }
+
+    private async Task SubmitRootComment()
+    {
+        var text = userComment?.Trim();
+        if (string.IsNullOrWhiteSpace(text) || OnSubmitComment is null)
+            return;
+
+        await OnSubmitComment.Invoke(Find.findId, VmId, null, text);
+        userComment = string.Empty;
+    }
+
+    private async Task SubmitReply(Guid parentCommentId)
+    {
+        var text = userCommentReply?.Trim();
+        if (string.IsNullOrWhiteSpace(text) || OnSubmitComment is null)
+            return;
+
+        await OnSubmitComment.Invoke(Find.findId, VmId, parentCommentId, text);
+        userCommentReply = string.Empty;
+    }
+
+    private async Task DeleteComment(Guid xrefId)
+    {
+        if (OnDeleteComment is null)
+            return;
+
+        await OnDeleteComment.Invoke(VmId, Find.findId, xrefId);
+    }
 }

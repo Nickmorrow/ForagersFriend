@@ -87,11 +87,12 @@ namespace DataAccess.Data
                 .WithOne(usc => usc.UserFindsCommentXref)
                 .HasForeignKey<UserFindsCommentXref>(xref => xref.UcxUscId);
 
-            //// Self-referencing relationship for replies
-            //modelBuilder.Entity<UserFindsComment>()
-            //    .HasOne(usc => usc.ParentComment)
-            //    .WithMany(usc => usc.Replies)
-            //    .HasForeignKey(usc => usc.UscParentCommentId);
+            // Self-referencing relationship for replies
+            modelBuilder.Entity<UserFindsComment>()
+                .HasOne(usc => usc.ParentComment)
+                .WithMany(usc => usc.Replies)
+                .HasForeignKey(usc => usc.UscParentCommentId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

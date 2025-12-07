@@ -351,22 +351,45 @@ namespace ForagerSite.Services
             return xrefDto;
         }
         public async Task DeleteComment(Guid xrefId)
-        {           
+        {
             using var context = _dbContextFactory.CreateDbContext();
-            
-            var deletedCommentXref = await context.UserFindsCommentXrefs
-                .Include(xref => xref.UserFindsComment)
-                .FirstOrDefaultAsync(xref => xref.UcxId == xrefId);
 
-            var deletedComment = deletedCommentXref.UserFindsComment;
-            context.UserFindsCommentXrefs.Remove(deletedCommentXref);
-            context.UserFindsComments.Remove(deletedComment);
+            var xref = await context.UserFindsCommentXrefs
+                .Include(x => x.UserFindsComment)
+                .FirstOrDefaultAsync(x => x.UcxId == xrefId);
+
+            if (xref == null)
+                return;
+
+            var commentId = xref.UcxUscId;
+
+            // 1) Find direct child comments (replies)
+            var childComments = await context.UserFindsComments
+                .Where(c => c.UscParentCommentId == commentId)
+                .ToListAsync();
+
+            if (childComments.Any())
+            {
+                var childIds = childComments.Select(c => c.UscId).ToList();
+
+                // 1a) Delete their xrefs
+                var childXrefs = await context.UserFindsCommentXrefs
+                    .Where(xx => childIds.Contains(xx.UcxUscId))
+                    .ToListAsync();
+
+                context.UserFindsCommentXrefs.RemoveRange(childXrefs);
+
+                // 1b) Delete the child comments themselves
+                context.UserFindsComments.RemoveRange(childComments);
+            }
+
+            // 2) Delete the xref + the parent comment
+            context.UserFindsCommentXrefs.Remove(xref);
+            context.UserFindsComments.Remove(xref.UserFindsComment);
+
             await context.SaveChangesAsync();
-
-            //var deletedCommentXrefDto = new FindsCommentXrefDto(deletedCommentXref);
-
-            //return deletedCommentXrefDto;
         }
+
         public async Task<UserFindsViewModel> CreateFind(
         string name,
         string speciesName,
