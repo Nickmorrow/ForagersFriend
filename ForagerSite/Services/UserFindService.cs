@@ -561,18 +561,22 @@ namespace ForagerSite.Services
             foreach (var image in images)
             {
                 var fileName = Path.GetFileName(image.UsiImageData);
-                string userDirectory = Path.Combine(_config.GetValue<string>("FileStorage"), userName);
-                string filePath = Path.Combine(userDirectory, fileName);
 
                 try
                 {
+                    string userDirectory = Path.Combine(_config.GetValue<string>("FileStorage"), userName);
+                    string filePath = Path.Combine(userDirectory, fileName);
+
                     System.IO.File.Delete(filePath);
                 }
                 catch (Exception ex)
                 {
                     throw new InvalidOperationException($"Error deleting file {fileName}: {ex.Message}", ex);
                 }
-                context.UserImages.Remove(image);
+                finally
+                {
+                    context.UserImages.Remove(image);
+                }
             }
             foreach (var xref in userFindCommentXrefs)
             {
