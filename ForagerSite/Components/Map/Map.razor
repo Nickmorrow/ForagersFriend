@@ -213,10 +213,12 @@
                                                     <p><strong>Notes: </strong><span>@find.description</span></p>
                                                 }
                                                 <p><a href="#" @onclick="() => ViewOnMap(vm.userId, find.findId)">View on map</a></p>
-                                                <div>
-                                                    <p><span>Thumbs up</span></p>
-                                                    <p><span>Thumbs down</span></p>
+                                                <div style="display:flex; gap:20px; margin-top:10px;">
+                                                    <i class="bi bi-hand-thumbs-up-fill vote up"></i>
+                                                    <i class="bi bi-hand-thumbs-down-fill vote down"></i>
                                                 </div>
+
+
                                                 @if (find.findUserId == userStateService.CurrentUser.user.UsrId)
                                                 {
                                                     <div style="display: flex; gap: 10px;">
