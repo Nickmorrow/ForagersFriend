@@ -38,6 +38,7 @@ namespace DataAccess.Models
         public UserImage UserImage { get; set; }
         public ICollection<UserFind> UserFinds { get; set; }
         public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
+        public ICollection<UserVote> UserVotes { get; set; }
 
     }
 

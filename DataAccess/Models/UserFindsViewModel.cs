@@ -12,9 +12,7 @@ namespace DataAccess.Models
         public string profilePic { get; set; }
         public string userName { get; set; }
         public List<FindDto> finds { get; set; }
-
-        //            UssUsrId          username
-        //public Dictionary<Guid, string> commentUserNames { get; set; }
+        //public List<UserVoteDto> findVotes { get; set; }
 
         public UserFindsViewModel()
         {
@@ -51,6 +49,7 @@ namespace DataAccess.Models
         public FindLocationDto findLocation { get; set; } = new();
         public List<ImageDto> findImages { get; set; } = new();
         public List<FindsCommentXrefDto> findsCommentXrefs { get; set; } = new();
+        public List<UserVoteDto> findVotes { get; set; } = new();
 
         public FindDto() { }    
         public FindDto(UserFind userFind)
@@ -114,6 +113,7 @@ namespace DataAccess.Models
         public DateTime commentDate { get; set; }
         public Guid? parentCommentId { get; set; }
         //public UserFindsComment? ParentComment { get; set; }
+        public List<UserVoteDto> commentVotes { get; set; } = new();
         public FindCommentDto() { }
         public FindCommentDto(UserFindsComment comment)
         {
@@ -144,6 +144,22 @@ namespace DataAccess.Models
             comxComId = xref.UcxUscId;
             comxFindId = xref.UcxUsfId;
             findsComment = new FindCommentDto(xref.UserFindsComment);
+        }
+    }
+
+    public class UserVoteDto
+    {
+        public Guid voteId { get; set; }
+        public Guid voteUserId { get; set; }
+        public Guid voteFindId { get; set; }
+        public int voteValue { get; set; }
+        public UserVoteDto() { }
+        public UserVoteDto(UserVote vote)
+        {
+            voteId = vote.UsvId;
+            voteUserId = vote.UsvUsrId;
+            voteFindId = vote.UsvUsfId;
+            voteValue = vote.UsvVoteValue;
         }
     }
 }

@@ -18,6 +18,7 @@ namespace DataAccess.Models
 
         // CHILDREN navigation
         public ICollection<UserFindsComment> Replies { get; set; } = new List<UserFindsComment>();
+        public ICollection<UserVote> UserVotes { get; set; }
 
     }
 

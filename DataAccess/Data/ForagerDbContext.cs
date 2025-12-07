@@ -13,6 +13,7 @@ namespace DataAccess.Data
         public DbSet<UserImage> UserImages { get; set; }
         public DbSet<UserFindsComment> UserFindsComments { get; set; }
         public DbSet<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
+        public DbSet<UserVote> UserVotes { get; set; }
         public ForagerDbContext(DbContextOptions<ForagerDbContext> options)
             : base(options)
         {
@@ -34,6 +35,7 @@ namespace DataAccess.Data
             modelBuilder.Entity<UserImage>().ToTable("UserImages");
             modelBuilder.Entity<UserFindsComment>().ToTable("UserFindsComments");
             modelBuilder.Entity<UserFindsCommentXref>().ToTable("UserFindsCommentXref");
+            modelBuilder.Entity<UserVote>().ToTable("UserVotes");
 
             modelBuilder.Entity<User>()
                 .HasOne(u => u.UserSecurity)
@@ -92,6 +94,26 @@ namespace DataAccess.Data
                 .HasOne(usc => usc.ParentComment)
                 .WithMany(usc => usc.Replies)
                 .HasForeignKey(usc => usc.UscParentCommentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<UserVote>()
+                .HasOne(v => v.User)
+                .WithMany(u => u.UserVotes)
+                .HasForeignKey(v => v.UsvUsrId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Find → votes (1-many, optional)
+            modelBuilder.Entity<UserVote>()
+                .HasOne(v => v.UserFind)
+                .WithMany(f => f.UserVotes)
+                .HasForeignKey(v => v.UsvUsfId)
+                .OnDelete(DeleteBehavior.Restrict); 
+
+            // Comment → votes (1-many, optional)
+            modelBuilder.Entity<UserVote>()
+                .HasOne(v => v.UserFindsComment)
+                .WithMany(c => c.UserVotes)
+                .HasForeignKey(v => v.UsvUscId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

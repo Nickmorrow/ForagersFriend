@@ -24,5 +24,6 @@ namespace DataAccess.Models
         public UserFindLocation UserFindLocation { get; set; }
         public ICollection<UserImage> UserImages { get; set; }
         public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
+        public ICollection<UserVote> UserVotes { get; set; }
     }
 }
