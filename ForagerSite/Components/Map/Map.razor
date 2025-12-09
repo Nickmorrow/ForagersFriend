@@ -213,19 +213,14 @@
                                                     <p><strong>Notes: </strong><span>@find.description</span></p>
                                                 }
                                                 <p><a href="#" @onclick="() => ViewOnMap(vm.userId, find.findId)">View on map</a></p>
-                                                <div style="display:flex; gap:20px; margin-top:10px; align-items:center;">
-                                                    <span class="vote-container">
-                                                        <i class="bi bi-hand-thumbs-up-fill vote-icon @GetFindUpClass(find)"
-                                                           @onclick='() => HandleUpvote(vm.userId, find.findId, "find")'></i>
-                                                        <span class="vote-count">@GetFindUpCount(find)</span>
-                                                    </span>
-
-                                                    <span class="vote-container">
-                                                        <i class="bi bi-hand-thumbs-down-fill vote-icon @GetFindDownClass(find)"
-                                                           @onclick='() => HandleDownVote(vm.userId, find.findId, "find")'></i>
-                                                        <span class="vote-count">@GetFindDownCount(find)</span>
-                                                    </span>
-                                                </div>
+                                                
+                                                <Vote
+                                                    @key="find.findId"
+                                                    find="find"
+                                                    comment="null"
+                                                    vmUserId="vm.userId"
+                                                    findOrCommentId="find.findId"
+                                                    voteType="find" />
 
                                                 @if (find.findUserId == userStateService.CurrentUser.user.UsrId)
                                                 {
@@ -494,52 +489,6 @@
 
         StateHasChanged();
     }
-
-    #region Votes
-
-    private async Task HandleUpvote(Guid vmId, Guid findOrCommentId, string voteType)
-    {
-        var userId = userStateService.CurrentUser.user.UsrId;
-        await mapService.Vote(vmId, findOrCommentId, 1, voteType);
-    }
-    private async Task HandleDownVote(Guid vmId, Guid findOrCommentId, string voteType)
-    {
-        var userId = userStateService.CurrentUser.user.UsrId;
-        await mapService.Vote(vmId, findOrCommentId, -1, voteType);
-    }
-
-    // ---- Find-level vote counts ----
-    private int GetFindUpCount(FindDto find)
-    {
-        return find.findVotes?.Count(v => v.voteValue == 1) ?? 0;
-    }
-
-    private int GetFindDownCount(FindDto find)
-    {
-        return find.findVotes?.Count(v => v.voteValue == -1) ?? 0;
-    }
-
-    // ---- Current user's vote for this find ----
-    private int GetCurrentUserFindVote(FindDto find)
-    {
-        var userId = userStateService.CurrentUser.user.UsrId;
-        var myVote = find.findVotes?.FirstOrDefault(v => v.voteUserId == userId);
-            
-        return myVote?.voteValue ?? 0;   // 1, -1, or 0 (no vote)
-    }
-
-    // ---- CSS classes for icon coloring ----
-    private string GetFindUpClass(FindDto find)
-    {
-        return GetCurrentUserFindVote(find) == 1 ? "vote-up-active" : string.Empty;
-    }
-
-    private string GetFindDownClass(FindDto find)
-    {
-        return GetCurrentUserFindVote(find) == -1 ? "vote-down-active" : string.Empty;
-    }
-
-    #endregion
 
     private async Task HandleCommentSubmit(Guid findId, Guid vmId, Guid? parentCommentId, string text)
     {

@@ -55,7 +55,12 @@
                                         <div>
                                             <p>@xref.findsComment.comment</p>
                                         </div>
-
+                                        <Vote @key="xref.findsComment.comId"
+                                              find=null
+                                              comment="xref.findsComment"
+                                              vmUserId="Find.findUserId"
+                                              findOrCommentId="xref.findsComment.comId"
+                                              voteType="comment" />
                                         @if (CanDeleteComment(xref.comxUserId))
                                         {
                                             <div>
@@ -114,7 +119,12 @@
                                                                         <div>
                                                                             <p>@reply.findsComment.comment</p>
                                                                         </div>
-
+                                                                        <Vote @key="reply.findsComment.comId"
+                                                                              find=null
+                                                                              comment="reply.findsComment"
+                                                                              vmUserId="Find.findUserId"
+                                                                              findOrCommentId="reply.findsComment.comId"
+                                                                              voteType="comment" />
                                                                         @if (CanDeleteComment(reply.comxUserId))
                                                                         {
                                                                             <div>
