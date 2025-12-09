@@ -16,15 +16,15 @@ namespace DataAccess.Models
 
         [ForeignKey("UsvUsrId")]
         public User User { get; set; }
-        public Guid UsvUscId { get; set; }
+        public Guid? UsvUscId { get; set; }
 
         [ForeignKey("UsvUscId")]
-        public UserFindsComment UserFindsComment { get; set; }
-        public int UsvVoteValue { get; set; }
-        public Guid UsvUsfId { get; set; }
+        public UserFindsComment? UserFindsComment { get; set; }
+        public int UsvVoteValue { get; set; } 
+        public Guid? UsvUsfId { get; set; }
 
         [ForeignKey("UsvUsfId")]
-        public UserFind UserFind { get; set; }
+        public UserFind? UserFind { get; set; }
 
 
     }

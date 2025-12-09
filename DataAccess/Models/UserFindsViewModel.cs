@@ -151,14 +151,16 @@ namespace DataAccess.Models
     {
         public Guid voteId { get; set; }
         public Guid voteUserId { get; set; }
-        public Guid voteFindId { get; set; }
-        public int voteValue { get; set; }
+        public Guid? voteFindId { get; set; }
+        public Guid? voteCommentId { get; set; }
+        public int voteValue { get; set; } = 0;
         public UserVoteDto() { }
         public UserVoteDto(UserVote vote)
         {
             voteId = vote.UsvId;
             voteUserId = vote.UsvUsrId;
             voteFindId = vote.UsvUsfId;
+            voteCommentId = vote.UsvUscId;
             voteValue = vote.UsvVoteValue;
         }
     }

@@ -49,11 +49,14 @@ namespace ForagerSite.Services
                 .Where(uf => uf.UsfUsrId == userId)
                 .Include(uf => uf.UserFindLocation)
                 .Include(uf => uf.UserImages)
+                .Include(uf => uf.UserVotes)
                 .Include(uf => uf.UserFindsCommentXrefs)
                     .ThenInclude(xref => xref.UserFindsComment)
+                        .ThenInclude(comment => comment.UserVotes)
                 .Include(uf => uf.UserFindsCommentXrefs)
                     .ThenInclude(xref => xref.User)
                         .ThenInclude(commentUser => commentUser.UserSecurity)
+                
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -91,6 +94,11 @@ namespace ForagerSite.Services
                     .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserFindsCommentXrefs)
                     .Select(xref => new FindsCommentXrefDto(xref))
+                    .ToList();
+                find.findVotes = userFinds
+                    .Where(uf => uf.UsfId == find.findId)
+                    .SelectMany(uf => uf.UserVotes)
+                    .Select(uv => new UserVoteDto(uv))
                     .ToList();
 
                 foreach (var xref in find.findsCommentXrefs)
@@ -132,8 +140,10 @@ namespace ForagerSite.Services
                 .Where(uf => uf.UsfUsrId == userId)
                 .Include(uf => uf.UserFindLocation)
                 .Include(uf => uf.UserImages)
+                .Include(uf => uf.UserVotes)
                 .Include(uf => uf.UserFindsCommentXrefs)
                     .ThenInclude(xref => xref.UserFindsComment)
+                        .ThenInclude(comment => comment.UserVotes)
                 .Include(uf => uf.UserFindsCommentXrefs)
                     .ThenInclude(xref => xref.User)
                         .ThenInclude(commentUser => commentUser.UserSecurity)
@@ -169,6 +179,11 @@ namespace ForagerSite.Services
                     .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserFindsCommentXrefs)
                     .Select(xref => new FindsCommentXrefDto(xref))
+                    .ToList();
+                find.findVotes = userFinds
+                    .Where(uf => uf.UsfId == find.findId)
+                    .SelectMany(uf => uf.UserVotes)
+                    .Select(uv => new UserVoteDto(uv))
                     .ToList();
 
                 foreach (var xref in find.findsCommentXrefs)
@@ -209,8 +224,10 @@ namespace ForagerSite.Services
                 .Where(uf => userIds.Contains(uf.UsfUsrId))
                 .Include(uf => uf.UserFindLocation)
                 .Include(uf => uf.UserImages)
+                .Include(uf => uf.UserVotes)
                 .Include(uf => uf.UserFindsCommentXrefs)
                     .ThenInclude(xref => xref.UserFindsComment)
+                        .ThenInclude(comment => comment.UserVotes)
                 .Include(uf => uf.UserFindsCommentXrefs)
                     .ThenInclude(xref => xref.User)
                         .ThenInclude(commentUser => commentUser.UserSecurity)
@@ -257,6 +274,11 @@ namespace ForagerSite.Services
                         .Where(uf => uf.UsfId == find.findId)
                         .SelectMany(uf => uf.UserFindsCommentXrefs)
                         .Select(xref => new FindsCommentXrefDto(xref))
+                        .ToList();
+                    find.findVotes = userFinds
+                        .Where(uf => uf.UsfId == find.findId)
+                        .SelectMany(uf => uf.UserVotes)
+                        .Select(uv => new UserVoteDto(uv))
                         .ToList();
 
                     foreach (var xref in find.findsCommentXrefs)
@@ -590,5 +612,63 @@ namespace ForagerSite.Services
             }
             await context.SaveChangesAsync();
         } 
+
+        public async Task<UserVoteDto> Vote(Guid findOrCommentId, Guid userId, string voteType, int voteValue)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+
+            var userVote = new UserVote
+            {
+                UsvUsrId = userId,
+                UsvVoteValue = voteValue,
+            };
+            var existingVote = null as UserVote;
+
+            if (voteType == "find")
+            {
+                userVote.UsvUsfId = findOrCommentId;
+
+                var userFind = await context.UserFinds.FirstOrDefaultAsync(uf => uf.UsfId == findOrCommentId);
+                existingVote = await context.UserVotes.FirstOrDefaultAsync(uv => uv.UsvUsrId == userId && uv.UsvUsfId == findOrCommentId);
+
+                if (existingVote != null)
+                {
+                    userFind.UsfAccuracyScore -= existingVote.UsvVoteValue;
+                    context.UserVotes.Remove(existingVote);
+
+                    if (existingVote.UsvVoteValue != voteValue)
+                    {
+                        userFind.UsfAccuracyScore += voteValue;
+                    }
+                }
+                else
+                {
+                    userFind.UsfAccuracyScore = (userFind.UsfAccuracyScore ?? 0) + voteValue;
+                }
+                context.UserFinds.Update(userFind);
+            }
+            else if (voteType == "comment")
+            {
+                userVote.UsvUscId = findOrCommentId;
+                existingVote = await context.UserVotes.FirstOrDefaultAsync(uv => uv.UsvUsrId == userId && uv.UsvUscId == findOrCommentId);
+
+                if (existingVote != null)
+                {
+                    context.UserVotes.Remove(existingVote);
+                }
+            }
+
+            if (existingVote != null && existingVote.UsvVoteValue == voteValue)
+            {
+                await context.SaveChangesAsync();
+                return new UserVoteDto();
+            }
+
+            context.UserVotes.Add(userVote);
+            var userVoteDto = new UserVoteDto(userVote);
+
+            await context.SaveChangesAsync();
+            return userVoteDto;
+        }
     }
 }

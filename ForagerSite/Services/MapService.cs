@@ -7,7 +7,6 @@ using DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
 
 
-
 namespace ForagerSite.Services
 {
     public class MapService
@@ -43,12 +42,6 @@ namespace ForagerSite.Services
         public void UpdateViewModels(Guid userId, UserFindsViewModel viewModel)
         {
             var currentUserId = _userStateService.CurrentUser.user.UsrId;
-
-            //var existingVmIndex = CurrentViewModels.FindIndex(vm => vm.userId == userId);
-            //if (existingVmIndex != -1)
-            //{
-            //    CurrentViewModels[existingVmIndex] = VmUtilities.Copy(viewModel);
-            //}
 
             if (currentUserId == viewModel.userId)
             {               
@@ -210,5 +203,63 @@ namespace ForagerSite.Services
             NotifyStateChanged();
             NotifyLoadingChanged(false);
         }
+
+        public async Task Vote(Guid vmId, Guid findOrCommentId, int voteValue, string voteType)
+        {
+            var userId = _userStateService.CurrentUser.user.UsrId;
+            var currentVm = CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
+            var userVoteDto = await _userFindService.Vote(findOrCommentId, userId, voteType, voteValue);
+            var find = new FindDto();
+
+            UserVoteDto? existingVote = null;
+
+            if (voteType == "find")
+            {
+                find = currentVm.finds.FirstOrDefault(f => f.findId == findOrCommentId);
+                existingVote = find.findVotes.FirstOrDefault(v => v.voteUserId == userId);
+
+                if (existingVote != null && existingVote.voteValue == voteValue)
+                {
+                    find.findVotes.Remove(existingVote);
+                }
+                else if (existingVote != null && existingVote.voteValue != voteValue)
+                {
+                    find.findVotes.Remove(existingVote);
+                    find.findVotes.Add(userVoteDto);
+                }
+                else if (existingVote == null)
+                {
+                    find.findVotes.Add(userVoteDto);
+                }
+                                             
+            }
+            else if (voteType == "comment")
+            {
+                // Find the find that owns this comment
+                find = currentVm.finds.FirstOrDefault(f => f.findsCommentXrefs.Any(x => x.comxComId == findOrCommentId));
+                var comment = find.findsCommentXrefs.FirstOrDefault(x => x.comxComId == findOrCommentId).findsComment;
+
+                existingVote = find.findsCommentXrefs
+                    .Where(xref => xref.findsComment.comId == findOrCommentId)
+                    .SelectMany(xref => xref.findsComment.commentVotes)
+                    .FirstOrDefault(v => v.voteUserId == userId);
+
+                if (existingVote != null && existingVote.voteValue == voteValue)
+                {
+                    comment.commentVotes.Remove(existingVote);
+                }
+                else if (existingVote != null && existingVote.voteValue != voteValue)
+                {
+                    comment.commentVotes.Remove(existingVote);
+                    comment.commentVotes.Add(userVoteDto);
+                }
+                else if (existingVote == null)
+                {
+                    comment.commentVotes.Add(userVoteDto);
+                }
+            }   
+            UpdateViewModels(vmId, currentVm);
+        }
+
     }
 }
