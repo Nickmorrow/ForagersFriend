@@ -1,0 +1,458 @@
+﻿@using Newtonsoft.Json
+@using ForagerSite.Services
+@using DataAccess.Models
+@using Utilities
+@using ForagerSite.Components.Find
+@implements IDisposable
+
+@inject UserStateService userStateService
+@inject MapService mapService
+@inject IJSRuntime JSRuntime
+
+<div id="finds-grid" style="flex: 1; overflow-y: auto; border: 1px solid #ccc; background-color: #f9f9f9;">
+    @if (isLoading && !hasLoaded)
+    {
+        <div class="loading-indicator">
+            <p>Loading...</p>
+        </div>
+    }
+    else if (ViewModels != null && ViewModels.Any())
+    {
+        <table style="width: 100%; border-collapse: collapse;">
+            <tbody>
+                @if (showCreateForm)
+                {
+                    <tr id="create-form-row">
+                        <td>
+                            <FindCreateForm OnClose="CloseCreateForm"
+                                            OnCreated="CloseCreateForm"
+                                            OnFindCreated="HandleFindCreated" />
+                        </td>
+                    </tr>
+                }
+
+                @foreach (var vm in ViewModels)
+                {
+                    foreach (var find in vm.finds)
+                    {
+                        <tr id="@GetFindRowId(find.findId)"
+                            style="cursor: pointer;"
+                            @onclick="() => ToggleRowExpansion(find)"
+                            class="@GetRowClass(find)">
+
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.findName</td>
+
+                            @if (find.findImages != null && find.findImages.Any())
+                            {
+                                <td>
+                                    <img src="@find.findImages.FirstOrDefault().imageData"
+                                         style="max-width: 100px;" />
+                                </td>
+                            }
+                            else
+                            {
+                                <td>No image available</td>
+                            }
+
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.speciesType</td>
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+                                Discovered by:
+                                <div style="display: flex; gap: 20px;">
+                                    <div>
+                                        <img src="@vm.profilePic"
+                                             alt="Profile Picture"
+                                             style="max-width: 50px; border-radius: 50%;" />
+                                    </div>
+                                    <div>
+                                        <p>@vm.userName</p>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+
+                        @if (IsRowExpanded(find))
+                        {
+                            @if (showEditForm && currentEditModel != null && currentEditModel.FindId == find.findId)
+                            {
+                                <tr>
+                                    <td colspan="4">
+                                        <FindEditForm @key="currentEditModel.FindId"
+                                                      Model="currentEditModel"
+                                                      OnClose="CloseEditForm"
+                                                      OnUpdated="CloseEditForm"
+                                                      OnFindUpdated="HandleFindUpdated" />
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">
+                                        <div style="padding-left: 20px;">
+                                            <div>
+                                                <p><strong>Image Gallery:</strong></p>
+                                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                                    @foreach (var image in find.findImages)
+                                                    {
+                                                        <img src="@image.imageData" style="max-width: 100px;" />
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <p>
+                                                <strong>Discovered: </strong>
+                                                <span>@find.findDate.ToString("MMMM dd, yyyy")</span>
+                                            </p>
+
+                                            @if (!string.IsNullOrWhiteSpace(find.speciesName))
+                                            {
+                                                <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
+                                            }
+
+                                            <p><strong>Species Type: </strong><span>@find.speciesType</span></p>
+                                            <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
+
+                                            @if (!string.IsNullOrWhiteSpace(find.features))
+                                            {
+                                                <p><strong>Distinguishing Features: </strong><span>@find.features</span></p>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(find.lookAlikes))
+                                            {
+                                                <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(find.harvestMethod))
+                                            {
+                                                <p><strong>Harvest Method: </strong><span>@find.harvestMethod</span></p>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(find.tastesLike))
+                                            {
+                                                <p><strong>Tastes like: </strong><span>@find.tastesLike</span></p>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(find.description))
+                                            {
+                                                <p><strong>Notes: </strong><span>@find.description</span></p>
+                                            }
+
+                                            @if (vm.userId == userStateService.CurrentUser.user.UsrId)
+                                            {
+                                                <p><strong>Who can see this? </strong>@find.accessibility</p>
+                                            }
+
+                                            <p>
+                                                <a href="#" @onclick="() => ViewOnMap(vm.userId, find.findId)">View on map</a>
+                                            </p>
+
+                                            <Vote find="find"
+                                                  comment="@null"
+                                                  vmUserId="vm.userId"
+                                                  findOrCommentId="find.findId"
+                                                  voteType="find" />
+
+                                            @if (find.findUserId == userStateService.CurrentUser.user.UsrId)
+                                            {
+                                                <div style="display: flex; gap: 10px;">
+                                                    <button class="btn btn-secondary" @onclick="() =>
+                                                {
+                                                    currentEditModel = new FindEditForm.FindEditTemp
+                                                    {
+                                                        FindId = find.findId,
+                                                        FindName = find.findName,
+                                                        SpeciesName = find.speciesName,
+                                                        SpeciesType = find.speciesType,
+                                                        UseCategory = find.useCategory,
+                                                        Features = find.features,
+                                                        LookAlikes = find.lookAlikes,
+                                                        HarvestMethod = find.harvestMethod,
+                                                        TastesLike = find.tastesLike,
+                                                        Description = find.description,
+                                                        ExistingImageUrls = find.findImages.Select(img => img.imageData).ToList(),
+                                                        AccessLevel = find.accessibility
+                                                    };
+                                                    showEditForm = true;
+                                                }">
+                                                    Edit
+                                                </button>
+
+                                                <button class="btn btn-danger"
+                                                        @onclick="() => HandleFindDeleted(find.findId)">
+                                                    Delete
+                                                </button>
+                                            </div>
+                                                }
+
+                                            <CommentThread @key="find.findId"
+                                                           Find="find"
+                                                           VmId="vm.userId"
+                                                           CurrentUserId="userStateService.CurrentUser.user.UsrId"
+                                                           UserNames="mapService.userNamesKvp" />
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    }
+    else if (hasLoaded)
+    {
+        <div class="no-data-indicator">
+            <p>No data available.</p>
+        </div>
+    }
+</div>
+
+@code {
+
+    private bool showCreateForm = false;
+    private bool showEditForm = false;
+    private FindEditForm.FindEditTemp? currentEditModel;
+    private readonly Dictionary<Guid, bool> expandedRowsFinds = new();
+
+    [Parameter] public List<UserFindsViewModel> ViewModels { get; set; }
+    [Parameter] public bool isLoading { get; set; }
+    [Parameter] public bool hasLoaded { get; set; }
+
+    #region Lifecycle 
+    protected override void OnInitialized()
+    {
+        mapService.OnChange += HandleMapChange;
+        mapService.OnLoadingChange += ViewDetails;
+        mapService.OnMarkerSelected += HandleMarkerSelected;
+        mapService.OnCreateFormRequested += HandleCreateFormRequested;
+
+        // If data is already there (e.g., coming back to the page), stop showing "Loading"
+        if (mapService.CurrentViewModels != null && mapService.CurrentViewModels.Any())
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        expandedRowsFinds.Clear();
+    }
+
+    private void HandleMapChange()
+    {
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        mapService.OnChange -= HandleMapChange;
+        mapService.OnLoadingChange -= ViewDetails;
+        mapService.OnMarkerSelected -= HandleMarkerSelected;
+        mapService.OnCreateFormRequested -= HandleCreateFormRequested;
+    }
+    #endregion
+    #region CRUD handlers + map refresh
+    private Task CloseEditForm()
+    {
+        showEditForm = false;
+        currentEditModel = null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void CloseCreateForm()
+    {
+        showCreateForm = false;
+        mapService.pendingLat = null;
+        mapService.pendingLng = null;
+    }
+
+    private void HandleCreateFormRequested()
+    {
+        showCreateForm = true;
+
+        InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await JSRuntime.InvokeVoidAsync("scrollToCreateForm");
+        });
+    }
+
+    private async Task HandleFindCreated(FindCreateForm.FindTemp temp)
+    {
+        await mapService.CreateFind(
+            temp.FindName,
+            temp.SpeciesName,
+            temp.SpeciesType,
+            temp.UseCategory,
+            temp.Features,
+            temp.LookAlikes,
+            temp.HarvestMethod,
+            temp.TastesLike,
+            temp.Description,
+            mapService.pendingLat!.Value,
+            mapService.pendingLng!.Value,
+            temp.ImageUrls,
+            temp.AccessLevel);
+
+        showCreateForm = false;
+        mapService.pendingLat = null;
+        mapService.pendingLng = null;
+
+        await ReInitializeMap();
+    }
+
+    private async Task HandleFindUpdated(FindEditForm.FindEditTemp temp)
+    {
+        await mapService.UpdateFind(
+            temp.FindId,
+            temp.FindName,
+            temp.SpeciesName ?? string.Empty,
+            temp.SpeciesType,
+            temp.UseCategory,
+            temp.Features ?? string.Empty,
+            temp.LookAlikes ?? string.Empty,
+            temp.HarvestMethod ?? string.Empty,
+            temp.TastesLike ?? string.Empty,
+            temp.Description ?? string.Empty,
+            temp.UploadedImageUrls,
+            temp.DeletedImageUrls,
+            temp.AccessLevel
+        );
+
+        showEditForm = false;
+        currentEditModel = null;
+
+        await ReInitializeMap();
+    }
+
+    private async Task HandleFindDeleted(Guid findId)
+    {
+        await mapService.DeleteFind(findId);
+        await ReInitializeMap();
+    }
+
+    private async Task ReInitializeMap()
+    {
+        var user = userStateService.CurrentUser.user;
+        if (user == null) return;
+
+        var json = JsonConvert.SerializeObject(
+            mapService.CurrentViewModels,
+            new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                Formatting = Formatting.Indented
+            });
+
+        await JSRuntime.InvokeVoidAsync(
+            "initializeMap",
+            json,
+            user.UsrId.ToString(),
+            mapService.mapFilter,
+            user.UserSecurity.UssUsername);
+    }
+    #endregion
+    #region Loading + expanding rows
+    private void ViewDetails(bool loading)
+    {
+        isLoading = loading;
+
+        if (!loading)
+        {
+            try
+            {
+                var viewModels = mapService.CurrentViewModels;
+
+                if (viewModels != null && viewModels.Count > 0 &&
+                    viewModels[0].finds != null && viewModels[0].finds.Count > 0)
+                {
+                    var firstFind = viewModels[0].finds[0];
+                    expandedRowsFinds.Clear();
+                    expandedRowsFinds[firstFind.findId] = true;
+                }
+                else
+                {
+                    Console.WriteLine("ViewDetails skipped: no viewModels or finds available.");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error viewing details: {ex.Message}");
+            }
+        }
+
+        StateHasChanged();
+    }
+
+
+    private void ToggleRowExpansion(FindDto find)
+    {
+        var id = find.findId;
+
+        if (expandedRowsFinds.ContainsKey(id))
+        {
+            var wasExpanded = expandedRowsFinds[id];
+            expandedRowsFinds[id] = !wasExpanded;
+        }
+        else
+        {
+            expandedRowsFinds.Clear();
+            expandedRowsFinds[id] = true;
+        }
+    }
+
+    private bool IsRowExpanded(FindDto find)
+    {
+        return expandedRowsFinds.TryGetValue(find.findId, out var expanded) && expanded;
+    }
+
+    private string GetFindRowId(Guid findId) => $"find-row-{findId}";
+
+    private string GetRowClass(FindDto item)
+    {
+        return IsRowExpanded(item) ? "expanded" : string.Empty;
+    }
+    #endregion
+    #region Marker selection + view on map
+    private async void HandleMarkerSelected(Guid findId)
+    {
+        try
+        {
+            var vm = mapService.CurrentViewModels
+                ?.FirstOrDefault(v => v.finds.Any(f => f.findId == findId));
+
+            var find = vm?.finds.FirstOrDefault(f => f.findId == findId);
+            if (find is null)
+                return;
+
+            expandedRowsFinds.Clear();
+            expandedRowsFinds[find.findId] = true;
+
+            await InvokeAsync(StateHasChanged);
+            await JSRuntime.InvokeVoidAsync("scrollToFindRow", findId.ToString());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in HandleMarkerSelected: {ex.Message}");
+        }
+    }
+
+    private async Task ViewOnMap(Guid userId, Guid findId)
+    {
+        var ufvm = mapService.CurrentViewModels
+            .FirstOrDefault(u => u.userId == userId);
+
+        var uf = ufvm?.finds
+            .FirstOrDefault(f => f.findId == findId);
+
+        if (uf == null || uf.findLocation == null)
+            return;
+
+        double latitude = uf.findLocation.latitude;
+        double longitude = uf.findLocation.longitude;
+
+        await JSRuntime.InvokeVoidAsync("centerMapOnFind", latitude, longitude);
+    }
+    #endregion
+}

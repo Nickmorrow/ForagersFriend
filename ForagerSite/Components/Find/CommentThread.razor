@@ -181,6 +181,7 @@
     private bool expandComments = false;
     private Dictionary<Guid, bool> expandedRepliesMap = new();
 
+    #region Row Expansion
     private void ToggleExpandComments()
     {
         expandComments = !expandComments;
@@ -208,7 +209,12 @@
     {
         return expandedRepliesMap.TryGetValue(commentId, out var expanded) && expanded;
     }
+    #endregion
 
+    private bool CanDeleteComment(Guid commentUserId)
+    {
+        return commentUserId == CurrentUserId || Find.findUserId == CurrentUserId;
+    }
     private string GetUserName(Guid userId)
     {
         if (UserNames != null && UserNames.TryGetValue(userId, out var name))
@@ -218,11 +224,7 @@
 
         return "Unknown User";
     }
-
-    private bool CanDeleteComment(Guid commentUserId)
-    {
-        return commentUserId == CurrentUserId || Find.findUserId == CurrentUserId;
-    }
+    #region CRUD Handlers
 
     private async Task SubmitRootComment()
     {
@@ -253,8 +255,8 @@
 
         userComment = string.Empty;
     }
-
- 
+    
+    
     private async Task SubmitReply(Guid parentCommentId)
     {
         var text = userCommentReply?.Trim();
@@ -315,5 +317,6 @@
 
         mapService.UpdateViewModels(VmId, newViewModel);
     }
+    #endregion
 }
 
