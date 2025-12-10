@@ -1,0 +1,148 @@
+﻿@using ForagerSite.Services
+@using DataAccess.Models
+@using Utilities
+@namespace ForagerSite.Components.Profile
+@inject UserService userService
+@inject UserStateService userStateService
+@inject IConfiguration config
+
+<div id="profile-pic-container">
+    @if (!editProfilePic)
+    {
+        <div>
+            <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px;" />
+        </div>
+        <p style="cursor: pointer;">
+            <a @onclick="EditProfilePic">Edit profile picture</a>
+        </p>
+    }
+    else
+    {
+        <div>
+            @if (!string.IsNullOrEmpty(previewUrl))
+            {
+                <div>
+                    <img src="@previewUrl" alt="Preview" style="max-width: 400px; margin-top: 10px;" />
+                </div>
+            }
+
+            <label for="profilePicture">Profile Picture:</label>
+            <InputFile type="file"
+                       id="profilePicture"
+                       OnChange="@(async e => await HandleFileChange(e))" />
+
+            @if (errors.Any())
+            {
+                <ul>
+                    @foreach (var error in errors)
+                    {
+                        <li><p style="color: red;">@error</p></li>
+                    }
+                </ul>
+            }
+
+            <div>
+                <p style="cursor: pointer;"><a @onclick="SaveProfilePic">Save Changes</a></p>
+                <p style="cursor: pointer;"><a @onclick="DeleteProfilePic">Delete</a></p>
+                <p style="cursor: pointer;"><a @onclick="CancelProfilePic">Cancel</a></p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private UserViewModel userVm = new();
+
+    private bool editProfilePic;
+    private string profileImageUrl;
+    private string previewUrl;
+    private IBrowserFile? uploadedFile;
+    private readonly List<string> errors = new();
+
+    private static readonly string PlaceholderImageUrl = "UserProfileImages/Shared/PlaceHolder.jpeg";
+
+    protected override async Task OnInitializedAsync()
+    {
+        userVm = userStateService.CurrentUser;
+        profileImageUrl = await GetProfileImageUrl();
+    }
+
+    private async Task<string> GetProfileImageUrl()
+    {
+        string profilePicUrl = (await userService.GetUserProfilePic(userVm.user)) ?? string.Empty;
+
+        return !string.IsNullOrEmpty(profilePicUrl)
+            ? profilePicUrl
+            : PlaceholderImageUrl;
+    }
+
+    private void EditProfilePic()
+    {
+        previewUrl = profileImageUrl;
+        editProfilePic = true;
+    }
+
+    private void CancelProfilePic()
+    {
+        editProfilePic = false;
+        uploadedFile = null;
+        previewUrl = null;
+        errors.Clear();
+    }
+
+    private async Task HandleFileChange(InputFileChangeEventArgs e)
+    {
+        (previewUrl, uploadedFile) = await PhotoUploadHelper.GeneratePreviewAsync(e, errors);
+    }
+
+    private async Task SaveProfilePic()
+    {
+        if (errors.Any())
+            return;
+
+        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+
+        var newUrl = await PhotoUploadHelper.UploadProfilePic(
+            errors,
+            userName,
+            uploadedFile,
+            config,
+            userService,
+            userVm);
+
+        if (string.IsNullOrEmpty(newUrl))
+            return;
+
+        profileImageUrl = newUrl;
+
+        if (errors.Contains("Error uploading file"))
+            return;
+
+        editProfilePic = false;
+        uploadedFile = null;
+        previewUrl = null;
+        errors.Clear();
+
+        profileImageUrl = await GetProfileImageUrl();
+    }
+
+    private async Task DeleteProfilePic()
+    {
+        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+
+        PhotoUploadHelper.DeleteProfilePic(
+            errors,
+            userName,
+            uploadedFile,
+            config,
+            userService,
+            userVm);
+
+        editProfilePic = false;
+        uploadedFile = null;
+        previewUrl = null;
+        errors.Clear();
+
+        profileImageUrl = await GetProfileImageUrl();
+    }
+}

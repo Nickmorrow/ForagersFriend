@@ -2,56 +2,20 @@
 @using ForagerSite.Services
 @using DataAccess.Models
 @using Utilities
+@using ForagerSite.Components.Profile
 @rendermode InteractiveServer
 @inject UserService userService
 @inject UserStateService userStateService
 @inject UserFindService userFindService
-@inject IConfiguration config
+
 
 <h3>Profile</h3>
 
 <div id="containers" style="display: flex; gap: 20px;">
     <div id="profile-container">
-        <div id="profile-pic-container">
-            
-            @if (!editProfilePic)
-            {
-                <div>
-                    <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px;" />
-                </div>
-                <p style="cursor: pointer;"><a @onclick="EditProfilePic">Edit profile picture</a></p>
-            } 
-            else
-            {
-                <div>
-                    @* @if (!string.IsNullOrEmpty(previewUrl))
-                    {
-                        <img src="@previewUrl" alt="Preview" style="max-width: 400px; margin-top: 10px;" />
-                    } *@
-                    <div>
-                        <div>
-                            <img src="@previewUrl" alt="Preview" style="max-width: 400px; margin-top: 10px;" />
-                        </div>                       
-                        <label for="profilePicture">Profile Picture:</label>
-                        <InputFile type="file" id="profilePicture" OnChange="@(async e => await HandleFileChange(e))" />
-                    </div>                                    
-                    @if (errors.Any())
-                    {
-                        <ul>
-                            @foreach (var error in errors)
-                            {
-                                <li><p style="color: red;">@error</p></li>
-                            }
-                        </ul>
-                    }
-                    <div>
-                        <p style ="cursor: pointer;"><a @onclick="SaveProfilePic">Save Changes</a></p>
-                        <p style="cursor: pointer;"><a @onclick="DeleteProfilePic">Delete</a></p>
-                        <p style="cursor: pointer;"><a @onclick="CancelProfilePic">Cancel</a></p>
-                    </div>
-                </div>
-            }
-        </div>
+
+        <ProfilePictureEditor />
+
         @if (!edit)
         {
             <div id="profile-details-container">
@@ -122,11 +86,7 @@
                         <button type="submit">Save</button> 
                         <button type="button" @onclick="CancelEdit">Cancel</button>
                     </div>
-            
-                    @* @if (errorMessage != null)
-                    {
-                        <p style="color: red;">@errorMessage</p>
-                    } *@
+
                 </EditForm>
             </div>
         }
@@ -212,21 +172,7 @@
 
     private bool edit;
 
-    private bool editProfilePic;
-
-    private static readonly string PlaceholderImageUrl = $"UserProfileImages/Shared/PlaceHolder.jpeg";
-
-    private List<string> errors  = new();
-
-    private string errorMessage;
-
     private bool userEmailExists;
-
-    private string previewUrl;
-
-    private IBrowserFile? uploadedFile;
-
-    private string profileImageUrl;
 
     private bool userFindsExpanded;
 
@@ -280,34 +226,9 @@
     {
         userVm = userStateService.CurrentUser;
         userFindsViewModel = await userFindService.GetUserFindsViewModel(userVm.user.UsrId);       
-        edit = false;
-        editProfilePic = false;
+        edit = false;       
         userFindsExpanded = false;
-        profileImageUrl = await GetProfileImageUrl();
         findsCount = userFindsViewModel.finds.Count();
-    }
-
-    private async Task<string> GetProfileImageUrl()
-    {
-        string profilePicUrl = (await userService.GetUserProfilePic(userVm.user)) ?? string.Empty;
-
-        return !string.IsNullOrEmpty(profilePicUrl)
-            ? profilePicUrl
-            : PlaceholderImageUrl;
-    }
-
-    private void EditProfilePic()
-    {
-        previewUrl = profileImageUrl;
-        editProfilePic = true;
-    }
-
-    private void CancelProfilePic()
-    {
-        editProfilePic = false;
-        uploadedFile = null;
-        previewUrl = null;
-        errors.Clear();
     }
 
     private void EditProfile()
@@ -337,7 +258,7 @@
         edit = false; 
     }
 
-    private async Task UserFindsExpanded()
+    private void UserFindsExpanded()
     {
         userFindsExpanded = userFindsExpanded ? false : true;
     }
@@ -346,7 +267,6 @@
     { 
         try 
         { 
-            errorMessage = null;
             userEmailExists = await userService.EmailExists(userVm.user.UsrEmail, userVm.user);
 
             if (string.IsNullOrWhiteSpace(userVm.user.UsrEmail))
@@ -367,175 +287,8 @@
         } 
         catch (Exception ex) 
         { 
-            errors.Add($"Error saving changes: {ex.Message}"); 
         } 
     }
-    private async Task HandleFileChange(InputFileChangeEventArgs e)
-    {
-        (previewUrl, uploadedFile) = await PhotoUploadHelper.GeneratePreviewAsync(e, errors);
-    }
-
-    // private async Task HandleFileChange(InputFileChangeEventArgs e)
-    // {
-    //     errors.Clear();
-
-    //     uploadedFile = e.File;
-
-    //     if (e.FileCount > maxAllowedFiles)
-    //     {
-    //         errors.Add($"Error: Attempting to upload {e.FileCount} images, but only {maxAllowedFiles} image is allowed");
-    //         return;
-    //     }
-
-    //     if (uploadedFile.Size > maxFileSize)
-    //     {
-    //         errors.Add($"File size exceeds the maximum allowed limit of {maxFileSize / (1024 * 1024)} MB.");
-    //         return;
-    //     }
-
-    //     var fileExtension = Path.GetExtension(uploadedFile.Name).ToLowerInvariant();
-    //     if (!allowedExtensions.Contains(fileExtension))
-    //     {
-    //         errors.Add("Only image files (JPG and PNG) are allowed.");
-    //         return;
-    //     }
-
-    //     try
-    //     {
-    //         using var stream = uploadedFile.OpenReadStream(maxFileSize);
-    //         var buffer = new byte[uploadedFile.Size];
-    //         await stream.ReadAsync(buffer, 0, (int)uploadedFile.Size);
-    //         previewUrl = $"data:{uploadedFile.ContentType};base64,{Convert.ToBase64String(buffer)}";
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         errors.Add($"Error generating preview: {ex.Message}");
-    //     }
-    // }
-    private async Task SaveProfilePic()
-    {
-        if (errors.Any())
-        {
-            return; // Prevent saving if there are validation errors
-        }
-
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-
-        var newUrl = await PhotoUploadHelper.UploadProfilePic(errors, userName, uploadedFile, config, userService, userVm);
-
-        if (string.IsNullOrEmpty(newUrl))
-            return;
-
-        profileImageUrl = newUrl;
-
-        if (errors.Contains("Error uploading file"))
-        {
-            return; // Prevent saving if there are errors
-        }
-
-        editProfilePic = false;
-        uploadedFile = null;
-        previewUrl = null;
-        errors.Clear();
-        profileImageUrl = await GetProfileImageUrl();
-
-    }
-    // private async Task SaveProfilePic()
-    // {
-    //     if (errors.Any())
-    //     {
-    //         return; // Prevent saving if there are validation errors
-    //     }
-
-    //     var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-    //     var file = uploadedFile; // Assume the file was saved during HandleFileChange
-    //     var fileExtension = Path.GetExtension(file.Name).ToLowerInvariant();
-
-    //     try
-    //     {
-    //         string newFileName = Path.ChangeExtension(Path.GetRandomFileName(), fileExtension);
-    //         string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
-    //         string filePath = Path.Combine(userDirectory, newFileName);
-
-    //         if (!Directory.Exists(userDirectory))
-    //         {
-    //             Directory.CreateDirectory(userDirectory);
-    //         }
-    //         // Remove existing files if the directory exists
-    //         if (Directory.Exists(userDirectory))
-    //         {
-    //             var existingFiles = Directory.GetFiles(userDirectory);
-    //             foreach (var existingFile in existingFiles)
-    //             {
-    //                 File.Delete(existingFile);
-    //             }
-    //         }
-    //         // Save the new file
-    //         await using var fs = new FileStream(filePath, FileMode.Create);
-    //         await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
-
-    //         // Generate file URL and update database
-    //         string fileUrl = $"/UserProfileImages/{userName}/{newFileName}";
-    //         await userService.UploadProfilePicUrl(userVm.user, fileUrl);
-
-    //         editProfilePic = false;
-    //         uploadedFile = null;
-    //         previewUrl = null;
-    //         errors.Clear();
-    //         profileImageUrl = await GetProfileImageUrl();
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         errors.Add($"Error uploading file: {ex.Message}");
-    //     }
-    // }
-    private async Task DeleteProfilePic()
-    {
-
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-
-        PhotoUploadHelper.DeleteProfilePic(errors, userName, uploadedFile, config, userService, userVm);
-
-        editProfilePic = false;
-        uploadedFile = null;
-        previewUrl = null;
-        errors.Clear();
-        profileImageUrl = await GetProfileImageUrl();
-        
-
-    }
-    // private async Task DeleteProfilePic()
-    // {
-
-    //     var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-    //     var file = uploadedFile; // Assume the file was saved during HandleFileChange
-
-    //     try
-    //     {
-    //         string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
-
-    //         // Remove existing files if the directory exists
-    //         if (Directory.Exists(userDirectory))
-    //         {
-    //             var existingFiles = Directory.GetFiles(userDirectory);
-    //             foreach (var existingFile in existingFiles)
-    //             {
-    //                 File.Delete(existingFile);
-    //             }
-    //         }
-    //         await userService.DeleteProfilePicUrl(userVm.user);
-
-    //         editProfilePic = false;
-    //         uploadedFile = null;
-    //         previewUrl = null;
-    //         errors.Clear();
-    //         profileImageUrl = await GetProfileImageUrl();
-    //     }
-    //     catch (Exception ex)
-    //     {
-
-    //         errors.Add($"Error uploading file: {ex.Message}");
-    //     }
-    // }
+    
 #endregion
 }
