@@ -1,6 +1,12 @@
 ﻿@using DataAccess.Models
 @using Microsoft.AspNetCore.Components
+@using ForagerSite.Services
 @namespace ForagerSite.Components.Find
+
+@inject UserFindService userFindService
+@inject MapService mapService
+@inject UserStateService userStateService
+
 
 <div id="commentSection">
     <div>
@@ -165,17 +171,11 @@
 </div>
 
 @code {
-    // ----- parameters from parent -----
     [Parameter] public FindDto Find { get; set; }
     [Parameter] public Guid VmId { get; set; }
     [Parameter] public Guid CurrentUserId { get; set; }
     [Parameter] public Dictionary<Guid, string> UserNames { get; set; }
 
-    // delegates (NOT EventCallbacks)
-    [Parameter] public Func<Guid, Guid, Guid?, string, Task> OnSubmitComment { get; set; }
-    [Parameter] public Func<Guid, Guid, Guid, Task> OnDeleteComment { get; set; }
-
-    // ----- local UI state -----
     private string userComment = string.Empty;
     private string userCommentReply = string.Empty;
     private bool expandComments = false;
@@ -227,28 +227,93 @@
     private async Task SubmitRootComment()
     {
         var text = userComment?.Trim();
-        if (string.IsNullOrWhiteSpace(text) || OnSubmitComment is null)
+        if (string.IsNullOrWhiteSpace(text))
             return;
 
-        await OnSubmitComment.Invoke(Find.findId, VmId, null, text);
+        var userId = userStateService.CurrentUser.user.UsrId;
+
+        FindsCommentXrefDto xref;
+
+        xref = await userFindService.AddComment(text, Find.findId, userId);
+
+        var newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == VmId);
+        if (newViewModel == null)
+            return;
+
+        var find = newViewModel.finds.FirstOrDefault(f => f.findId == Find.findId);
+        if (find == null)
+            return;
+
+        find.findsCommentXrefs.Add(xref);
+        find.findsCommentXrefs = find.findsCommentXrefs
+            .OrderBy(c => c.findsComment.commentDate)
+            .ToList();
+
+        mapService.UpdateViewModels(VmId, newViewModel);
+
         userComment = string.Empty;
     }
 
+ 
     private async Task SubmitReply(Guid parentCommentId)
     {
         var text = userCommentReply?.Trim();
-        if (string.IsNullOrWhiteSpace(text) || OnSubmitComment is null)
+        if (string.IsNullOrWhiteSpace(text))
             return;
 
-        await OnSubmitComment.Invoke(Find.findId, VmId, parentCommentId, text);
+        var userId = userStateService.CurrentUser.user.UsrId;
+
+        FindsCommentXrefDto xref;
+        xref = await userFindService.AddComment(text, Find.findId, userId, parentCommentId);
+
+        var newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == VmId);
+        if (newViewModel == null)
+            return;
+
+        var find = newViewModel.finds.FirstOrDefault(f => f.findId == Find.findId);
+        if (find == null)
+            return;
+
+        find.findsCommentXrefs.Add(xref);
+        find.findsCommentXrefs = find.findsCommentXrefs
+            .OrderBy(c => c.findsComment.commentDate)
+            .ToList();
+
+        mapService.UpdateViewModels(VmId, newViewModel);
+
         userCommentReply = string.Empty;
     }
 
     private async Task DeleteComment(Guid xrefId)
     {
-        if (OnDeleteComment is null)
+        await userFindService.DeleteComment(xrefId);
+
+        var newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == VmId);
+        if (newViewModel == null)
             return;
 
-        await OnDeleteComment.Invoke(VmId, Find.findId, xrefId);
+        var find = newViewModel.finds.FirstOrDefault(f => f.findId == Find.findId);
+        if (find == null)
+            return;
+
+        var deletedCommentXref = find.findsCommentXrefs
+            .FirstOrDefault(x => x.comXId == xrefId);
+
+        if (deletedCommentXref != null)
+        {
+            var repliesToDelete = find.findsCommentXrefs
+                .Where(x => x.findsComment.parentCommentId == deletedCommentXref.findsComment.comId)
+                .ToList();
+
+            foreach (var reply in repliesToDelete)
+            {
+                find.findsCommentXrefs.Remove(reply);
+            }
+
+            find.findsCommentXrefs.Remove(deletedCommentXref);
+        }
+
+        mapService.UpdateViewModels(VmId, newViewModel);
     }
 }
+

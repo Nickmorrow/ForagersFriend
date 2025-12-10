@@ -257,9 +257,8 @@
                                                     Find="find"
                                                     VmId="vm.userId"
                                                     CurrentUserId="userStateService.CurrentUser.user.UsrId"
-                                                    UserNames="mapService.userNamesKvp"
-                                                    OnSubmitComment="HandleCommentSubmit"
-                                                    OnDeleteComment="HandleCommentDelete" />
+                                                    UserNames="mapService.userNamesKvp"/>
+                                                     
 
                                             </div>
                                         </td>
@@ -498,74 +497,6 @@
         }
 
         StateHasChanged();
-    }
-
-    private async Task HandleCommentSubmit(Guid findId, Guid vmId, Guid? parentCommentId, string text)
-    {
-        var userId = userStateService.CurrentUser.user.UsrId;
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
-
-        FindsCommentXrefDto xref;
-
-        if (parentCommentId.HasValue)
-        {
-            // reply
-            xref = await userFindService.AddComment(text, findId, userId, parentCommentId);
-        }
-        else
-        {
-            // root comment
-            xref = await userFindService.AddComment(text, findId, userId);
-        }
-
-        // Update the in-memory view model
-        var newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
-        if (newViewModel == null)
-            return;
-
-        var find = newViewModel.finds.FirstOrDefault(f => f.findId == findId);
-        if (find == null)
-            return;
-
-        find.findsCommentXrefs.Add(xref);
-        find.findsCommentXrefs = find.findsCommentXrefs
-            .OrderBy(c => c.findsComment.commentDate)
-            .ToList();
-
-        mapService.UpdateViewModels(vmId, newViewModel);
-    }
-
-    private async Task HandleCommentDelete(Guid vmId, Guid findId, Guid xrefId)
-    {
-        await userFindService.DeleteComment(xrefId);
-
-        var newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
-        if (newViewModel == null)
-            return;
-
-        var find = newViewModel.finds.FirstOrDefault(f => f.findId == findId);
-        if (find == null)
-            return;
-
-        var deletedCommentXref = find.findsCommentXrefs
-            .FirstOrDefault(x => x.comXId == xrefId);
-
-        if (deletedCommentXref != null)
-        {
-
-            var repliesToDelete = find.findsCommentXrefs
-                .Where(x => x.findsComment.parentCommentId == deletedCommentXref.findsComment.comId)
-                .ToList();
-
-            foreach (var reply in repliesToDelete)
-            {
-                find.findsCommentXrefs.Remove(reply);
-            }
-
-            find.findsCommentXrefs.Remove(deletedCommentXref);
-        }
-
-        mapService.UpdateViewModels(vmId, newViewModel);
     }
 
     #region Search
