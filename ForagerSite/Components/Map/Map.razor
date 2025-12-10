@@ -212,6 +212,11 @@
                                                 {
                                                     <p><strong>Notes: </strong><span>@find.description</span></p>
                                                 }
+                                                @if (vm.userId == userStateService.CurrentUser.user.UsrId)
+                                                {
+                                                    <p><strong>Who can see this? </strong>@find.accessibility</p>
+                                                }
+                                                
                                                 <p><a href="#" @onclick="() => ViewOnMap(vm.userId, find.findId)">View on map</a></p>
                                                 
                                                 <Vote
