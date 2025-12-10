@@ -1,5 +1,4 @@
-﻿Edited version
-
+﻿
 @page "/Profile"
 @using ForagerSite.Services
 @using DataAccess.Models
@@ -33,79 +32,14 @@
         }
         else
         {
-
-
             <div id="edit-profile-container">
                 <ProfileDetailsEditor UserVm="userVm"
                                       OnSaved="HandleProfileSaved"
                                       OnCancelled="HandleProfileCancelled" />
             </div>
-
-
         }
     </div>
-    <div id="finds-container">
-        <div>
-            <h3 @onclick="UserFindsExpanded">Finds (@findsCount)</h3>
-        </div>
-        <table>
-            <tbody>
-                @if (userFindsExpanded)
-                {
-                    @foreach (FindDto find in userFindsViewModel.finds)
-                    {
-                        <tr style="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
-                            <td>
-                                <div>
-                                    <div>
-                                        <p><strong>@find.findName</strong></p>
-                                        <div>
-                                            <img src="@find.findImages.FirstOrDefault().imageData" style="max-width: 100px;" />
-                                            <p><strong>Discovered: </strong><span>@find.findDate.ToString("MMMM dd, yyyy")</span></p>
-                                        </div>
-                                    </div>
-
-                                    @if (IsRowExpanded(find))
-                                    {
-                                        <div>
-                                            <p><strong>Image Gallery:</strong></p>
-                                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                                @foreach (var image in find.findImages)
-                                                {
-                                                    <img src="@image.imageData" style="max-width: 100px;" />
-                                                }
-                                            </div>
-                                        </div>
-                                        <p><strong>Discovered: </strong><span>@find.findDate.ToString("MMMM dd, yyyy")</span></p>
-                                        <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
-                                        <p><strong>Species Type: </strong><span>@find.speciesType</span></p>
-                                        <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
-                                        <p><strong>Distinguishing Features: </strong><span>@find.features</span></p>
-                                        <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>
-                                        <p><strong>Harvest Method: </strong><span>@find.harvestMethod</span></p>
-                                        <p><strong>Tastes like: </strong><span>@find.tastesLike</span></p>
-                                        <p><strong>Notes: </strong><span>@find.description</span></p>
-                                        <p><a></a>View on map</p>
-                                        <div>
-                                            <p><span>{Thumbs up}</span></p>
-                                            <p><span>{Thumbs down}</span></p>
-                                        </div>
-                                        <div>
-                                            <p><span>Comments</span></p>
-                                            <table>
-                                                <tbody>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    }
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                }
-            </tbody>
-        </table>
-    </div>
+    <ProfileFindsList FindsViewModel="userFindsViewModel" />
     <div id="friends-container">
         <h3>Friends</h3>
         <table>
@@ -115,63 +49,22 @@
     </div>
 </div>
 @code {
-    #region Fields
-    private UserViewModel userVm { get; set; } = new();
 
+    private UserViewModel userVm { get; set; } = new();
     private UserFindsViewModel userFindsViewModel { get; set; } = new();
 
-
-
     private bool edit;
-
-
-
-    private bool userFindsExpanded;
-
-    private int findsCount;
-
-    private Dictionary<FindDto, bool> expandedRows = new Dictionary<FindDto, bool>();
-    #endregion
-    #region Methods
-    private void ToggleRowExpansion(FindDto item)
-    {
-        if (expandedRows.ContainsKey(item))
-        {
-            expandedRows[item] = !expandedRows[item];
-        }
-        else
-        {
-            expandedRows[item] = true;
-        }
-    }
-
-    private bool IsRowExpanded(FindDto item)
-    {
-        return expandedRows.ContainsKey(item) && expandedRows[item];
-    }
-
-    private string GetRowClass(FindDto item)
-    {
-        return IsRowExpanded(item) ? "expanded" : "";
-    }
 
     protected override async Task OnInitializedAsync()
     {
         userVm = userStateService.CurrentUser;
         userFindsViewModel = await userFindService.GetUserFindsViewModel(userVm.user.UsrId);
         edit = false;
-        userFindsExpanded = false;
-        findsCount = userFindsViewModel.finds.Count();
     }
 
     private void EditProfile()
     {
         edit = true;
-    }
-
-    private void UserFindsExpanded()
-    {
-        userFindsExpanded = !userFindsExpanded;
     }
 
     private void HandleProfileSaved()
@@ -185,7 +78,4 @@
     }
 
 
-
-
-    #endregion
 }

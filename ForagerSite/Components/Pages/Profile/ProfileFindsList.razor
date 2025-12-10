@@ -1,0 +1,153 @@
+﻿@namespace ForagerSite.Components.Profile
+@using DataAccess.Models
+
+<div id="finds-container">
+    <div>
+        <h3 @onclick="ToggleExpanded">Finds (@FindsCount)</h3>
+    </div>
+
+    <table>
+        <tbody>
+            @if (isExpanded && FindsViewModel?.finds != null && FindsViewModel.finds.Any())
+            {
+                @foreach (var find in FindsViewModel.finds)
+                {
+                    <tr style="cursor: pointer;"
+                        @onclick="() => ToggleRowExpansion(find.findId)"
+                        class="@GetRowClass(find.findId)">
+                        <td>
+                            <div>
+                                <div>
+                                    <p><strong>@find.findName</strong></p>
+                                    <div>
+                                        @if (find.findImages != null && find.findImages.Any())
+                                        {
+                                            <img src="@find.findImages.FirstOrDefault().imageData"
+                                                 style="max-width: 100px;" />
+                                        }
+                                        <p>
+                                            <strong>Discovered: </strong>
+                                            <span>@find.findDate.ToString("MMMM dd, yyyy")</span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                @if (IsRowExpanded(find.findId))
+                                {
+                                    <div>
+                                        <p><strong>Image Gallery:</strong></p>
+                                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                            @foreach (var image in find.findImages ?? Enumerable.Empty<ImageDto>())
+                                            {
+                                                <img src="@image.imageData" style="max-width: 100px;" />
+                                            }
+                                        </div>
+                                    </div>
+
+                                    <p>
+                                        <strong>Discovered: </strong>
+                                        <span>@find.findDate.ToString("MMMM dd, yyyy")</span>
+                                    </p>
+
+                                    @if (!string.IsNullOrWhiteSpace(find.speciesName))
+                                    {
+                                        <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
+                                    }
+
+                                    <p><strong>Species Type: </strong><span>@find.speciesType</span></p>
+                                    <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
+
+                                    @if (!string.IsNullOrWhiteSpace(find.features))
+                                    {
+                                        <p><strong>Distinguishing Features: </strong><span>@find.features</span></p>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(find.lookAlikes))
+                                    {
+                                        <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(find.harvestMethod))
+                                    {
+                                        <p><strong>Harvest Method: </strong><span>@find.harvestMethod</span></p>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(find.tastesLike))
+                                    {
+                                        <p><strong>Tastes like: </strong><span>@find.tastesLike</span></p>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(find.description))
+                                    {
+                                        <p><strong>Notes: </strong><span>@find.description</span></p>
+                                    }
+
+                                    <p><a></a>View on map</p>
+
+                                    <div>
+                                        <p><span>{Thumbs up}</span></p>
+                                        <p><span>{Thumbs down}</span></p>
+                                    </div>
+
+                                    <div>
+                                        <p><span>Comments</span></p>
+                                        <table>
+                                            <tbody>
+                                                @* comments UI can be wired later if needed *@
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public UserFindsViewModel FindsViewModel { get; set; } = new();
+
+    private bool isExpanded;
+    // Track expansion by findId instead of FindDto reference
+    private readonly Dictionary<Guid, bool> expandedRows = new();
+
+    private int FindsCount =>
+        FindsViewModel?.finds?.Count ?? 0;
+
+    private void ToggleExpanded()
+    {
+        isExpanded = !isExpanded;
+
+        // Optionally collapse rows when closing the whole section
+        if (!isExpanded)
+        {
+            expandedRows.Clear();
+        }
+    }
+
+    private void ToggleRowExpansion(Guid findId)
+    {
+        if (expandedRows.ContainsKey(findId))
+        {
+            expandedRows[findId] = !expandedRows[findId];
+        }
+        else
+        {
+            expandedRows.Clear(); // only one open at a time (optional)
+            expandedRows[findId] = true;
+        }
+    }
+
+    private bool IsRowExpanded(Guid findId)
+    {
+        return expandedRows.TryGetValue(findId, out var expanded) && expanded;
+    }
+
+    private string GetRowClass(Guid findId)
+    {
+        return IsRowExpanded(findId) ? "expanded" : "";
+    }
+}
