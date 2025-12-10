@@ -1,0 +1,22 @@
+﻿@rendermode InteractiveServer
+@inject ForagerSite.Services.UserStateService userStateService
+@inject NavigationManager Navigation
+
+@if (userStateService.IsAuthenticated)
+{
+    <div class="nav-item px-3">
+        <button class="nav-link btn btn-link" @onclick="HandleLogout">
+            <span class="bi bi-box-arrow-right"></span>Log Out
+        </button>
+    </div>
+}
+
+@code {
+
+    private void HandleLogout()
+    {
+        userStateService.Logout();
+        Navigation.NavigateTo("/", true);
+    }
+
+}
