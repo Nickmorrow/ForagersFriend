@@ -1,4 +1,4 @@
-﻿@page "/map"
+﻿@* @page "/map" *@
 
 @using Newtonsoft.Json
 @using ForagerSite.Services
@@ -817,7 +817,7 @@
         _mapServiceReference?.Dispose();
         mapService.OnChange -= StateHasChanged;
         mapService.OnLoadingChange -= ViewDetails;
-        mapService.OnMarkerSelected += HandleMarkerSelected;
+        mapService.OnMarkerSelected -= HandleMarkerSelected;
         mapService.OnCreateFormRequested -= HandleCreateFormRequested;
 
     }

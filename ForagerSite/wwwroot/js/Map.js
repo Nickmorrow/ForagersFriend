@@ -1,5 +1,5 @@
 ﻿
-window.map = null;
+window.map = window.map || null;
 var markers = {};
 var tempMarker = null;
 var userMarker = null;
@@ -54,48 +54,59 @@ function onMapClick(e) {
 window.initializeMap = function (json, currentUserId, mapFilter, userName) {
     let userFindsViewModels = JSON.parse(json);
 
+    // Always get the current container
+    const mapContainer = document.getElementById('map');
+
+    if (!mapContainer) {
+        console.error("Map container with id 'map' not found.");
+        return;
+    }
+
+    // If a map exists but its container is gone or different, destroy it
+    if (window.map) {
+        // Leaflet stores the DOM element in _container
+        if (!window.map._container || window.map._container !== mapContainer) {
+            try {
+                window.map.remove();
+            } catch (e) {
+                console.warn("Error removing existing map:", e);
+            }
+            window.map = null;
+        }
+    }
+
+    // If we still have a valid map, just update markers and bail
     if (window.map) {
         console.log('Map already initialized, updating markers.');
         updateMarkers(userFindsViewModels, currentUserId, mapFilter, userName);
         return;
     }
 
+    // ---- from here on, we are creating a new map instance ----
+
     const defaultLatLng = [51.505, -0.09];
     let latLng = defaultLatLng;
 
     const northAmericaBounds = [
-        [7.0, -168.0], // Southwest corner (latitude, longitude)
-        [83.0, -30.0]  // Northeast corner (latitude, longitude)
+        [7.0, -168.0],  // Southwest corner (lat, lng)
+        [83.0, -30.0]   // Northeast corner (lat, lng)
     ];
 
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function (position) {
-            latLng = [position.coords.latitude, position.coords.longitude];
-            initMap(latLng);
-        }, function (error) {
-            console.error("Error obtaining location: ", error);
-            initMap(defaultLatLng);
-        });
-    } else {
-        console.error("Geolocation is not supported by this browser.");
-        initMap(defaultLatLng);
-    }
-
-    function initMap(latLng) {
+    function initMap(centerLatLng) {
         window.map = L.map('map', {
-            center: latLng,
+            center: centerLatLng,
             zoom: 13,
-            maxBounds: northAmericaBounds, // Restrict panning to North America
-            maxBoundsViscosity: 1.0 // Stickiness when reaching bounds
+            maxBounds: northAmericaBounds,      // Restrict panning to North America
+            maxBoundsViscosity: 1.0             // Stickiness when reaching bounds
         });
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            minZoom: 4, // Minimum zoom level to focus on North America
-            maxZoom: 18 // Maximum zoom level
+            minZoom: 4,
+            maxZoom: 18
         }).addTo(window.map);
 
-        L.marker(latLng)
+        L.marker(centerLatLng)
             .addTo(window.map)
             .bindPopup("<b>Your Location</b>")
             .openPopup();
@@ -104,7 +115,26 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
 
         updateMarkers(userFindsViewModels, currentUserId, mapFilter, userName);
     }
-}
+
+    // Try geolocation, fall back to default
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                latLng = [position.coords.latitude, position.coords.longitude];
+                initMap(latLng);
+            },
+            function (error) {
+                console.error("Error obtaining location: ", error);
+                initMap(defaultLatLng);
+            }
+        );
+    } else {
+        console.error("Geolocation is not supported by this browser.");
+        initMap(defaultLatLng);
+    }
+};
+
+
 window.setDotNetObjectReference = function (reference) {
     dotNetObjectReference = reference;
 };
