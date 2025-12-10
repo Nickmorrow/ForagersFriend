@@ -1,0 +1,194 @@
+﻿@using ForagerSite.Services
+@inject UserService userService
+
+<div id="search-container" style="display: flex; gap: 20px;">
+    <div id="filter-buttons" class="mb-3">
+        <button id="get-all-finds"
+                class="btn btn-primary btn-lg mr-2"
+                @onclick="() => OnGetAllFinds.InvokeAsync()">
+            All Finds
+        </button>
+
+        <button id="get-my-finds"
+                class="btn btn-primary btn-lg mr-2"
+                @onclick="() => OnGetMyFinds.InvokeAsync()">
+            My Finds
+        </button>
+
+        <button id="get-friends-finds"
+                class="btn btn-primary btn-lg">
+            Friend's Finds
+        </button>
+    </div>
+
+    <div>
+        <div>
+            <label>
+                <InputCheckbox @bind-Value="isAdvancedSearchVisible"
+                               @onchange="OnAdvancedSearchToggled" />
+                Advanced Search
+            </label>
+        </div>
+
+        @if (isAdvancedSearchVisible)
+        {
+            <div id="advanced-search-container" style="display: flex; gap: 20px;">
+                <div class="mb-3">
+                    <label for="species-dropdown">Species Type</label>
+                    <select id="species-dropdown"
+                            class="form-control"
+                            @bind="selectedSpeciesType">
+                        <option value="">Select an option</option>
+                        <option value="Tree">Tree</option>
+                        <option value="Mushroom">Mushroom</option>
+                        <option value="Fruit">Fruit</option>
+                        <option value="Herb">Herb</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="use-category-dropdown">Use Category</label>
+                    <select id="use-category-dropdown"
+                            class="form-control"
+                            @bind="selectedUseCategory">
+                        <option value="">Select an option</option>
+                        <option value="Medicinal">Medicinal</option>
+                        <option value="Gourmet">Gourmet</option>
+                        <option value="Crafting">Crafting</option>
+                    </select>
+                </div>
+
+                <div id="user-search-container">
+                    <label for="user-search">Search by user</label>
+                    <InputText id="user-search"
+                               @bind-Value="userSearchTerm"
+                               placeholder="Search..."
+                               class="form-control"
+                               @oninput="UserSearchInputChanged" />
+
+                    @if (filteredUserResults.Any())
+                    {
+                        <ul id="results-dropdown"
+                            class="dropdown-menu show"
+                            style="display: block;">
+                            @foreach (var result in filteredUserResults)
+                            {
+                                <li class="dropdown-item"
+                                    @onclick="() => SelectUserSearchResult(result)">
+                                    @result
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+
+                <div id="find-search-container">
+                    <label for="find-search">Search by keyword</label>
+                    <InputText id="find-search"
+                               @bind-Value="findSearchTerm"
+                               placeholder="Search..."
+                               class="form-control"
+                               @oninput="FindSearchInputChanged" />
+                </div>
+
+                <button id="advanced-search-button"
+                        class="btn btn-primary mt-3"
+                        @onclick="SearchClicked">
+                    Search
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    // ---- Callbacks to parent (Map.razor) ----
+    [Parameter] public EventCallback OnGetAllFinds { get; set; }
+    [Parameter] public EventCallback OnGetMyFinds { get; set; }
+
+    // Parent will do the actual filtering & map re-init
+    [Parameter] public EventCallback<MapSearchCriteria> OnSearch { get; set; }
+
+    // ---- Local UI state (moved from Map.razor) ----
+    private List<string> filteredUserResults = new();
+    private string selectedSpeciesType = string.Empty;
+    private string selectedUseCategory = string.Empty;
+    private string userSearchTerm = string.Empty;
+    private string findSearchTerm = string.Empty;
+    private bool isAdvancedSearchVisible = false;
+
+    private void OnAdvancedSearchToggled(ChangeEventArgs e)
+    {
+        if (!isAdvancedSearchVisible)
+        {
+            ClearAdvancedSearchFields();
+        }
+    }
+
+    private void ClearAdvancedSearchFields()
+    {
+        selectedSpeciesType = string.Empty;
+        selectedUseCategory = string.Empty;
+        userSearchTerm = string.Empty;
+        findSearchTerm = string.Empty;
+        filteredUserResults.Clear();
+    }
+
+    private async Task UserSearchInputChanged(ChangeEventArgs e)
+    {
+        userSearchTerm = e.Value?.ToString().ToLower() ?? string.Empty;
+
+        if (!string.IsNullOrEmpty(userSearchTerm))
+        {
+            await FilterResults();
+        }
+        else
+        {
+            filteredUserResults.Clear();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task FilterResults()
+    {
+        var userNames = await userService.GetAllUserNames();
+        filteredUserResults = userNames
+            .Where(u => u.StartsWith(userSearchTerm, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private void SelectUserSearchResult(string result)
+    {
+        userSearchTerm = result;
+        filteredUserResults.Clear();
+        StateHasChanged();
+    }
+
+    private void FindSearchInputChanged(ChangeEventArgs e)
+    {
+        findSearchTerm = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task SearchClicked()
+    {
+        var criteria = new MapSearchCriteria
+        {
+            SelectedSpeciesType = selectedSpeciesType,
+            SelectedUseCategory = selectedUseCategory,
+            UserSearchTerm = userSearchTerm,
+            FindSearchTerm = findSearchTerm
+        };
+
+        await OnSearch.InvokeAsync(criteria);
+    }
+
+    // Tiny DTO describing what the user searched for
+    public class MapSearchCriteria
+    {
+        public string SelectedSpeciesType { get; set; }
+        public string SelectedUseCategory { get; set; }
+        public string UserSearchTerm { get; set; }
+        public string FindSearchTerm { get; set; }
+    }
+}

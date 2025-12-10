@@ -16,75 +16,9 @@
 
 <div>
     <h4>Search</h4>
-    <div id="search-container" style="display: flex; gap: 20px;">
-        <div id="filter-buttons" class="mb-3" >
-            <button id="get-all-finds" class="btn btn-primary btn-lg mr-2" @onclick="GetAllFinds">All Finds</button>
-            <button id="get-my-finds" class="btn btn-primary btn-lg mr-2" @onclick="GetMyFinds">My Finds</button>
-            <button id="get-friends-finds" class="btn btn-primary btn-lg">Friend's Finds</button>
-        </div>
-        
-      <div>
-        <div>
-            <label>
-                <InputCheckbox @bind-Value="isAdvancedSearchVisible" @onchange="OnAdvancedSearchToggled" />
-                Advanced Search
-            </label>
-        </div>
-        @if (isAdvancedSearchVisible)
-        {            
-            <div id="advanced-search-container" style="display: flex; gap: 20px;">
-                <div class="mb-3">
-                    <label for="species-dropdown">Species Type</label>
-                    <select id="species-dropdown" class="form-control" @bind="selectedSpeciesType">
-                        <option value="">Select an option</option>
-                        <option value="Tree">Tree</option>
-                        <option value="Mushroom">Mushroom</option>
-                        <option value="Fruit">Fruit</option>
-                        <option value="Herb">Herb</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="use-category-dropdown">Use Category</label>
-                    <select id="use-category-dropdown" class="form-control" @bind="selectedUseCategory">
-                        <option value="">Select an option</option>
-                        <option value="Medicinal">Medicinal</option>
-                        <option value="Gourmet">Gourmet</option>
-                        <option value="Crafting">Crafting</option>
-                    </select>
-                </div>
-                <div id="user-search-container">
-                    <label for="user-search">Search by user</label>
-                    <InputText id="user-search" 
-                        @bind-Value="userSearchTerm" 
-                        placeholder="Search..." 
-                        class="form-control" 
-                        @oninput="UserSearchInputChanged" />
-
-                    @if (filteredUserResults.Any()) 
-                    {
-                        <ul id="results-dropdown" class="dropdown-menu show" style="display: block;">
-                            @foreach (var result in filteredUserResults)
-                            {
-                                <li class="dropdown-item" @onclick="() => SelectUserSearchResult(result)">
-                                    @result
-                                </li>
-                            }
-                        </ul>
-                    }
-                </div>
-                <div id="find-search-container">
-                    <label for="find-search">Search by keyword</label>
-                    <InputText id="find-search"
-                        @bind-Value="findSearchTerm"
-                        placeholder="Search..."
-                        class="form-control"
-                        @oninput="FindSearchInputChanged" />
-                </div>
-                <button id="advanced-search-button" class="btn btn-primary mt-3" @onclick="GetFindsBySearch">Search</button>
-            </div>           
-        }
-        </div>
-    </div>
+    <MapSearch OnGetAllFinds="GetAllFinds"
+           OnGetMyFinds="GetMyFinds"
+           OnSearch="HandleSearch" />
 
     <div id="map-container" style="display: flex; height: 800px;">
         @* <div id="map" style="height: 800px; width: 100%;"></div> *@
@@ -125,9 +59,6 @@
                             foreach (var find in vm.finds)
                             {                                                          
                                 <tr id="@GetFindRowId(find.findId)" style="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)"class="@GetRowClass(find)">
-
-
-
 
                                 <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.findName</td>
                                     @if (find.findImages != null && find.findImages.Any())
@@ -302,35 +233,16 @@
 <div></div>
 
 @code {
-    #region Fields
-    private string GetFindRowId(Guid findId) => $"find-row-{findId}";
-
+    #region Fields   
     private DotNetObjectReference<MapService> _mapServiceReference;
-
-    private List<string> filteredUserResults = new List<string>();
-
-    private string selectedSpeciesType = string.Empty;
-
-    private string selectedUseCategory = string.Empty;
-
-    private string userSearchTerm = string.Empty;
-
-    private string findSearchTerm = string.Empty;
-
-    private bool isAdvancedSearchVisible = false;
-
     private Dictionary<FindDto, bool> expandedRowsFinds = new();
-
     private bool isLoading = true;
-
     private bool showCreateForm = false;
-
     private bool showEditForm = false;
-
     private FindEditForm.FindEditTemp? currentEditModel;
-
     #endregion
 
+    #region Initialize & Render
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -368,7 +280,6 @@
             }
         }
     }
-
     protected override void OnInitialized()
     {
         mapService.OnChange += StateHasChanged;
@@ -389,6 +300,9 @@
         await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
         await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername); 
     }
+    #endregion
+
+    #region CRUD Handlers
     private Task CloseEditForm()
     {
         showEditForm = false;
@@ -396,14 +310,12 @@
         StateHasChanged();
         return Task.CompletedTask;
     }
-
     private void CloseCreateForm()
     {
         showCreateForm = false;
         mapService.pendingLat = null;
         mapService.pendingLng = null;
     }
-
     private void HandleCreateFormRequested()
     {
         showCreateForm = true;
@@ -416,7 +328,6 @@
             await JSRuntime.InvokeVoidAsync("scrollToCreateForm");
         });
     }
-
     private async Task HandleFindCreated(FindCreateForm.FindTemp temp)
     {
         await mapService.CreateFind(temp.FindName, 
@@ -462,12 +373,12 @@
 
         await ReInitializeMap();
     }
-
     private async Task HandleFindDeleted(Guid findId)
     {
         await mapService.DeleteFind(findId);
         await ReInitializeMap();
     }
+    #endregion
 
     private void ViewDetails(bool loading)
     {
@@ -500,59 +411,6 @@
     }
 
     #region Search
-    private void OnAdvancedSearchToggled(ChangeEventArgs e)
-    {
-        if (!isAdvancedSearchVisible)
-        {
-            ClearAdvancedSearchFields();
-        }
-    }
-
-    private void ClearAdvancedSearchFields()
-    {
-        selectedSpeciesType = string.Empty;
-        selectedUseCategory = string.Empty;
-        userSearchTerm = string.Empty;
-        findSearchTerm = string.Empty;
-        filteredUserResults.Clear();
-    }
-
-    private async Task UserSearchInputChanged(ChangeEventArgs e)
-    {
-        userSearchTerm = e.Value?.ToString().ToLower() ?? string.Empty;
-
-        if (!string.IsNullOrEmpty(userSearchTerm))
-        {
-            await FilterResults();
-        }
-        else
-        {
-            filteredUserResults.Clear(); 
-        }
-
-        StateHasChanged(); 
-    }
-
-    private async Task FilterResults()
-    {
-        var userNames = await userService.GetAllUserNames();
-        filteredUserResults = userNames
-        .Where(u => u.StartsWith(userSearchTerm, StringComparison.OrdinalIgnoreCase))
-        .ToList();
-    }
-
-    private void SelectUserSearchResult(string result)
-    {
-        userSearchTerm = result; 
-        filteredUserResults.Clear(); 
-        StateHasChanged(); 
-    }
-
-    private void FindSearchInputChanged(ChangeEventArgs e)
-    {
-        findSearchTerm = e.Value?.ToString() ?? string.Empty;
-    }
-
     private async Task GetMyFinds()
     {
         var user = userStateService.CurrentUser.user;
@@ -572,7 +430,6 @@
             await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);
         }
     }
-
     private async Task GetAllFinds() // To Do - logic to filter AllViewmodels by map zoom radius to reduce load time
     {
         var user = userStateService.CurrentUser.user;
@@ -610,7 +467,6 @@
         }
         StateHasChanged();
     }
-
     private void FilterAccessibility(List<UserFindsViewModel> CurrentViewModels, Guid userId)
     {
         foreach (var vm in CurrentViewModels)
@@ -619,8 +475,7 @@
                     vm.finds = vm.finds.Where(f => f.accessibility != "Private").ToList(); // To do - filter for "Friends Only" finds as well
             }
     }
-
-    private async Task GetFindsBySearch()
+    private async Task HandleSearch(MapSearch.MapSearchCriteria criteria)
     {
         var user = userStateService.CurrentUser.user;
 
@@ -630,6 +485,7 @@
             Formatting = Formatting.Indented
         };
 
+        // Start from baseline based on current map filter
         if (mapService.mapFilter == "UserOnly")
         {
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.MyViewModels);
@@ -638,38 +494,37 @@
         {
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
         }
-        if (!string.IsNullOrEmpty(userSearchTerm))
+
+        // Filter by user name (if set)
+        if (!string.IsNullOrEmpty(criteria.UserSearchTerm))
         {
             mapService.CurrentViewModels = mapService.CurrentViewModels
-            .Where(f => f.userName
-                .Contains(userSearchTerm)).ToList();
+                .Where(vm => vm.userName.Contains(criteria.UserSearchTerm, StringComparison.OrdinalIgnoreCase))
+                .ToList();
         }
-        if (!string.IsNullOrEmpty(selectedSpeciesType)
-        || !string.IsNullOrEmpty(selectedUseCategory)
-        || !string.IsNullOrEmpty(findSearchTerm))
+
+        // Filter by species / use category / keyword
+        if (!string.IsNullOrEmpty(criteria.SelectedSpeciesType)
+            || !string.IsNullOrEmpty(criteria.SelectedUseCategory)
+            || !string.IsNullOrEmpty(criteria.FindSearchTerm))
         {
             foreach (var vm in mapService.CurrentViewModels)
             {
                 vm.finds = vm.finds
-                .Where(f =>
-                    (string.IsNullOrEmpty(selectedSpeciesType) ||
-                     f.speciesType.Equals(selectedSpeciesType, StringComparison.OrdinalIgnoreCase))
-                    && (string.IsNullOrEmpty(selectedUseCategory) ||
-                        f.useCategory.Equals(selectedUseCategory, StringComparison.OrdinalIgnoreCase))
-                    && (string.IsNullOrEmpty(findSearchTerm) ||
-                        f.findName.Contains(findSearchTerm, StringComparison.OrdinalIgnoreCase))
-                )
-                .ToList();
+                    .Where(f =>
+                        (string.IsNullOrEmpty(criteria.SelectedSpeciesType) ||
+                            f.speciesType.Equals(criteria.SelectedSpeciesType, StringComparison.OrdinalIgnoreCase))
+                        && (string.IsNullOrEmpty(criteria.SelectedUseCategory) ||
+                            f.useCategory.Equals(criteria.SelectedUseCategory, StringComparison.OrdinalIgnoreCase))
+                        && (string.IsNullOrEmpty(criteria.FindSearchTerm) ||
+                            f.findName.Contains(criteria.FindSearchTerm, StringComparison.OrdinalIgnoreCase))
+                    )
+                    .ToList();
             }
         }
+
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
         await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter);
-
-        selectedSpeciesType = string.Empty;
-        selectedUseCategory = string.Empty;
-        userSearchTerm = string.Empty;
-        findSearchTerm = string.Empty;
-        filteredUserResults.Clear();
     }
     #endregion
 
@@ -690,11 +545,12 @@
         }
     }
 
-
     private bool IsRowExpanded(FindDto item)
     {
         return expandedRowsFinds.ContainsKey(item) && expandedRowsFinds[item];
     }
+
+    private string GetFindRowId(Guid findId) => $"find-row-{findId}";
 
     private string GetRowClass(FindDto item)
     {
@@ -728,7 +584,6 @@
         }
     }
 
-    
     private async Task ViewOnMap(Guid userId, Guid findId)
     {
         var ufvm = mapService.CurrentViewModels
