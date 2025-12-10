@@ -3,7 +3,7 @@
 @using ForagerSite.Services
 @using Microsoft.AspNetCore.Components.Forms
 
-@inject UserService userService
+@inject IUserService userService
 
 <EditForm Model="UserVm.user" OnValidSubmit="SaveChanges">
     <DataAnnotationsValidator />
@@ -125,7 +125,7 @@
         if (userEmailExists)
             return;
 
-        await userService.UpdateUserAsync(UserVm.user);
+        await userService.UpdateUser(UserVm.user);
 
         if (OnSaved.HasDelegate)
         {

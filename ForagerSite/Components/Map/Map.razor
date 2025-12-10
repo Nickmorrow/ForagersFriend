@@ -9,9 +9,9 @@
 @inject IJSRuntime JSRuntime
 @inject IConfiguration config
 @inject UserStateService userStateService
-@inject UserService userService
-@inject UserFindService userFindService
-@inject MapService mapService
+@inject IUserService userService
+@inject IUserFindService userFindService
+@inject IMapService mapService
 
 <div>
     <h4>Search</h4>
@@ -45,7 +45,7 @@
 
 
 @code {
-    private DotNetObjectReference<MapService> _mapServiceReference;
+    private DotNetObjectReference<IMapService> _mapServiceReference;
     #region Initialize map + load data
     private bool isLoading = false;
     private bool hasLoaded = false;

@@ -9,30 +9,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ForagerSite.Services
 {
-    public class MapService
+    public class MapService : IMapService
     {       
-
         public static readonly List<string> MapFilters = new List<string>
         {
             "UserOnly", "AllUsers", "FriendUsers"
         };
-        public string mapFilter = MapFilters[0];
+        
         private readonly UserStateService _userStateService;
-        private readonly UserFindService _userFindService;
+        private readonly IUserFindService _userFindService;
 
         public event Action OnChange;
         public event Action<bool> OnLoadingChange;
         public event Action? OnCreateFormRequested;
         public event Action<Guid>? OnMarkerSelected;
-
-        public double? pendingLat;
-        public double? pendingLng;
+        public string mapFilter { get; set; } = MapFilters[0];
+        public double? pendingLat { get; set; }
+        public double? pendingLng { get; set; }
         public List<UserFindsViewModel> MyViewModels { get; set; } = new();
         public List<UserFindsViewModel> AllViewModels { get; set; } = new();
         public List<UserFindsViewModel> CurrentViewModels { get; set; } = new();
         public Dictionary<Guid, string> userNamesKvp { get; set; }
 
-        public MapService(UserStateService userStateService, UserFindService userFindService)
+        public MapService(UserStateService userStateService, IUserFindService userFindService)
         {
             _userStateService = userStateService;
             _userFindService = userFindService;
@@ -82,7 +81,7 @@ namespace ForagerSite.Services
             return Task.CompletedTask;
         }        
 
-        public async Task CreateFind(
+        public async Task CreateFindVm(
         string name,
         string speciesName,
         string speciesType,
@@ -131,7 +130,7 @@ namespace ForagerSite.Services
             NotifyLoadingChanged(false);
 
         }
-        public async Task UpdateFind(
+        public async Task UpdateFindVm(
         Guid upFindId,
         string name,
         string speciesName,
@@ -188,7 +187,7 @@ namespace ForagerSite.Services
             NotifyLoadingChanged(false);
         }
 
-        public async Task DeleteFind(Guid delFindId)
+        public async Task DeleteFindVm(Guid delFindId)
         {
             NotifyLoadingChanged(true);
 

@@ -28,10 +28,10 @@ namespace ForagerSite
                 {
                     options.DetailedErrors = true;
                 }); 
-            builder.Services.AddTransient<UserService>();
-            builder.Services.AddTransient<UserFindService>();
+            builder.Services.AddTransient<IUserService, UserService>();
+            builder.Services.AddTransient<IUserFindService, UserFindService>();
             builder.Services.AddSingleton<UserStateService>();
-            builder.Services.AddScoped<MapService>();
+            builder.Services.AddScoped<IMapService, MapService>();
 
             //builder.Services.AddTransient<EmailService>();
             //builder.Services.AddTransient<PasswordResetService>();

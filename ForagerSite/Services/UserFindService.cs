@@ -10,7 +10,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace ForagerSite.Services
 {
-    public class UserFindService
+    public class UserFindService : IUserFindService
     {
 
         private IDbContextFactory<ForagerDbContext> _dbContextFactory;

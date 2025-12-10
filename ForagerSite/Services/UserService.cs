@@ -10,7 +10,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace ForagerSite.Services
 {
-    public class UserService
+    public class UserService : IUserService
     {
         private IDbContextFactory<ForagerDbContext> _dbContextFactory;
 
@@ -77,12 +77,12 @@ namespace ForagerSite.Services
                 context.SaveChanges();
             }
         }
-        public async Task<User> GetUserAsync(Guid userId)
+        public async Task<User> GetUser(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
             return await context.Users.FirstOrDefaultAsync(u => u.UsrId == userId);               
         }
-        public async Task<List<User>> GetAllUsersAsync()
+        public async Task<List<User>> GetAllUsers()
         {
             using var context = _dbContextFactory.CreateDbContext();
             return await context.Users.ToListAsync();
@@ -95,7 +95,7 @@ namespace ForagerSite.Services
             return userNames;
         }
 
-        public async Task UpdateUserAsync(User user)
+        public async Task UpdateUser(User user)
         {
             using var context = _dbContextFactory.CreateDbContext(); 
             var existingUser = await context.Users.FindAsync(user.UsrId);

@@ -6,7 +6,7 @@
 @implements IDisposable
 
 @inject UserStateService userStateService
-@inject MapService mapService
+@inject IMapService mapService
 @inject IJSRuntime JSRuntime
 
 <div id="finds-grid" style="flex: 1; overflow-y: auto; border: 1px solid #ccc; background-color: #f9f9f9;">
@@ -280,7 +280,7 @@
 
     private async Task HandleFindCreated(FindCreateForm.FindTemp temp)
     {
-        await mapService.CreateFind(
+        await mapService.CreateFindVm(
             temp.FindName,
             temp.SpeciesName,
             temp.SpeciesType,
@@ -304,7 +304,7 @@
 
     private async Task HandleFindUpdated(FindEditForm.FindEditTemp temp)
     {
-        await mapService.UpdateFind(
+        await mapService.UpdateFindVm(
             temp.FindId,
             temp.FindName,
             temp.SpeciesName ?? string.Empty,
@@ -328,7 +328,7 @@
 
     private async Task HandleFindDeleted(Guid findId)
     {
-        await mapService.DeleteFind(findId);
+        await mapService.DeleteFindVm(findId);
         await ReInitializeMap();
     }
 
