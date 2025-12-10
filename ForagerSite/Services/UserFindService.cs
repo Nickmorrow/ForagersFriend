@@ -70,11 +70,6 @@ namespace ForagerSite.Services
                 profilePic = userImage?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl,
                 userName = user.UserSecurity.UssUsername,
                 finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
-                //userNamesKvp = userFinds
-                //    .SelectMany(uf => uf.UserFindsCommentXrefs)
-                //    .Select(xref => xref.User.UserSecurity)
-                //    .Where(us => us != null)
-                //    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
             };
 
             foreach (var find in userViewModel.finds)
@@ -108,17 +103,6 @@ namespace ForagerSite.Services
                         .FirstOrDefault();
                     xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl;
                 }
-
-                //foreach (var xref in find.findsCommentXrefs)
-                //{
-                //    var matchingComment = user.UserFindsCommentXrefs
-                //        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
-                //        .Select(ufcx => ufcx.UserFindsComment)
-                //        .FirstOrDefault();
-                //    var xrefComment = new FindCommentDto(matchingComment);
-
-                //    xref.findsComment = xrefComment;
-                //}
             }
             return userViewModel;
         }
@@ -193,17 +177,6 @@ namespace ForagerSite.Services
                         .FirstOrDefault();
                     xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl;
                 }
-
-                //foreach (var xref in find.findsCommentXrefs)
-                //{
-                //    var matchingComment = user.UserFindsCommentXrefs
-                //        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
-                //        .Select(ufcx => ufcx.UserFindsComment)
-                //        .FirstOrDefault();
-                //    var xrefComment = new FindCommentDto(matchingComment);
-
-                //    xref.findsComment = xrefComment;
-                //}
             }
 
 
@@ -250,11 +223,6 @@ namespace ForagerSite.Services
                     profilePic = userImage?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl,
                     userName = user.UserSecurity.UssUsername,
                     finds = userFindsForUser.Select(uf => new FindDto(uf)).ToList(),
-                    //userNamesKvp = userFindsForUser
-                    //    .SelectMany(uf => uf.UserFindsCommentXrefs)
-                    //    .Select(xref => xref.User.UserSecurity)
-                    //    .Where(us => us != null)
-                    //    .ToDictionary(us => us.UssUsrId, us => us.UssUsername)
                 };
 
                 foreach (var find in userViewModel.finds)
@@ -288,17 +256,6 @@ namespace ForagerSite.Services
                             .FirstOrDefault();
                         xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl;
                     }
-
-                    //foreach (var xref in find.findsCommentXrefs)
-                    //{
-                    //    var matchingComment = user.UserFindsCommentXrefs
-                    //        .Where(ufcx => ufcx.UcxUscId == xref.comxComId && ufcx.UcxUsfId == find.findId)
-                    //        .Select(ufcx => ufcx.UserFindsComment)
-                    //        .FirstOrDefault();
-                    //    var xrefComment = new FindCommentDto(matchingComment);
-
-                    //    xref.findsComment = xrefComment;
-                    //}
                 }
                 userViewModelsList.Add(userViewModel);
             }
