@@ -1,4 +1,6 @@
-﻿@page "/Profile"
+﻿Edited version
+
+@page "/Profile"
 @using ForagerSite.Services
 @using DataAccess.Models
 @using Utilities
@@ -21,7 +23,7 @@
             <div id="profile-details-container">
                 <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
                 <p><strong>Name:</strong> @userVm.user.UsrName</p>
-                <p><strong>Rank:</strong> @userVm.user.UsrExpScore</p>           
+                <p><strong>Rank:</strong> @userVm.user.UsrExpScore</p>
                 <p><strong>Joined:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
                 <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
                 <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
@@ -31,87 +33,38 @@
         }
         else
         {
-            <div id="edit-profile-container">
-                 <EditForm Model="userVm.user" OnValidSubmit="SaveChanges">
-                    <DataAnnotationsValidator />
-                    <ValidationSummary />
-                            
-                    <div> 
-                        <label for="name">Name:</label> 
-                        <InputText id="name" @bind-Value="userVm.user.UsrName" /> 
-                    </div> 
-                    <div> 
-                        <label for="bio">Bio:</label> 
-                        <InputTextArea id="bio" @bind-Value="userVm.user.UsrBio" />
-                        <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => userVm.user.UsrBio)" />
-                        @if (userVm.user.UsrBio?.Length > 250)
-                        {
-                            <p style="color: red;">Bio cannot exceed 250 characters.</p>
-                        }
-                    </div> 
-                    <div> 
-                        <label for="country">Country:</label> 
-                        <InputText id="country" @bind-Value="userVm.user.UsrCountry" /> 
-                    </div> 
-                    <div> 
-                        <label for="state">State/Province:</label> 
-                        <InputText id="state" @bind-Value="userVm.user.UsrStateorProvince" /> 
-                    </div> 
-                    <div> 
-                        <label for="zipcode">Zip Code:</label>
-                        <InputNumber id="zipcode" @bind-Value="userVm.user.UsrZipCode" />
-                        @if (!IsValidZipCode(userVm.user.UsrZipCode))
-                        {
-                            <p style="color: red;">Please enter a valid zip code.</p>
-                        }
-                    </div> 
-                    <div> 
-                        <label for="email">Email:</label>
-                        <InputText id="email" @bind-Value="userVm.user.UsrEmail" />
-                        <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => userVm.user.UsrEmail)" />
-                        @if (string.IsNullOrWhiteSpace(userVm.user.UsrEmail))
-                        {
-                            <p style="color: red;">You must enter an Email address.</p>                    
-                        }
-                        @if (!IsValidEmail(userVm.user.UsrEmail) && !string.IsNullOrWhiteSpace(userVm.user.UsrEmail))
-                        {
-                            <p style="color: red;">Please enter a valid email address (e.g., example@domain.com).</p>
-                        }                   
-                        @if (userEmailExists)
-                        {
-                            <p style="color: red;">This email is already taken. Please choose a different one.</p>                       
-                        }
-                    </div>
-                    <div>
-                        <button type="submit">Save</button> 
-                        <button type="button" @onclick="CancelEdit">Cancel</button>
-                    </div>
 
-                </EditForm>
+
+            <div id="edit-profile-container">
+                <ProfileDetailsEditor UserVm="userVm"
+                                      OnSaved="HandleProfileSaved"
+                                      OnCancelled="HandleProfileCancelled" />
             </div>
+
+
         }
     </div>
     <div id="finds-container">
         <div>
-            <h3 @onclick="UserFindsExpanded">Finds (@findsCount)</h3>        
+            <h3 @onclick="UserFindsExpanded">Finds (@findsCount)</h3>
         </div>
         <table>
             <tbody>
                 @if (userFindsExpanded)
-                {               
+                {
                     @foreach (FindDto find in userFindsViewModel.finds)
                     {
-                        <tr style ="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
+                        <tr style="cursor: pointer;" @onclick="() => ToggleRowExpansion(find)" class="@GetRowClass(find)">
                             <td>
                                 <div>
-                                    <div >
+                                    <div>
                                         <p><strong>@find.findName</strong></p>
                                         <div>
                                             <img src="@find.findImages.FirstOrDefault().imageData" style="max-width: 100px;" />
                                             <p><strong>Discovered: </strong><span>@find.findDate.ToString("MMMM dd, yyyy")</span></p>
                                         </div>
-                                    </div>                                                                                              
-                                
+                                    </div>
+
                                     @if (IsRowExpanded(find))
                                     {
                                         <div>
@@ -128,7 +81,7 @@
                                         <p><strong>Species Type: </strong><span>@find.speciesType</span></p>
                                         <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
                                         <p><strong>Distinguishing Features: </strong><span>@find.features</span></p>
-                                        <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>                                   
+                                        <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>
                                         <p><strong>Harvest Method: </strong><span>@find.harvestMethod</span></p>
                                         <p><strong>Tastes like: </strong><span>@find.tastesLike</span></p>
                                         <p><strong>Notes: </strong><span>@find.description</span></p>
@@ -136,20 +89,20 @@
                                         <div>
                                             <p><span>{Thumbs up}</span></p>
                                             <p><span>{Thumbs down}</span></p>
-                                        </div> 
+                                        </div>
                                         <div>
                                             <p><span>Comments</span></p>
                                             <table>
                                                 <tbody>
                                                 </tbody>
                                             </table>
-                                        </div>                                    
+                                        </div>
                                     }
                                 </div>
-                            </td>                                    
-                        </tr>                   
-                    }               
-                }       
+                            </td>
+                        </tr>
+                    }
+                }
             </tbody>
         </table>
     </div>
@@ -157,7 +110,6 @@
         <h3>Friends</h3>
         <table>
             <tbody>
-
             </tbody>
         </table>
     </div>
@@ -168,11 +120,11 @@
 
     private UserFindsViewModel userFindsViewModel { get; set; } = new();
 
-    private User originalUser;
+
 
     private bool edit;
 
-    private bool userEmailExists;
+
 
     private bool userFindsExpanded;
 
@@ -203,92 +155,37 @@
         return IsRowExpanded(item) ? "expanded" : "";
     }
 
-    private bool IsValidEmail(string email)
-    {
-        try
-        {
-            var mailAddress = new System.Net.Mail.MailAddress(email);
-            return mailAddress.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private bool IsValidZipCode(int? zipCode)
-    {
-        if (zipCode == null) return false;
-        return zipCode >= 10000 && zipCode <= 99999; 
-    }
-
     protected override async Task OnInitializedAsync()
     {
         userVm = userStateService.CurrentUser;
-        userFindsViewModel = await userFindService.GetUserFindsViewModel(userVm.user.UsrId);       
-        edit = false;       
+        userFindsViewModel = await userFindService.GetUserFindsViewModel(userVm.user.UsrId);
+        edit = false;
         userFindsExpanded = false;
         findsCount = userFindsViewModel.finds.Count();
     }
 
     private void EditProfile()
     {
-        originalUser = new User
-            {
-                UsrName = userVm.user.UsrName,
-                UsrBio = userVm.user.UsrBio,
-                UsrCountry = userVm.user.UsrCountry,
-                UsrStateorProvince = userVm.user.UsrStateorProvince,
-                UsrZipCode = userVm.user.UsrZipCode,
-                UsrEmail = userVm.user.UsrEmail
-            };
-
         edit = true;
-    }
-
-    private void CancelEdit() 
-    { 
-        userVm.user.UsrName = originalUser.UsrName;
-        userVm.user.UsrBio = originalUser.UsrBio;
-        userVm.user.UsrCountry = originalUser.UsrCountry;
-        userVm.user.UsrStateorProvince = originalUser.UsrStateorProvince;
-        userVm.user.UsrZipCode = originalUser.UsrZipCode;
-        userVm.user.UsrEmail = originalUser.UsrEmail;
-
-        edit = false; 
     }
 
     private void UserFindsExpanded()
     {
-        userFindsExpanded = userFindsExpanded ? false : true;
+        userFindsExpanded = !userFindsExpanded;
     }
 
-    private async Task SaveChanges() 
-    { 
-        try 
-        { 
-            userEmailExists = await userService.EmailExists(userVm.user.UsrEmail, userVm.user);
-
-            if (string.IsNullOrWhiteSpace(userVm.user.UsrEmail))
-            {
-                return;
-            }
-            if (!IsValidEmail(userVm.user.UsrEmail))
-            {
-                return;
-            }
-            if (userEmailExists)
-            {
-                return;
-            }
-
-            await userService.UpdateUserAsync(userVm.user); 
-            edit = false; 
-        } 
-        catch (Exception ex) 
-        { 
-        } 
+    private void HandleProfileSaved()
+    {
+        edit = false;
     }
-    
-#endregion
+
+    private void HandleProfileCancelled()
+    {
+        edit = false;
+    }
+
+
+
+
+    #endregion
 }

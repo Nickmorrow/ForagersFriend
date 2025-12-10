@@ -97,11 +97,12 @@
 
     private async Task SaveProfilePic()
     {
-        if (errors.Any())
+        if (errors.Any() || uploadedFile == null)
             return;
 
         var userName = userStateService.CurrentUser.userSecurity.UssUsername;
 
+        
         var newUrl = await PhotoUploadHelper.UploadProfilePic(
             errors,
             userName,
