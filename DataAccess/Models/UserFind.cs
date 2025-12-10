@@ -21,6 +21,7 @@ namespace DataAccess.Models
         public string UsfTastesLike { get; set; }
         public string UsfDescription { get; set; }
         public int? UsfAccuracyScore { get; set; }
+        public string UsfAccessibility { get; set; } = "Public";
         public UserFindLocation UserFindLocation { get; set; }
         public ICollection<UserImage> UserImages { get; set; }
         public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }

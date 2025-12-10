@@ -94,7 +94,8 @@ namespace ForagerSite.Services
         string description,
         double lat,
         double lng,
-        List<string> uploadedFileUrls)
+        List<string> uploadedFileUrls,
+        string accessLevel)       
         {
             NotifyLoadingChanged(true);
 
@@ -116,7 +117,8 @@ namespace ForagerSite.Services
                 lng,
                 uploadedFileUrls,
                 userId,
-                userName
+                userName,
+                accessLevel
             );
 
             var find = newUserFindViewModel.finds[0];
@@ -141,7 +143,8 @@ namespace ForagerSite.Services
         string tastesLike,
         string description,
         List<string>? uploadedFileUrls,
-        List<string>? deletedFileUrls)
+        List<string>? deletedFileUrls,
+        string accessLevel)
         {            
             var userId = _userStateService.CurrentUser.user.UsrId;
             var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
@@ -167,7 +170,8 @@ namespace ForagerSite.Services
                 uploadedFileUrls,
                 deletedFileUrls,
                 userId,
-                userName
+                userName,
+                accessLevel
             );
 
             var find = newUserFindViewModel.finds[0];

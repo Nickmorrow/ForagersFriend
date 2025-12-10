@@ -426,7 +426,8 @@ namespace ForagerSite.Services
         double lng,
         List<string> uploadedFileUrls,
         Guid userId,
-        string userName)
+        string userName,
+        string AccessLevel)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -448,6 +449,7 @@ namespace ForagerSite.Services
                 UsfTastesLike = tastesLike,
                 UsfDescription = description,
                 UsfFindDate = DateTime.Now,
+                UsfAccessibility = AccessLevel
             };
             mapViewModel.finds.Add(new FindDto(userFind));
 
@@ -497,7 +499,8 @@ namespace ForagerSite.Services
             List<string>? uploadedFileUrls,
             List<string>? deletedFileUrls,
             Guid userId,
-            string userName)
+            string userName,
+            string accessLevel)
         {
             using var context = _dbContextFactory.CreateDbContext();
             var mapViewModel = new UserFindsViewModel();
@@ -520,6 +523,7 @@ namespace ForagerSite.Services
             userFind.UsfHarvestMethod = harvestMethod;
             userFind.UsfTastesLike = tastesLike;
             userFind.UsfDescription = description;
+            userFind.UsfAccessibility = accessLevel;
 
             context.UserFinds.Update(userFind);
             mapViewModel.finds.Add(new FindDto(userFind));

@@ -215,9 +215,9 @@
                                                 <p><a href="#" @onclick="() => ViewOnMap(vm.userId, find.findId)">View on map</a></p>
                                                 
                                                 <Vote
-                                                    @key="find.findId"
+                                                    
                                                     find="find"
-                                                    comment="null"
+                                                    comment="@null"
                                                     vmUserId="vm.userId"
                                                     findOrCommentId="find.findId"
                                                     voteType="find" />
@@ -243,7 +243,7 @@
                                                             };
                                                             showEditForm = true;
                                                         }">Edit</button>
-                                                        <button class="btn btn-danger" @onclick="() => mapService.DeleteFind(find.findId)">Delete</button>
+                                                        <button class="btn btn-danger" @onclick="() => HandleFindDeleted(find.findId)">Delete</button>
                                                     </div>
                                                 
                                                 }
@@ -255,9 +255,6 @@
                                                     UserNames="mapService.userNamesKvp"
                                                     OnSubmitComment="HandleCommentSubmit"
                                                     OnDeleteComment="HandleCommentDelete" />
-
-
-
 
                                             </div>
                                         </td>
@@ -304,10 +301,6 @@
     #region Fields
     private string GetFindRowId(Guid findId) => $"find-row-{findId}";
 
-    //private string userComment = string.Empty;
-
-    //private string userCommentReply = string.Empty;
-
     private DotNetObjectReference<MapService> _mapServiceReference;
 
     private List<string> filteredUserResults = new List<string>();
@@ -324,13 +317,7 @@
 
     private Dictionary<FindDto, bool> expandedRowsFinds = new();
 
-    //private Dictionary<Guid, bool> expandedRepliesMap = new();
-
     private bool isLoading = true;
-
-    //private bool expandComments = false;
-
-    //private bool expandReplies = false;
 
     private bool showCreateForm = false;
 
@@ -430,7 +417,7 @@
     {
         await mapService.CreateFind(temp.FindName, temp.SpeciesName, temp.SpeciesType,
             temp.UseCategory, temp.Features, temp.LookAlikes, temp.HarvestMethod,
-            temp.TastesLike, temp.Description, mapService.pendingLat.Value, mapService.pendingLng.Value, temp.ImageUrls);
+            temp.TastesLike, temp.Description, mapService.pendingLat.Value, mapService.pendingLng.Value, temp.ImageUrls, temp.AccessLevel);
 
         showCreateForm = false;
         mapService.pendingLat = null;
@@ -452,7 +439,8 @@
             temp.TastesLike ?? string.Empty,
             temp.Description ?? string.Empty,
             temp.UploadedImageUrls,
-            temp.DeletedImageUrls
+            temp.DeletedImageUrls,
+            temp.AccessLevel
         );
 
         showEditForm = false;
@@ -460,6 +448,13 @@
 
         await ReInitializeMap();
     }
+
+    private async Task HandleFindDeleted(Guid findId)
+    {
+        await mapService.DeleteFind(findId);
+        await ReInitializeMap();
+    }
+
     private void ViewDetails(bool loading)
     {
         isLoading = loading;
@@ -557,7 +552,7 @@
 
         mapService.UpdateViewModels(vmId, newViewModel);
     }
-   
+
     #region Search
     private void OnAdvancedSearchToggled(ChangeEventArgs e)
     {
@@ -644,7 +639,7 @@
             {
                 try
                 {
-                    mapService.AllViewModels = await userFindService.GetUserFindsViewModels();
+                    mapService.AllViewModels = await userFindService.GetUserFindsViewModels();                   
                 }
                 catch (Exception ex)
                 {
@@ -658,6 +653,8 @@
                 };
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
 
+            FilterAccessibility(mapService.CurrentViewModels, user.UsrId);
+
             var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
             await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);
         }
@@ -666,6 +663,15 @@
             isLoading = false;
         }
         StateHasChanged();
+    }
+
+    private void FilterAccessibility(List<UserFindsViewModel> CurrentViewModels, Guid userId)
+    {
+        foreach (var vm in CurrentViewModels)
+            {
+                if (vm.userId != userId)
+                    vm.finds = vm.finds.Where(f => f.accessibility != "Private").ToList(); // To do - filter for "Friends Only" finds as well
+            }
     }
 
     private async Task GetFindsBySearch()

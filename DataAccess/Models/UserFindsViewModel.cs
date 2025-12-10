@@ -46,6 +46,7 @@ namespace DataAccess.Models
         public string tastesLike { get; set; }
         public string description { get; set; }
         public int? findScore { get; set; } = 0;
+        public string accessibility { get; set; } 
         public FindLocationDto findLocation { get; set; } = new();
         public List<ImageDto> findImages { get; set; } = new();
         public List<FindsCommentXrefDto> findsCommentXrefs { get; set; } = new();
@@ -67,6 +68,7 @@ namespace DataAccess.Models
             tastesLike = userFind.UsfTastesLike;
             description = userFind.UsfDescription;
             findScore = userFind.UsfAccuracyScore;
+            accessibility = userFind.UsfAccessibility;
         }
 
     }

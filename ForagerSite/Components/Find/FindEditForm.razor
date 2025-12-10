@@ -117,6 +117,14 @@
             </ul>
         }
     </div>
+    <div>
+        <label>Who can see this?</label>
+        <InputSelect @bind-Value="editModel.AccessLevel">
+            <option value="Public">Public</option>
+            <option value="Private">Private</option>
+            <option value="Friends Only">Friends Only</option>
+        </InputSelect>       
+    </div>
 
     <button type="submit">Save Changes</button>
     <button type="button" @onclick="OnClose">Cancel</button>
@@ -250,6 +258,7 @@
         public string? HarvestMethod { get; set; }
         public string? TastesLike { get; set; }
         public string? Description { get; set; }
+        public string AccessLevel { get; set; } 
 
         public Guid UserId { get; set; }
 
