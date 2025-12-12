@@ -52,7 +52,7 @@ function onMapClick(e) {
 
 
 window.initializeMap = function (json, currentUserId, mapFilter, userName) {
-    let userFindsViewModels = JSON.parse(json);
+    let userFindsDCs = JSON.parse(json);
 
     // Always get the current container
     const mapContainer = document.getElementById('map');
@@ -78,7 +78,7 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
     // If we still have a valid map, just update markers and bail
     if (window.map) {
         console.log('Map already initialized, updating markers.');
-        updateMarkers(userFindsViewModels, currentUserId, mapFilter, userName);
+        updateMarkers(userFindsDCs, currentUserId, mapFilter, userName);
         return;
     }
 
@@ -113,7 +113,7 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
 
         window.map.on('click', onMapClick);
 
-        updateMarkers(userFindsViewModels, currentUserId, mapFilter, userName);
+        updateMarkers(userFindsDCs, currentUserId, mapFilter, userName);
     }
 
     // Try geolocation, fall back to default
@@ -139,7 +139,7 @@ window.setDotNetObjectReference = function (reference) {
     dotNetObjectReference = reference;
 };
 
-window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, userName) {
+window.updateMarkers = function (userFindsDCs, currentUserId, mapFilter, userName) {
     
     // Display all finds on map
     Object.keys(markers).forEach(key => {
@@ -149,7 +149,7 @@ window.updateMarkers = function (userFindsViewModels, currentUserId, mapFilter, 
 
     const templateHtml = document.getElementById('find-popup-template').innerHTML;
 
-    userFindsViewModels.forEach(viewModel => {
+    userFindsDCs.forEach(viewModel => {
 
         var currentViewModel = viewModel;
 

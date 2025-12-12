@@ -57,7 +57,7 @@
 
 @code {
 
-    public UserViewModel userViewModel = new UserViewModel();
+    public UserDataContainer userViewModel = new UserDataContainer();
 
     private string confirmPassword;
     private bool showPassword;
@@ -118,12 +118,12 @@
         }
         #endregion
 
-        var newUser = (UserViewModel)editContext.Model;
+        var newUser = (UserDataContainer)editContext.Model;
         newUser.user.UsrJoinedDate = DateTime.Now;
         newUser.userSecurity.User = newUser.user;
 
         userService.AddUser(newUser.user, newUser.userSecurity);
-        userViewModel = new UserViewModel();
+        userViewModel = new UserDataContainer();
         navigationManager.NavigateTo("/");
     }
 }

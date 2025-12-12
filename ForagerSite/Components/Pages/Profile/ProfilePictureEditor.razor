@@ -4,7 +4,7 @@
 @using Utilities
 @namespace ForagerSite.Components.Profile
 @inject IUserService userService
-@inject UserStateService userStateService
+@inject UserSessionService session
 @inject IConfiguration config
 
 @if (!_loaded)
@@ -62,7 +62,7 @@ else
 @code {
     [Parameter] public Guid UserId { get; set; }
 
-    private UserViewModel userVm = new();
+    private UserDataContainer userVm = new();
     private bool editProfilePic;
     private string profileImageUrl;
     private string previewUrl;
@@ -119,7 +119,7 @@ else
         if (errors.Any() || uploadedFile == null)
             return;
 
-        var userName = userStateService.SessionUser!.Username;
+        var userName = session.SessionUser!.Username;
 
         
         var newUrl = await PhotoUploadHelper.UploadProfilePic(
@@ -148,7 +148,7 @@ else
 
     private async Task DeleteProfilePic()
     {
-        var userName = userStateService.SessionUser!.Username;
+        var userName = session.SessionUser!.Username;
 
         PhotoUploadHelper.DeleteProfilePic(
             errors,

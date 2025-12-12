@@ -55,7 +55,7 @@ namespace ForagerSite.Services
                 .AsNoTracking()
                 .ToDictionaryAsync(u => u.UsrId, u => u.UserSecurity.UssUsername);
         }
-        public async Task<UserFindsViewModel> GetUserFindsViewModel(Guid userId)
+        public async Task<UserFindsDataContainer> GetUserFindsDC(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -67,7 +67,7 @@ namespace ForagerSite.Services
 
             if (user == null)
             {
-                return new UserFindsViewModel();
+                return new UserFindsDataContainer();
             }
 
             var userFinds = await context.UserFinds
@@ -89,10 +89,10 @@ namespace ForagerSite.Services
                     .Where(ui => ui.UsiUsrId == user.UsrId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
                     .FirstOrDefault();
 
-            var userViewModel = new UserFindsViewModel
+            var userViewModel = new UserFindsDataContainer
             {
                 userId = user.UsrId,
-                profilePic = userImage?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl,
+                profilePic = userImage?.UsiImageData ?? UserFindsDataContainer.PlaceholderImageUrl,
                 userName = user.UserSecurity.UssUsername,
                 finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
             };
@@ -126,12 +126,12 @@ namespace ForagerSite.Services
                     var commentProficPic = context.UserImages
                         .Where(ui => ui.UsiUsrId == xref.comxUserId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
                         .FirstOrDefault();
-                    xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl;
+                    xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsDataContainer.PlaceholderImageUrl;
                 }
             }
             return userViewModel;
         }
-        public async Task<List<UserFindsViewModel>> GetUserFindsViewModels(Guid userId)
+        public async Task<List<UserFindsDataContainer>> GetUserFindsDCs(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -142,7 +142,7 @@ namespace ForagerSite.Services
 
             if (user == null)
             {
-                return new List<UserFindsViewModel>();
+                return new List<UserFindsDataContainer>();
             }
 
             var userFinds = await context.UserFinds
@@ -163,10 +163,10 @@ namespace ForagerSite.Services
                     .Where(ui => ui.UsiUsrId == user.UsrId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
                     .FirstOrDefault();
 
-            var userViewModel = new UserFindsViewModel
+            var userViewModel = new UserFindsDataContainer
             {
                 userId = user.UsrId,
-                profilePic = userImage?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl,
+                profilePic = userImage?.UsiImageData ?? UserFindsDataContainer.PlaceholderImageUrl,
                 userName = user.UserSecurity.UssUsername,
                 finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
             };
@@ -200,14 +200,14 @@ namespace ForagerSite.Services
                     var commentProficPic = context.UserImages
                         .Where(ui => ui.UsiUsrId == xref.comxUserId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
                         .FirstOrDefault();
-                    xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl;
+                    xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsDataContainer.PlaceholderImageUrl;
                 }
             }
 
 
-            return new List<UserFindsViewModel> { userViewModel };
+            return new List<UserFindsDataContainer> { userViewModel };
         }
-        public async Task<List<UserFindsViewModel>> GetUserFindsViewModels()
+        public async Task<List<UserFindsDataContainer>> GetUserFindsDCs()
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -232,7 +232,7 @@ namespace ForagerSite.Services
                 .AsNoTracking()
                 .ToListAsync();
 
-            var userViewModelsList = new List<UserFindsViewModel>();    
+            var userViewModelsList = new List<UserFindsDataContainer>();    
 
             foreach (var user in users)
             {
@@ -242,10 +242,10 @@ namespace ForagerSite.Services
                     .Where(ui => ui.UsiUsrId == user.UsrId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
                     .FirstOrDefault();
 
-                var userViewModel = new UserFindsViewModel
+                var userViewModel = new UserFindsDataContainer
                 {
                     userId = user.UsrId,
-                    profilePic = userImage?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl,
+                    profilePic = userImage?.UsiImageData ?? UserFindsDataContainer.PlaceholderImageUrl,
                     userName = user.UserSecurity.UssUsername,
                     finds = userFindsForUser.Select(uf => new FindDto(uf)).ToList(),
                 };
@@ -279,7 +279,7 @@ namespace ForagerSite.Services
                         var commentProficPic = context.UserImages
                             .Where(ui => ui.UsiUsrId == xref.comxUserId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
                             .FirstOrDefault();
-                        xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsViewModel.PlaceholderImageUrl;
+                        xref.CommentUserProfilePic = commentProficPic?.UsiImageData ?? UserFindsDataContainer.PlaceholderImageUrl;
                     }
                 }
                 userViewModelsList.Add(userViewModel);
@@ -350,7 +350,7 @@ namespace ForagerSite.Services
                 CommentUserProfilePic = context.UserImages?
                     .Where(ui => ui.UsiUsrId == userCommentXref.UcxUsrId && ui.UsiUsfId == null && ui.UsiImageData.StartsWith("/UserProfileImages"))
                     .Select(ui => ui.UsiImageData)
-                    .FirstOrDefault() ?? UserFindsViewModel.PlaceholderImageUrl
+                    .FirstOrDefault() ?? UserFindsDataContainer.PlaceholderImageUrl
             };
             return xrefDto;
         }
@@ -394,7 +394,7 @@ namespace ForagerSite.Services
             await context.SaveChangesAsync();
         }
 
-        public async Task<UserFindsViewModel> CreateFind(
+        public async Task<UserFindsDataContainer> CreateFind(
         string name,
         string speciesName,
         string speciesType,
@@ -413,7 +413,7 @@ namespace ForagerSite.Services
         {
             using var context = _dbContextFactory.CreateDbContext();
 
-            var mapViewModel = new UserFindsViewModel();
+            var mapViewModel = new UserFindsDataContainer();
 
             mapViewModel.userId = userId;
             mapViewModel.userName = userName;
@@ -467,7 +467,7 @@ namespace ForagerSite.Services
             mapViewModel.finds[0].findId = userFind.UsfId;
             return mapViewModel;
         }
-        public async Task<UserFindsViewModel> UpdateFind(
+        public async Task<UserFindsDataContainer> UpdateFind(
             Guid findId,
             string name,
             string speciesName,
@@ -487,7 +487,7 @@ namespace ForagerSite.Services
             string accessLevel)
         {
             using var context = _dbContextFactory.CreateDbContext();
-            var mapViewModel = new UserFindsViewModel();
+            var mapViewModel = new UserFindsDataContainer();
 
             mapViewModel.userId = userId;
             mapViewModel.userName = userName;

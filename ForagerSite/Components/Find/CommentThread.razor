@@ -6,7 +6,7 @@
 
 @inject IUserFindService userFindService
 @inject IMapService mapService
-@inject UserStateService userStateService
+@inject UserSessionService session
 
 
 <div id="commentSection">
@@ -233,7 +233,7 @@
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        var userId = userStateService.SessionUser.UserId;
+        var userId = session.SessionUser.UserId;
 
         FindsCommentXrefDto xref;
 
@@ -264,7 +264,7 @@
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        var userId = userStateService.SessionUser.UserId;
+        var userId = session.SessionUser.UserId;
 
         FindsCommentXrefDto xref;
         xref = await userFindService.AddComment(text, Find.findId, userId, parentCommentId);

@@ -32,7 +32,7 @@ namespace ForagerSite
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IUserFindService, UserFindService>();           
             builder.Services.AddScoped<IMapService, MapService>();
-            builder.Services.AddScoped<UserStateService>();
+            builder.Services.AddScoped<IUserSessionService, UserSessionService>();
             builder.Services.AddScoped<ProtectedSessionStorage>();
 
 

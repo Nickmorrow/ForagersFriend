@@ -8,11 +8,11 @@ namespace ForagerSite.Services
         Task RecalculateUserExpScore(Guid userId);
         Task<Dictionary<Guid, string>> GetCommentUserNames();
 
-        Task<UserFindsViewModel> GetUserFindsViewModel(Guid userId);
+        Task<UserFindsDataContainer> GetUserFindsDC(Guid userId);
 
-        Task<List<UserFindsViewModel>> GetUserFindsViewModels(Guid userId);
+        Task<List<UserFindsDataContainer>> GetUserFindsDCs(Guid userId);
 
-        Task<List<UserFindsViewModel>> GetUserFindsViewModels();
+        Task<List<UserFindsDataContainer>> GetUserFindsDCs();
 
         Task<List<UserFindLocation>> GetUserFindLocations(Guid userId);
 
@@ -26,7 +26,7 @@ namespace ForagerSite.Services
 
         Task DeleteComment(Guid xrefId);
 
-        Task<UserFindsViewModel> CreateFind(
+        Task<UserFindsDataContainer> CreateFind(
             string name,
             string speciesName,
             string speciesType,
@@ -43,7 +43,7 @@ namespace ForagerSite.Services
             string userName,
             string AccessLevel);
 
-        Task<UserFindsViewModel> UpdateFind(
+        Task<UserFindsDataContainer> UpdateFind(
             Guid findId,
             string name,
             string speciesName,

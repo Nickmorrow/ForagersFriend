@@ -7,7 +7,7 @@ using ForagerSite.DataContainer;
 
 namespace ForagerSite.DataContainer
 {
-    public class UserFindsViewModel
+    public class UserFindsDataContainer
     {
         public Guid userId { get; set; }
 
@@ -17,7 +17,7 @@ namespace ForagerSite.DataContainer
         public List<FindDto> finds { get; set; }
         //public List<UserVoteDto> findVotes { get; set; }
 
-        public UserFindsViewModel()
+        public UserFindsDataContainer()
         {
             userId = Guid.Empty;
             userName = string.Empty;

@@ -2,15 +2,15 @@
 @using ForagerSite.Services
 @rendermode InteractiveServer
 @inject NavigationManager navigationManager
-@inject UserStateService userStateService
+@inject UserSessionService session
 
 @if (!_loaded)
 {
     <p>Loading...</p>
 }
-else if (userStateService.IsAuthenticated)
+else if (session.IsAuthenticated)
 {
-    <p>Welcome, @userStateService.SessionUser!.DisplayName</p>
+    <p>Welcome, @session.SessionUser!.DisplayName</p>
     <ForagerSite.Components.Map.Map />
 }
 
@@ -22,10 +22,10 @@ else if (userStateService.IsAuthenticated)
     {
         if (!firstRender) return;
 
-        await userStateService.Load();
+        await session.Load();
         _loaded = true;
 
-        if (!userStateService.IsAuthenticated)
+        if (!session.IsAuthenticated)
         {
             navigationManager.NavigateTo("/Login");
             return;

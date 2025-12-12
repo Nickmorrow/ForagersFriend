@@ -9,9 +9,9 @@ namespace ForagerSite.Services
         double? pendingLat { get; set; }
         double? pendingLng { get; set; }
 
-        List<UserFindsViewModel> MyViewModels { get; set; }
-        List<UserFindsViewModel> AllViewModels { get; set; }
-        List<UserFindsViewModel> CurrentViewModels { get; set; }
+        List<UserFindsDataContainer> MyViewModels { get; set; }
+        List<UserFindsDataContainer> AllViewModels { get; set; }
+        List<UserFindsDataContainer> CurrentViewModels { get; set; }
 
         Dictionary<Guid, string> userNamesKvp { get; set; }
 
@@ -20,8 +20,8 @@ namespace ForagerSite.Services
         event Action? OnCreateFormRequested;
         event Action<Guid>? OnMarkerSelected;
 
-        void UpdateViewModels(Guid userId, UserFindsViewModel viewModel);
-        UserFindsViewModel? GetViewModel(Guid userId);
+        void UpdateViewModels(Guid userId, UserFindsDataContainer viewModel);
+        UserFindsDataContainer? GetViewModel(Guid userId);
 
         Task OnMarkerClicked(string findId);
         Task TriggerCreateForm(double lat, double lng);

@@ -1,8 +1,9 @@
 ﻿using ForagerSite.DataContainer;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Newtonsoft.Json;
+using ForagerSite.Services;
 
-public class UserStateService
+public class UserSessionService : IUserSessionService
 {
     private readonly ProtectedSessionStorage _session;
 
@@ -11,7 +12,7 @@ public class UserStateService
 
     public event Action? OnChange;
 
-    public UserStateService(ProtectedSessionStorage session)
+    public UserSessionService(ProtectedSessionStorage session)
         => _session = session;
 
     public async Task Load()
@@ -31,7 +32,7 @@ public class UserStateService
         OnChange?.Invoke();
     }
 
-    public async Task SetUserState(bool isAuthenticated, UserViewModel? vm)
+    public async Task SetUserState(bool isAuthenticated, UserDataContainer? vm)
     {
         IsAuthenticated = isAuthenticated;
 

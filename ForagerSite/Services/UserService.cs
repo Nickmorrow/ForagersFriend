@@ -19,7 +19,7 @@ namespace ForagerSite.Services
         {
             _dbContextFactory = dbContextFactory;
         }  
-        public UserViewModel AuthenticateUser(string username, string password)
+        public UserDataContainer AuthenticateUser(string username, string password)
         {
             using (var context = _dbContextFactory.CreateDbContext())
             {
@@ -29,7 +29,7 @@ namespace ForagerSite.Services
 
                 if (userSecurity != null)
                 {
-                    return new UserViewModel
+                    return new UserDataContainer
                     {
                         user = userSecurity.User,
                         userSecurity = userSecurity
@@ -38,7 +38,7 @@ namespace ForagerSite.Services
                 return null;
             }
         }
-        public async Task<UserViewModel> GetUserViewModelById(Guid userId)
+        public async Task<UserDataContainer> GetUserViewModelById(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -47,9 +47,9 @@ namespace ForagerSite.Services
                 .FirstOrDefaultAsync(us => us.UssUsrId == userId);
 
             if (userSecurity is null)
-                return new UserViewModel();
+                return new UserDataContainer();
 
-            return new UserViewModel
+            return new UserDataContainer
             {
                 user = userSecurity.User,
                 userSecurity = userSecurity

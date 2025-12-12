@@ -4,7 +4,7 @@ namespace ForagerSite.Services
 {
     public interface IUserService
     {
-        UserViewModel? AuthenticateUser(string username, string password);
+        UserDataContainer? AuthenticateUser(string username, string password);
         Task<bool> UsernameExists(string username);
         Task<bool> EmailExists(string email, User? user = null);
         void UpdateUserSecurity(UserSecurity userSecurity);
@@ -16,6 +16,6 @@ namespace ForagerSite.Services
         Task<string> GetUserProfilePic(User user);
         Task UploadProfilePicUrl(User user, string fileUrl);
         Task DeleteProfilePicUrl(User user);
-        Task<UserViewModel> GetUserViewModelById(Guid userId);
+        Task<UserDataContainer> GetUserViewModelById(Guid userId);
     }
 }

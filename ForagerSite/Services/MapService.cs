@@ -17,8 +17,8 @@ namespace ForagerSite.Services
             "UserOnly", "AllUsers", "FriendUsers"
         };
         
-        private readonly UserStateService _userStateService;
-        private readonly IUserFindService _userFindService;
+        private readonly UserSessionService session;
+        private readonly IUserFindService userFindService;
 
         public event Action OnChange;
         public event Action<bool> OnLoadingChange;
@@ -27,21 +27,21 @@ namespace ForagerSite.Services
         public string mapFilter { get; set; } = MapFilters[0];
         public double? pendingLat { get; set; }
         public double? pendingLng { get; set; }
-        public List<UserFindsViewModel> MyViewModels { get; set; } = new();
-        public List<UserFindsViewModel> AllViewModels { get; set; } = new();
-        public List<UserFindsViewModel> CurrentViewModels { get; set; } = new();
+        public List<UserFindsDataContainer> MyViewModels { get; set; } = new();
+        public List<UserFindsDataContainer> AllViewModels { get; set; } = new();
+        public List<UserFindsDataContainer> CurrentViewModels { get; set; } = new();
         public Dictionary<Guid, string> userNamesKvp { get; set; }
 
-        public MapService(UserStateService userStateService, IUserFindService userFindService)
+        public MapService(UserSessionService session, IUserFindService userFindService)
         {
-            _userStateService = userStateService;
-            _userFindService = userFindService;
+            this.session = session;
+            this.userFindService = userFindService;
         }
         private void NotifyStateChanged() => OnChange?.Invoke();
         private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading);        
-        public void UpdateViewModels(Guid userId, UserFindsViewModel viewModel)
+        public void UpdateViewModels(Guid userId, UserFindsDataContainer viewModel)
         {
-            var currentUserId = _userStateService.SessionUser.UserId;
+            var currentUserId = session.SessionUser.UserId;
 
             if (currentUserId == viewModel.userId)
             {               
@@ -57,7 +57,7 @@ namespace ForagerSite.Services
                 }
             }
         }
-        public UserFindsViewModel GetViewModel(Guid userId)
+        public UserFindsDataContainer GetViewModel(Guid userId)
         {
             return CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
         }
@@ -99,11 +99,11 @@ namespace ForagerSite.Services
         {
             NotifyLoadingChanged(true);
 
-            var userId = _userStateService.SessionUser.UserId;
-            var userName = _userStateService.SessionUser.Username;
+            var userId = session.SessionUser.UserId;
+            var userName = session.SessionUser.Username;
 
             var newUserFindViewModel =
-            await _userFindService.CreateFind(
+            await userFindService.CreateFind(
                 name,
                 speciesName,
                 speciesType,
@@ -146,15 +146,15 @@ namespace ForagerSite.Services
         List<string>? deletedFileUrls,
         string accessLevel)
         {            
-            var userId = _userStateService.SessionUser.UserId;
-            var userName = _userStateService.SessionUser.Username;
+            var userId = session.SessionUser.UserId;
+            var userName = session.SessionUser.Username;
 
             NotifyLoadingChanged(true);
 
             FindLocationDto location = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId).finds.FirstOrDefault(f => f.findId == upFindId).findLocation;
 
             var newUserFindViewModel =
-            await _userFindService.UpdateFind(
+            await userFindService.UpdateFind(
                 upFindId,
                 name,
                 speciesName,
@@ -192,11 +192,11 @@ namespace ForagerSite.Services
         {
             NotifyLoadingChanged(true);
 
-            var userId = _userStateService.SessionUser.UserId;
-            var userName = _userStateService.SessionUser.Username;
-            var deletedFindVm = new UserFindsViewModel();
+            var userId = session.SessionUser.UserId;
+            var userName = session.SessionUser.Username;
+            var deletedFindVm = new UserFindsDataContainer();
 
-            _userFindService.DeleteFind(delFindId, userId, userName);
+            userFindService.DeleteFind(delFindId, userId, userName);
 
             var currentViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
             var find = currentViewModel.finds.FirstOrDefault(f => f.findId == delFindId);
@@ -210,9 +210,9 @@ namespace ForagerSite.Services
 
         public async Task Vote(Guid vmId, Guid findOrCommentId, int voteValue, string voteType)
         {
-            var userId = _userStateService.SessionUser.UserId;
+            var userId = session.SessionUser.UserId;
             var currentVm = CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
-            var userVoteDto = await _userFindService.Vote(findOrCommentId, userId, voteType, voteValue);
+            var userVoteDto = await userFindService.Vote(findOrCommentId, userId, voteType, voteValue);
             var find = new FindDto();
 
             UserVoteDto? existingVote = null;

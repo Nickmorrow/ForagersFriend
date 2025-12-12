@@ -6,7 +6,7 @@
 @using Utilities
 @implements IDisposable
 
-@inject UserStateService userStateService
+@inject UserSessionService session
 @inject IMapService mapService
 @inject IJSRuntime JSRuntime
 @inject IUserService userService
@@ -139,7 +139,7 @@
                                                 <p><strong>Notes: </strong><span>@find.description</span></p>
                                             }
 
-                                            @if (vm.userId == userStateService.SessionUser.UserId)
+                                            @if (vm.userId == session.SessionUser.UserId)
                                             {
                                                 <p><strong>Who can see this? </strong>@find.accessibility</p>
                                             }
@@ -154,7 +154,7 @@
                                                   findOrCommentId="find.findId"
                                                   voteType="find" />
 
-                                            @if (find.findUserId == userStateService.SessionUser.UserId)
+                                            @if (find.findUserId == session.SessionUser.UserId)
                                             {
                                                 <div style="display: flex; gap: 10px;">
                                                     <button class="btn btn-secondary" @onclick="() =>
@@ -189,7 +189,7 @@
                                             <CommentThread @key="find.findId"
                                                            Find="find"
                                                            VmId="vm.userId"
-                                                           CurrentUserId="userStateService.SessionUser.UserId"
+                                                           CurrentUserId="session.SessionUser.UserId"
                                                            UserNames="mapService.userNamesKvp" />
                                         </div>
                                     </td>
@@ -216,7 +216,7 @@
     private FindEditForm.FindEditTemp? currentEditModel;
     private readonly Dictionary<Guid, bool> expandedRowsFinds = new();
 
-    [Parameter] public List<UserFindsViewModel> ViewModels { get; set; }
+    [Parameter] public List<UserFindsDataContainer> ViewModels { get; set; }
     [Parameter] public bool isLoading { get; set; }
     [Parameter] public bool hasLoaded { get; set; }
 
@@ -336,7 +336,7 @@
 
     private async Task ReInitializeMap()
     {
-        var userVm = await userService.GetUserViewModelById(userStateService.SessionUser.UserId);
+        var userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
         if (userVm == null) return;
 
         var json = JsonConvert.SerializeObject(

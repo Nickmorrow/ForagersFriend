@@ -6,7 +6,7 @@
 @inject IUserService userService
 @rendermode InteractiveServer
 @inject NavigationManager navigationManager
-@inject UserStateService userStateService
+@inject UserSessionService session
 
 <PageTitle>Login</PageTitle>
 
@@ -46,9 +46,9 @@
 
     private string _errorMessage;
 
-    public UserViewModel userViewModel = new UserViewModel();
+    public UserDataContainer userViewModel = new UserDataContainer();
 
-    private bool _UserAuthenticated(UserViewModel userViewModel)
+    private bool _UserAuthenticated(UserDataContainer userViewModel)
     {
         var authenticatedUser = userService.AuthenticateUser(userViewModel.userSecurity.UssUsername, userViewModel.userSecurity.UssPassword);
 
@@ -64,7 +64,7 @@
 
     private async Task _HandleValidSubmit(EditContext editContext)
     {
-        var newUser = (UserViewModel)editContext.Model;
+        var newUser = (UserDataContainer)editContext.Model;
         _userAuthenticated = _UserAuthenticated(newUser);
 
         if (_userAuthenticated)
@@ -72,7 +72,7 @@
             newUser.userSecurity.UssLastLoginDate = DateTime.Now;
             userService.UpdateUserSecurity(newUser.userSecurity);
 
-            await userStateService.SetUserState(true, newUser);
+            await session.SetUserState(true, newUser);
             navigationManager.NavigateTo("/");
 
         }

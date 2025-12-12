@@ -3,7 +3,7 @@
 @using ForagerSite.Services
 @using ForagerSite.Utilities
 @using ForagerSite.Components.Utility
-@inject UserStateService userStateService
+@inject UserSessionService session
 @inject IConfiguration config
 
 <div>
@@ -169,8 +169,8 @@
     {
         uploadErrors.Clear(); 
 
-        var userId = userStateService.SessionUser.UserId;
-        var userName = userStateService.SessionUser.Username;
+        var userId = session.SessionUser.UserId;
+        var userName = session.SessionUser.Username;
         findModel.UserId = userId;
 
         var uploadedUrls = await PhotoUploadHelper.UploadFindImages(selectedFiles, userName, config, uploadErrors);

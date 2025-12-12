@@ -7,7 +7,7 @@
 @using Utilities
 @rendermode InteractiveServer
 @inject IUserService userService
-@inject UserStateService userStateService
+@inject UserSessionService session
 @inject IUserFindService userFindService
 @inject NavigationManager navigationManager
 
@@ -46,7 +46,7 @@ else
                 </div>
             }
         </div>
-        <ProfileFindsList FindsViewModel="userFindsViewModel" />
+        <ProfileFindsList FindsViewModel="ufdc" />
         <div id="friends-container">
             <h3>Friends</h3>
             <table>
@@ -59,8 +59,8 @@ else
 
 @code {
 
-    private UserViewModel userVm { get; set; } = new();
-    private UserFindsViewModel userFindsViewModel { get; set; } = new();
+    private UserDataContainer userVm { get; set; } = new();
+    private UserFindsDataContainer ufdc { get; set; } = new();
     
 
     private bool edit;
@@ -88,15 +88,15 @@ else
     {
         if (!firstRender) return;
 
-        await userStateService.Load();
+        await session.Load();
 
-        if (!userStateService.IsAuthenticated || userStateService.SessionUser is null)
+        if (!session.IsAuthenticated || session.SessionUser is null)
         {
             navigationManager.NavigateTo("/Login");
             return;
         }
-        userVm = await userService.GetUserViewModelById(userStateService.SessionUser.UserId);
-        userFindsViewModel = await userFindService.GetUserFindsViewModel(userVm.user.UsrId);
+        userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
+        ufdc = await userFindService.GetUserFindsDC(userVm.user.UsrId);
 
         edit = false;
         _loaded = true;

@@ -1,8 +1,8 @@
 ﻿@rendermode InteractiveServer
-@inject UserStateService userStateService
+@inject UserSessionService session
 @inject NavigationManager Navigation
 
-@if (userStateService.IsAuthenticated)
+@if (session.IsAuthenticated)
 {
     <div class="nav-item px-3">
         <button class="nav-link btn btn-link" @onclick="HandleLogout">
@@ -15,7 +15,7 @@
 
     private void HandleLogout()
     {
-        userStateService.Logout();
+        session.Logout();
         Navigation.NavigateTo("/");
     }
 

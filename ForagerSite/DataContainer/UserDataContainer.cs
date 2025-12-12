@@ -5,12 +5,12 @@ using ForagerSite.DataContainer;
 
 namespace ForagerSite.DataContainer
 {
-    public class UserViewModel
+    public class UserDataContainer
     {
         public User user { get; set; }
         public UserSecurity userSecurity { get; set; }
 
-        public UserViewModel()
+        public UserDataContainer()
         {
             user = new User();
             userSecurity = new UserSecurity();

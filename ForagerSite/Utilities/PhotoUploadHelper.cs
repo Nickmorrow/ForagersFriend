@@ -57,7 +57,7 @@ namespace ForagerSite.Utilities
                 return (null, null);
             }
         }
-        public static async Task<string?> UploadProfilePic(List<string> errors, string userName, IBrowserFile? uploadedFile, IConfiguration config, IUserService userService, UserViewModel userVm)
+        public static async Task<string?> UploadProfilePic(List<string> errors, string userName, IBrowserFile? uploadedFile, IConfiguration config, IUserService userService, UserDataContainer userVm)
         {
             if (errors.Any())
             {
@@ -103,7 +103,7 @@ namespace ForagerSite.Utilities
                 return null;
             }
         }
-        public static async Task DeleteProfilePic(List<string> errors, string userName, IBrowserFile? uploadedFile, IConfiguration config, IUserService userService, UserViewModel userVm)
+        public static async Task DeleteProfilePic(List<string> errors, string userName, IBrowserFile? uploadedFile, IConfiguration config, IUserService userService, UserDataContainer userVm)
         {
             var file = uploadedFile; // Assume the file was saved during HandleFileChange
 
