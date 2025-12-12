@@ -1,5 +1,6 @@
-﻿@rendermode InteractiveServer
-@inject UserSessionService session
+﻿@using ForagerSite.Services.Interfaces
+@rendermode InteractiveServer
+@inject IUserSessionService session
 @inject NavigationManager Navigation
 
 @if (session.IsAuthenticated)

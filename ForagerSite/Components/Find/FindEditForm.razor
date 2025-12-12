@@ -1,10 +1,11 @@
 ﻿@using Microsoft.AspNetCore.Components.Forms
 @using System.ComponentModel.DataAnnotations
 @using ForagerSite.Services
+@using ForagerSite.Services.Interfaces
 @using ForagerSite.Utilities
 @using ForagerSite.Components.Utility
 @using DataAccess.Models
-@inject UserSessionService session
+@inject IUserSessionService session
 @inject IConfiguration config
 
 <EditForm Model="editModel" OnValidSubmit="HandleValidSubmit">

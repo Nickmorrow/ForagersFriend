@@ -7,9 +7,15 @@ namespace ForagerSite.Services.Interfaces
 {
     public interface IUserSessionService
     {
+        SessionUserState? SessionUser { get; }
+        bool IsAuthenticated { get; }
+
         Task Load();
-        Task SetUserState(bool isAuthenticated, UserDataContainer? vm);
         Task Logout();
+        Task SetUserState(bool isAuthenticated, UserDataContainer? vm);
+
+        event Action? OnChange;
+        
 
     }
 }

@@ -1,8 +1,9 @@
 ﻿@page "/"
 @using ForagerSite.Services
+@using ForagerSite.Services.Interfaces
 @rendermode InteractiveServer
 @inject NavigationManager navigationManager
-@inject UserSessionService session
+@inject IUserSessionService session
 
 @if (!_loaded)
 {

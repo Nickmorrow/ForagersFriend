@@ -18,7 +18,7 @@ namespace ForagerSite.Services
             "UserOnly", "AllUsers", "FriendUsers"
         };
         
-        private readonly UserSessionService session;
+        private readonly IUserSessionService session;
         private readonly IUserFindService userFindService;
 
         public event Action OnChange;
@@ -33,7 +33,7 @@ namespace ForagerSite.Services
         public List<UserFindsDataContainer> CurrentViewModels { get; set; } = new();
         public Dictionary<Guid, string> userNamesKvp { get; set; }
 
-        public MapService(UserSessionService session, IUserFindService userFindService)
+        public MapService(IUserSessionService session, IUserFindService userFindService)
         {
             this.session = session;
             this.userFindService = userFindService;

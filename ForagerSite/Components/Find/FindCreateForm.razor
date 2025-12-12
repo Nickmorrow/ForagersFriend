@@ -1,9 +1,10 @@
 ﻿@using Microsoft.AspNetCore.Components.Forms
 @using System.ComponentModel.DataAnnotations
 @using ForagerSite.Services
+@using ForagerSite.Services.Interfaces
 @using ForagerSite.Utilities
 @using ForagerSite.Components.Utility
-@inject UserSessionService session
+@inject IUserSessionService session
 @inject IConfiguration config
 
 <div>

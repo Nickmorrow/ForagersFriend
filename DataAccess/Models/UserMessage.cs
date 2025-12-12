@@ -11,7 +11,9 @@ namespace DataAccess.Models
         [ForeignKey("UsmUsrId")]
         public Guid UsmUsrId { get; set; }      
         public User User { get; set; }
+        [Required]
         public string UsmSubject { get; set; }
+        [Required]
         public string UsmMessage { get; set; }
         public DateTime UsmSendDate { get; set; }
         public DateTime? UsmReceivedDate { get; set; }
