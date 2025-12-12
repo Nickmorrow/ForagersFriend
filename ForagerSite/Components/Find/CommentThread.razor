@@ -172,7 +172,7 @@
 </div>
 
 @code {
-    [Parameter] public FindDto Find { get; set; }
+    [Parameter] public FindDC Find { get; set; }
     [Parameter] public Guid VmId { get; set; }
     [Parameter] public Guid CurrentUserId { get; set; }
     [Parameter] public Dictionary<Guid, string> UserNames { get; set; }
@@ -235,7 +235,7 @@
 
         var userId = session.SessionUser.UserId;
 
-        FindsCommentXrefDto xref;
+        FindsCommentXrefDC xref;
 
         xref = await userFindService.AddComment(text, Find.findId, userId);
 
@@ -266,7 +266,7 @@
 
         var userId = session.SessionUser.UserId;
 
-        FindsCommentXrefDto xref;
+        FindsCommentXrefDC xref;
         xref = await userFindService.AddComment(text, Find.findId, userId, parentCommentId);
 
         var newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == VmId);

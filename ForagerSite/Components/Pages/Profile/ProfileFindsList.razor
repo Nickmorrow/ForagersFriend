@@ -38,7 +38,7 @@
                                     <div>
                                         <p><strong>Image Gallery:</strong></p>
                                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                            @foreach (var image in find.findImages ?? Enumerable.Empty<ImageDto>())
+                                            @foreach (var image in find.findImages ?? Enumerable.Empty<ImageDC>())
                                             {
                                                 <img src="@image.imageData" style="max-width: 100px;" />
                                             }
@@ -100,7 +100,7 @@
     [Parameter] public UserFindsDataContainer FindsViewModel { get; set; } = new();
 
     private bool isExpanded;
-    // Track expansion by findId instead of FindDto reference
+    // Track expansion by findId instead of FindDC reference
     private readonly Dictionary<Guid, bool> expandedRows = new();
 
     private int FindsCount =>

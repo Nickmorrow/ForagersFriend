@@ -14,14 +14,14 @@ namespace ForagerSite.DataContainer
         public static readonly string PlaceholderImageUrl = $"UserProfileImages/Shared/PlaceHolder.jpeg";
         public string profilePic { get; set; }
         public string userName { get; set; }
-        public List<FindDto> finds { get; set; }
-        //public List<UserVoteDto> findVotes { get; set; }
+        public List<FindDC> finds { get; set; }
+        //public List<UserVoteDC> findVotes { get; set; }
 
         public UserFindsDataContainer()
         {
             userId = Guid.Empty;
             userName = string.Empty;
-            finds = new List<FindDto>();
+            finds = new List<FindDC>();
             //commentUserNames = new();
         }
 
@@ -34,7 +34,7 @@ namespace ForagerSite.DataContainer
         }
 
     }
-    public class FindDto
+    public class FindDC
     {
         public Guid findId { get; set; }
         public Guid findUserId { get; set; }
@@ -50,13 +50,13 @@ namespace ForagerSite.DataContainer
         public string description { get; set; }
         public int? findScore { get; set; } = 0;
         public string accessibility { get; set; } 
-        public FindLocationDto findLocation { get; set; } = new();
-        public List<ImageDto> findImages { get; set; } = new();
-        public List<FindsCommentXrefDto> findsCommentXrefs { get; set; } = new();
-        public List<UserVoteDto> findVotes { get; set; } = new();
+        public FindLocationDC findLocation { get; set; } = new();
+        public List<ImageDC> findImages { get; set; } = new();
+        public List<FindsCommentXrefDC> findsCommentXrefs { get; set; } = new();
+        public List<UserVoteDC> findVotes { get; set; } = new();
 
-        public FindDto() { }    
-        public FindDto(UserFind userFind)
+        public FindDC() { }    
+        public FindDC(UserFind userFind)
         {
             findId = userFind.UsfId;
             findUserId = userFind.UsfUsrId;
@@ -76,15 +76,15 @@ namespace ForagerSite.DataContainer
 
     }
 
-    public class FindLocationDto
+    public class FindLocationDC
     {
         public Guid locId { get; set; }
         public Guid locFindId { get; set; }
-        //public FindDto UserFind { get; set; }
+        //public FindDC UserFind { get; set; }
         public double latitude { get; set; }
         public double longitude { get; set; }
-        public FindLocationDto() { }
-        public FindLocationDto(UserFindLocation location)
+        public FindLocationDC() { }
+        public FindLocationDC(UserFindLocation location)
         {
             locId = location.UslId;
             locFindId = location.UslUsfId;
@@ -92,15 +92,15 @@ namespace ForagerSite.DataContainer
             longitude = location.UslLongitude;
         }
     }
-    public class ImageDto
+    public class ImageDC
     {
         public Guid imageId { get; set; }
         public Guid? imgUserId { get; set; }
         public Guid? imgFindId { get; set; }
         public string imageData { get; set; }
-        //public FindDto UserFind { get; set; }
-        public ImageDto(){ }
-        public ImageDto(UserImage userImage)
+        //public FindDC UserFind { get; set; }
+        public ImageDC(){ }
+        public ImageDC(UserImage userImage)
         {
             imageId = userImage.UsiId;
             imgUserId = userImage.UsiUsrId;
@@ -110,7 +110,7 @@ namespace ForagerSite.DataContainer
         }
     }
 
-    public class FindCommentDto
+    public class FindCommentDC
     {
         public Guid comId { get; set; }
         public string comment { get; set; }
@@ -118,50 +118,50 @@ namespace ForagerSite.DataContainer
         public DateTime commentDate { get; set; }
         public Guid? parentCommentId { get; set; }
         //public UserFindsComment? ParentComment { get; set; }
-        public List<UserVoteDto> commentVotes { get; set; } = new();
-        public FindCommentDto() { }
-        public FindCommentDto(UserFindsComment comment)
+        public List<UserVoteDC> commentVotes { get; set; } = new();
+        public FindCommentDC() { }
+        public FindCommentDC(UserFindsComment comment)
         {
             comId = comment.UscId;
             this.comment = comment.UscComment;
             commentScore = comment.UscCommentScore;
             commentDate = comment.UscCommentDate;
             parentCommentId = comment.UscParentCommentId;
-            commentVotes = comment.UserVotes?.Select(v => new UserVoteDto(v)).ToList() ?? new List<UserVoteDto>();
+            commentVotes = comment.UserVotes?.Select(v => new UserVoteDC(v)).ToList() ?? new List<UserVoteDC>();
         }
 
     }
 
-    public class FindsCommentXrefDto
+    public class FindsCommentXrefDC
     {
         public Guid comXId { get; set; }
         public Guid comxUserId { get; set; }
         public Guid comxComId { get; set; }
-        public FindCommentDto findsComment { get; set; } = new(); 
+        public FindCommentDC findsComment { get; set; } = new(); 
         public Guid comxFindId { get; set; }
-        //public FindDto UserFind { get; set; }
+        //public FindDC UserFind { get; set; }
         public string CommentUserProfilePic { get; set; } 
 
-        public FindsCommentXrefDto() { }
-        public FindsCommentXrefDto(UserFindsCommentXref xref)
+        public FindsCommentXrefDC() { }
+        public FindsCommentXrefDC(UserFindsCommentXref xref)
         {
             comXId = xref.UcxId;
             comxUserId = xref.UcxUsrId;
             comxComId = xref.UcxUscId;
             comxFindId = xref.UcxUsfId;
-            findsComment = new FindCommentDto(xref.UserFindsComment);
+            findsComment = new FindCommentDC(xref.UserFindsComment);
         }
     }
 
-    public class UserVoteDto
+    public class UserVoteDC
     {
         public Guid voteId { get; set; }
         public Guid voteUserId { get; set; }
         public Guid? voteFindId { get; set; }
         public Guid? voteCommentId { get; set; }
         public int voteValue { get; set; } = 0;
-        public UserVoteDto() { }
-        public UserVoteDto(UserVote vote)
+        public UserVoteDC() { }
+        public UserVoteDC(UserVote vote)
         {
             voteId = vote.UsvId;
             voteUserId = vote.UsvUsrId;

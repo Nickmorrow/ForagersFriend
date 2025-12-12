@@ -21,8 +21,8 @@
 </div>
 
 @code {
-    [Parameter] public FindDto find { get; set; }
-    [Parameter] public FindCommentDto comment { get; set; }
+    [Parameter] public FindDC find { get; set; }
+    [Parameter] public FindCommentDC comment { get; set; }
     [Parameter] public Guid vmUserId { get; set; }
     [Parameter] public Guid findOrCommentId { get; set; }
     [Parameter] public string voteType { get; set; }  // "find" or "comment"
@@ -40,7 +40,7 @@
     }
 
     // ---- Find-level vote counts ----
-    private int GetFindUpCount(FindDto find = null, FindCommentDto commentDto = null)
+    private int GetFindUpCount(FindDC find = null, FindCommentDC commentDto = null)
     {
         int voteCount = 0;
 
@@ -55,7 +55,7 @@
         return voteCount;
     }
 
-    private int GetFindDownCount(FindDto find = null, FindCommentDto commentDto = null)
+    private int GetFindDownCount(FindDC find = null, FindCommentDC commentDto = null)
     {
         int voteCount = 0;
 
@@ -71,11 +71,11 @@
     }
 
     // ---- Current user's vote for this find ----
-    private int GetCurrentUserVote(FindDto find = null, FindCommentDto commentDto = null)
+    private int GetCurrentUserVote(FindDC find = null, FindCommentDC commentDto = null)
     {
         var userId = session.SessionUser.UserId;
         
-        var myVote = new UserVoteDto();
+        var myVote = new UserVoteDC();
 
         if (commentDto != null)
         {
@@ -90,7 +90,7 @@
     }
 
     // ---- CSS classes for icon coloring ----
-    private string GetFindUpClass(FindDto find = null, FindCommentDto commentDto = null)
+    private string GetFindUpClass(FindDC find = null, FindCommentDC commentDto = null)
     {
         string voteClass = string.Empty;
 
@@ -105,7 +105,7 @@
         return voteClass;
     }
 
-    private string GetFindDownClass(FindDto find = null, FindCommentDto commentDto = null)
+    private string GetFindDownClass(FindDC find = null, FindCommentDC commentDto = null)
     {
         string voteClass = string.Empty;
 

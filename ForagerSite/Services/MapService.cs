@@ -151,7 +151,7 @@ namespace ForagerSite.Services
 
             NotifyLoadingChanged(true);
 
-            FindLocationDto location = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId).finds.FirstOrDefault(f => f.findId == upFindId).findLocation;
+            FindLocationDC location = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId).finds.FirstOrDefault(f => f.findId == upFindId).findLocation;
 
             var newUserFindViewModel =
             await userFindService.UpdateFind(
@@ -213,9 +213,9 @@ namespace ForagerSite.Services
             var userId = session.SessionUser.UserId;
             var currentVm = CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
             var userVoteDto = await userFindService.Vote(findOrCommentId, userId, voteType, voteValue);
-            var find = new FindDto();
+            var find = new FindDC();
 
-            UserVoteDto? existingVote = null;
+            UserVoteDC? existingVote = null;
 
             if (voteType == "find")
             {

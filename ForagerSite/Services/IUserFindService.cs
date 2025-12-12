@@ -18,7 +18,7 @@ namespace ForagerSite.Services
 
         Task<UserFind> GetFindById(Guid findId);
 
-        Task<FindsCommentXrefDto> AddComment(
+        Task<FindsCommentXrefDC> AddComment(
             string comment,
             Guid findId,
             Guid userId,
@@ -64,7 +64,7 @@ namespace ForagerSite.Services
 
         Task DeleteFind(Guid findId, Guid userId, string userName);
 
-        Task<UserVoteDto> Vote(
+        Task<UserVoteDC> Vote(
             Guid findOrCommentId,
             Guid userId,
             string voteType,

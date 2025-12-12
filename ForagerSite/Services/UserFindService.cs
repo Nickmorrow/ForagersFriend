@@ -94,7 +94,7 @@ namespace ForagerSite.Services
                 userId = user.UsrId,
                 profilePic = userImage?.UsiImageData ?? UserFindsDataContainer.PlaceholderImageUrl,
                 userName = user.UserSecurity.UssUsername,
-                finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
+                finds = userFinds.Select(uf => new FindDC(uf)).ToList(),
             };
 
             foreach (var find in userViewModel.finds)
@@ -103,22 +103,22 @@ namespace ForagerSite.Services
                     .Where(uf => uf.UsfId == find.findId)
                     .Select(uf => uf.UserFindLocation)
                     .Where(ufl => ufl != null)
-                    .Select(ufl => new FindLocationDto(ufl))
+                    .Select(ufl => new FindLocationDC(ufl))
                     .FirstOrDefault();
                 find.findImages = userFinds
                     .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserImages)
-                    .Select(ui => new ImageDto(ui))
+                    .Select(ui => new ImageDC(ui))
                     .ToList();
                 find.findsCommentXrefs = userFinds
                     .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserFindsCommentXrefs)
-                    .Select(xref => new FindsCommentXrefDto(xref))
+                    .Select(xref => new FindsCommentXrefDC(xref))
                     .ToList();
                 find.findVotes = userFinds
                     .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserVotes)
-                    .Select(uv => new UserVoteDto(uv))
+                    .Select(uv => new UserVoteDC(uv))
                     .ToList();
 
                 foreach (var xref in find.findsCommentXrefs)
@@ -168,7 +168,7 @@ namespace ForagerSite.Services
                 userId = user.UsrId,
                 profilePic = userImage?.UsiImageData ?? UserFindsDataContainer.PlaceholderImageUrl,
                 userName = user.UserSecurity.UssUsername,
-                finds = userFinds.Select(uf => new FindDto(uf)).ToList(),
+                finds = userFinds.Select(uf => new FindDC(uf)).ToList(),
             };
 
             foreach (var find in userViewModel.finds)
@@ -177,22 +177,22 @@ namespace ForagerSite.Services
                     .Where(uf => uf.UsfId == find.findId)
                     .Select(uf => uf.UserFindLocation)
                     .Where(ufl => ufl != null)
-                    .Select(ufl => new FindLocationDto(ufl))
+                    .Select(ufl => new FindLocationDC(ufl))
                     .FirstOrDefault();
                 find.findImages = userFinds
                     .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserImages)
-                    .Select(ui => new ImageDto(ui))
+                    .Select(ui => new ImageDC(ui))
                     .ToList();
                 find.findsCommentXrefs = userFinds
                     .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserFindsCommentXrefs)
-                    .Select(xref => new FindsCommentXrefDto(xref))
+                    .Select(xref => new FindsCommentXrefDC(xref))
                     .ToList();
                 find.findVotes = userFinds
                     .Where(uf => uf.UsfId == find.findId)
                     .SelectMany(uf => uf.UserVotes)
-                    .Select(uv => new UserVoteDto(uv))
+                    .Select(uv => new UserVoteDC(uv))
                     .ToList();
 
                 foreach (var xref in find.findsCommentXrefs)
@@ -247,7 +247,7 @@ namespace ForagerSite.Services
                     userId = user.UsrId,
                     profilePic = userImage?.UsiImageData ?? UserFindsDataContainer.PlaceholderImageUrl,
                     userName = user.UserSecurity.UssUsername,
-                    finds = userFindsForUser.Select(uf => new FindDto(uf)).ToList(),
+                    finds = userFindsForUser.Select(uf => new FindDC(uf)).ToList(),
                 };
 
                 foreach (var find in userViewModel.finds)
@@ -256,22 +256,22 @@ namespace ForagerSite.Services
                         .Where(uf => uf.UsfId == find.findId)
                         .Select(uf => uf.UserFindLocation)
                         .Where(ufl => ufl != null)
-                        .Select(ufl => new FindLocationDto(ufl))
+                        .Select(ufl => new FindLocationDC(ufl))
                         .FirstOrDefault();
                     find.findImages = userFinds
                         .Where(uf => uf.UsfId == find.findId)
                         .SelectMany(uf => uf.UserImages)
-                        .Select(ui => new ImageDto(ui))
+                        .Select(ui => new ImageDC(ui))
                         .ToList();
                     find.findsCommentXrefs = userFinds
                         .Where(uf => uf.UsfId == find.findId)
                         .SelectMany(uf => uf.UserFindsCommentXrefs)
-                        .Select(xref => new FindsCommentXrefDto(xref))
+                        .Select(xref => new FindsCommentXrefDC(xref))
                         .ToList();
                     find.findVotes = userFinds
                         .Where(uf => uf.UsfId == find.findId)
                         .SelectMany(uf => uf.UserVotes)
-                        .Select(uv => new UserVoteDto(uv))
+                        .Select(uv => new UserVoteDC(uv))
                         .ToList();
 
                     foreach (var xref in find.findsCommentXrefs)
@@ -317,7 +317,7 @@ namespace ForagerSite.Services
             //return await context.UserFinds.FirstOrDefaultAsync(uf => uf.findId == findId);
         }
 
-        public async Task<FindsCommentXrefDto> AddComment(string comment, Guid findId, Guid userId, Guid? comId = null)
+        public async Task<FindsCommentXrefDC> AddComment(string comment, Guid findId, Guid userId, Guid? comId = null)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -339,8 +339,8 @@ namespace ForagerSite.Services
             context.UserFindsCommentXrefs.Add(userCommentXref);
             await context.SaveChangesAsync();
 
-            var commentDto = new FindCommentDto(userComment);
-            var xrefDto = new FindsCommentXrefDto
+            var commentDto = new FindCommentDC(userComment);
+            var xrefDto = new FindsCommentXrefDC
             {
                 comXId = userCommentXref.UcxId,
                 comxUserId = userCommentXref.UcxUsrId,
@@ -433,7 +433,7 @@ namespace ForagerSite.Services
                 UsfFindDate = DateTime.Now,
                 UsfAccessibility = AccessLevel
             };
-            mapViewModel.finds.Add(new FindDto(userFind));
+            mapViewModel.finds.Add(new FindDC(userFind));
 
             context.UserFinds.Add(userFind);
             await context.SaveChangesAsync();
@@ -444,7 +444,7 @@ namespace ForagerSite.Services
                 UslLongitude = lng,
                 UslUsfId = userFind.UsfId
             };
-            mapViewModel.finds[0].findLocation = new FindLocationDto(userFindLocation);
+            mapViewModel.finds[0].findLocation = new FindLocationDC(userFindLocation);
 
             context.UserFindLocations.Add(userFindLocation);
             await context.SaveChangesAsync();
@@ -457,7 +457,7 @@ namespace ForagerSite.Services
                     UsiUsfId = userFind.UsfId,
                     UsiImageData = image
                 };
-                mapViewModel.finds[0].findImages.Add(new ImageDto(userImage));
+                mapViewModel.finds[0].findImages.Add(new ImageDC(userImage));
 
                 context.UserImages.Add(userImage);
                 await context.SaveChangesAsync();
@@ -510,7 +510,7 @@ namespace ForagerSite.Services
             userFind.UsfAccessibility = accessLevel;
 
             context.UserFinds.Update(userFind);
-            mapViewModel.finds.Add(new FindDto(userFind));
+            mapViewModel.finds.Add(new FindDC(userFind));
 
             var userFindLocation = await context.UserFindLocations.FirstOrDefaultAsync(ufl => ufl.UslUsfId == findId);
             if (userFindLocation == null)
@@ -522,12 +522,12 @@ namespace ForagerSite.Services
             userFindLocation.UslLongitude = lng;
 
             context.UserFindLocations.Update(userFindLocation);
-            mapViewModel.finds[0].findLocation = new FindLocationDto(userFindLocation);
+            mapViewModel.finds[0].findLocation = new FindLocationDC(userFindLocation);
 
             // Manage image URLs
             var existingImages = await context.UserImages.Where(ui => ui.UsiUsfId == findId).ToListAsync();
             var existingImageUrls = existingImages.Select(ui => ui.UsiImageData).ToList();
-            var existingImageDtos = existingImages.Select(ui => new ImageDto(ui)).ToList();
+            var existingImageDtos = existingImages.Select(ui => new ImageDC(ui)).ToList();
             mapViewModel.finds[0].findImages.AddRange(existingImageDtos);
 
             // Delete old image URLs from the database
@@ -552,7 +552,7 @@ namespace ForagerSite.Services
                         UsiImageData = urlToAdd
                     };
                     context.UserImages.Add(addedImage);                   
-                    mapViewModel.finds[0].findImages.Add(new ImageDto(addedImage));                   
+                    mapViewModel.finds[0].findImages.Add(new ImageDC(addedImage));                   
                 }
             }           
             await context.SaveChangesAsync();
@@ -603,7 +603,7 @@ namespace ForagerSite.Services
             await RecalculateUserExpScore(userId);
         } 
 
-        public async Task<UserVoteDto> Vote(Guid findOrCommentId, Guid userId, string voteType, int voteValue)
+        public async Task<UserVoteDC> Vote(Guid findOrCommentId, Guid userId, string voteType, int voteValue)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -651,11 +651,11 @@ namespace ForagerSite.Services
             if (existingVote != null && existingVote.UsvVoteValue == voteValue)
             {
                 await context.SaveChangesAsync();
-                return new UserVoteDto();
+                return new UserVoteDC();
             }
 
             context.UserVotes.Add(userVote);
-            var userVoteDto = new UserVoteDto(userVote);
+            var userVoteDto = new UserVoteDC(userVote);
 
             await context.SaveChangesAsync();
             await RecalculateUserExpScore(userId);

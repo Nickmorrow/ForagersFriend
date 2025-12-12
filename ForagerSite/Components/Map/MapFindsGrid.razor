@@ -388,7 +388,7 @@
     }
 
 
-    private void ToggleRowExpansion(FindDto find)
+    private void ToggleRowExpansion(FindDC find)
     {
         var id = find.findId;
 
@@ -404,14 +404,14 @@
         }
     }
 
-    private bool IsRowExpanded(FindDto find)
+    private bool IsRowExpanded(FindDC find)
     {
         return expandedRowsFinds.TryGetValue(find.findId, out var expanded) && expanded;
     }
 
     private string GetFindRowId(Guid findId) => $"find-row-{findId}";
 
-    private string GetRowClass(FindDto item)
+    private string GetRowClass(FindDC item)
     {
         return IsRowExpanded(item) ? "expanded" : string.Empty;
     }
