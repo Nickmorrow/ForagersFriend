@@ -22,7 +22,7 @@
             <div id="profile-details-container">
                 <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
                 <p><strong>Name:</strong> @userVm.user.UsrName</p>
-                <p><strong>Rank:</strong> @userVm.user.UsrExpScore</p>
+                <p><strong>Rank:</strong> @GetUserRank(userVm.user.UsrExpScore)</p>
                 <p><strong>Joined:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
                 <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
                 <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
@@ -52,8 +52,26 @@
 
     private UserViewModel userVm { get; set; } = new();
     private UserFindsViewModel userFindsViewModel { get; set; } = new();
+    
 
     private bool edit;
+
+    private static string GetUserRank(int? expScore)
+    {
+        return expScore switch
+        {
+            var x when x < 50 => "Sapling",
+            var x when x < 150 => "Squirrel",
+            var x when x < 400 => "Raccoon",
+            var x when x < 800 => "Fox",
+            var x when x < 1500 => "Hawk",
+            var x when x < 3000 => "Owl",
+            var x when x < 6000 => "Ranger",
+            var x when x < 10000 => "Druid",
+            _ => "Forest Spirit"
+        };
+    }
+
 
     protected override async Task OnInitializedAsync()
     {

@@ -21,6 +21,30 @@ namespace ForagerSite.Services
             _dbContextFactory = dbContextFactory;
             _config = config;
         }
+        public async Task RecalculateUserExpScore(Guid userId)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+
+            var finds = await context.UserFinds
+                .Where(f => f.UsfUsrId == userId)
+                .ToListAsync();
+
+            if (!finds.Any())
+                return;
+
+            int sumAccuracy = finds.Sum(f => f.UsfAccuracyScore ?? 0);
+            int totalFinds = finds.Count;
+
+            int expScore = sumAccuracy * totalFinds;
+
+            var user = await context.Users.FirstOrDefaultAsync(u => u.UsrId == userId);
+            if (user != null)
+            {
+                user.UsrExpScore = expScore;
+                context.Users.Update(user);
+                await context.SaveChangesAsync();
+            }
+        }
 
         public async Task<Dictionary<Guid, string>> GetCommentUserNames()
         {
@@ -437,6 +461,8 @@ namespace ForagerSite.Services
                 context.UserImages.Add(userImage);
                 await context.SaveChangesAsync();
             }
+            await RecalculateUserExpScore(userId);
+
             mapViewModel.finds[0].findId = userFind.UsfId;
             return mapViewModel;
         }
@@ -529,6 +555,7 @@ namespace ForagerSite.Services
                 }
             }           
             await context.SaveChangesAsync();
+            await RecalculateUserExpScore(userId);
             mapViewModel.finds[0].findId = findId;
             return mapViewModel;
         }
@@ -572,6 +599,7 @@ namespace ForagerSite.Services
                 context.UserFinds.Remove(userFind);               
             }
             await context.SaveChangesAsync();
+            await RecalculateUserExpScore(userId);
         } 
 
         public async Task<UserVoteDto> Vote(Guid findOrCommentId, Guid userId, string voteType, int voteValue)
@@ -629,6 +657,7 @@ namespace ForagerSite.Services
             var userVoteDto = new UserVoteDto(userVote);
 
             await context.SaveChangesAsync();
+            await RecalculateUserExpScore(userId);
             return userVoteDto;
         }
     }

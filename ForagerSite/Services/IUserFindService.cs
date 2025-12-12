@@ -4,6 +4,7 @@ namespace ForagerSite.Services
 {
     public interface IUserFindService
     {
+        Task RecalculateUserExpScore(Guid userId);
         Task<Dictionary<Guid, string>> GetCommentUserNames();
 
         Task<UserFindsViewModel> GetUserFindsViewModel(Guid userId);

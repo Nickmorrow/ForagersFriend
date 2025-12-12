@@ -43,8 +43,7 @@ namespace ForagerSite.Services
             {
                 return await context.UserSecurities.AnyAsync(us => us.UssUsername == username);
             }
-        }
-        
+        }      
         public async Task<bool> EmailExists(string email, User user = null)
         {
             using (var context = _dbContextFactory.CreateDbContext())
@@ -58,8 +57,7 @@ namespace ForagerSite.Services
 
                 return await query.AnyAsync(u => u.UsrEmail == email);
             }
-        }       
-        
+        }           
         public void UpdateUserSecurity(UserSecurity userSecurity)
         {
             using (var context = _dbContextFactory.CreateDbContext())
