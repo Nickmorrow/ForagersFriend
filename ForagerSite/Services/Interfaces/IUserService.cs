@@ -1,6 +1,9 @@
 ﻿using DataAccess.Models;
+using ForagerSite;
 using ForagerSite.DataContainer;
-namespace ForagerSite.Services
+using ForagerSite.Services;
+using ForagerSite.Services.Interfaces;
+namespace ForagerSite.Services.Interfaces
 {
     public interface IUserService
     {

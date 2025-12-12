@@ -1,6 +1,9 @@
-﻿using ForagerSite.DataContainer;
+﻿using ForagerSite;
+using ForagerSite.DataContainer;
+using ForagerSite.Services;
+using ForagerSite.Services.Interfaces;
 
-namespace ForagerSite.Services
+namespace ForagerSite.Services.Interfaces
 {
     public interface IUserSessionService
     {

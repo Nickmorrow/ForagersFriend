@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Newtonsoft.Json;
 using ForagerSite.Services;
+using ForagerSite.Services.Interfaces;
 
 public class UserSessionService : IUserSessionService
 {

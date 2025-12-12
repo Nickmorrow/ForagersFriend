@@ -7,6 +7,7 @@ using Microsoft.JSInterop;
 using System;
 using static System.Net.Mime.MediaTypeNames;
 using ForagerSite.DataContainer;
+using ForagerSite.Services.Interfaces;
 
 
 namespace ForagerSite.Services

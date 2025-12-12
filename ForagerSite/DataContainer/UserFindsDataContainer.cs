@@ -15,22 +15,19 @@ namespace ForagerSite.DataContainer
         public string profilePic { get; set; }
         public string userName { get; set; }
         public List<FindDC> finds { get; set; }
-        //public List<UserVoteDC> findVotes { get; set; }
 
         public UserFindsDataContainer()
         {
             userId = Guid.Empty;
             userName = string.Empty;
             finds = new List<FindDC>();
-            //commentUserNames = new();
         }
 
         public bool IsEmpty()
         {
             return userId == Guid.Empty &&
                    !string.IsNullOrEmpty(userName) &&
-                   !finds.Any();
-                   
+                   !finds.Any();        
         }
 
     }
@@ -98,7 +95,6 @@ namespace ForagerSite.DataContainer
         public Guid? imgUserId { get; set; }
         public Guid? imgFindId { get; set; }
         public string imageData { get; set; }
-        //public FindDC UserFind { get; set; }
         public ImageDC(){ }
         public ImageDC(UserImage userImage)
         {
@@ -117,7 +113,6 @@ namespace ForagerSite.DataContainer
         public int? commentScore { get; set; } = 0;
         public DateTime commentDate { get; set; }
         public Guid? parentCommentId { get; set; }
-        //public UserFindsComment? ParentComment { get; set; }
         public List<UserVoteDC> commentVotes { get; set; } = new();
         public FindCommentDC() { }
         public FindCommentDC(UserFindsComment comment)
@@ -139,7 +134,6 @@ namespace ForagerSite.DataContainer
         public Guid comxComId { get; set; }
         public FindCommentDC findsComment { get; set; } = new(); 
         public Guid comxFindId { get; set; }
-        //public FindDC UserFind { get; set; }
         public string CommentUserProfilePic { get; set; } 
 
         public FindsCommentXrefDC() { }
