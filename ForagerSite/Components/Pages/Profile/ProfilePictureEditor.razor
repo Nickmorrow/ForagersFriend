@@ -1,79 +1,98 @@
 ﻿@using ForagerSite.Services
 @using DataAccess.Models
+@using ForagerSite.DataContainer
 @using Utilities
 @namespace ForagerSite.Components.Profile
 @inject IUserService userService
 @inject UserStateService userStateService
 @inject IConfiguration config
 
-<div id="profile-pic-container">
-    @if (!editProfilePic)
-    {
-        <div>
-            <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px;" />
-        </div>
-        <p style="cursor: pointer;">
-            <a @onclick="EditProfilePic">Edit profile picture</a>
-        </p>
-    }
-    else
-    {
-        <div>
-            @if (!string.IsNullOrEmpty(previewUrl))
-            {
-                <div>
-                    <img src="@previewUrl" alt="Preview" style="max-width: 400px; margin-top: 10px;" />
-                </div>
-            }
-
-            <label for="profilePicture">Profile Picture:</label>
-            <InputFile type="file"
-                       id="profilePicture"
-                       OnChange="@(async e => await HandleFileChange(e))" />
-
-            @if (errors.Any())
-            {
-                <ul>
-                    @foreach (var error in errors)
-                    {
-                        <li><p style="color: red;">@error</p></li>
-                    }
-                </ul>
-            }
-
+@if (!_loaded)
+{
+    <p>Loading profile...</p>
+}
+else
+{
+    <div id="profile-pic-container">
+        @if (!editProfilePic)
+        {
             <div>
-                <p style="cursor: pointer;"><a @onclick="SaveProfilePic">Save Changes</a></p>
-                <p style="cursor: pointer;"><a @onclick="DeleteProfilePic">Delete</a></p>
-                <p style="cursor: pointer;"><a @onclick="CancelProfilePic">Cancel</a></p>
+                <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px;" />
             </div>
-        </div>
-    }
-</div>
+            <p style="cursor: pointer;">
+                <a @onclick="EditProfilePic">Edit profile picture</a>
+            </p>
+        }
+        else
+        {
+            <div>
+                @if (!string.IsNullOrEmpty(previewUrl))
+                {
+                    <div>
+                        <img src="@previewUrl" alt="Preview" style="max-width: 400px; margin-top: 10px;" />
+                    </div>
+                }
+
+                <label for="profilePicture">Profile Picture:</label>
+                <InputFile type="file"
+                           id="profilePicture"
+                           OnChange="@(async e => await HandleFileChange(e))" />
+
+                @if (errors.Any())
+                {
+                    <ul>
+                        @foreach (var error in errors)
+                        {
+                            <li><p style="color: red;">@error</p></li>
+                        }
+                    </ul>
+                }
+
+                <div>
+                    <p style="cursor: pointer;"><a @onclick="SaveProfilePic">Save Changes</a></p>
+                    <p style="cursor: pointer;"><a @onclick="DeleteProfilePic">Delete</a></p>
+                    <p style="cursor: pointer;"><a @onclick="CancelProfilePic">Cancel</a></p>
+                </div>
+            </div>
+        }
+    </div>
+}
+
 
 @code {
-    private UserViewModel userVm = new();
+    [Parameter] public Guid UserId { get; set; }
 
+    private UserViewModel userVm = new();
     private bool editProfilePic;
     private string profileImageUrl;
     private string previewUrl;
     private IBrowserFile? uploadedFile;
     private readonly List<string> errors = new();
+    private bool _loaded;
 
     private static readonly string PlaceholderImageUrl = "UserProfileImages/Shared/PlaceHolder.jpeg";
 
-    protected override async Task OnInitializedAsync()
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     userVm = await userService.GetUserViewModelById(userStateService.SessionUser.UserId);
+    //     profileImageUrl = await GetProfileImageUrl();
+    // }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        userVm = userStateService.CurrentUser;
+        if (!firstRender) return;
+
+        userVm = await userService.GetUserViewModelById(UserId);
         profileImageUrl = await GetProfileImageUrl();
+
+        _loaded = true;
+        StateHasChanged();
     }
 
     private async Task<string> GetProfileImageUrl()
     {
-        string profilePicUrl = (await userService.GetUserProfilePic(userVm.user)) ?? string.Empty;
-
-        return !string.IsNullOrEmpty(profilePicUrl)
-            ? profilePicUrl
-            : PlaceholderImageUrl;
+        var profilePicUrl = await userService.GetUserProfilePic(userVm.user); 
+        return !string.IsNullOrEmpty(profilePicUrl) ? profilePicUrl : PlaceholderImageUrl;
     }
 
     private void EditProfilePic()
@@ -100,7 +119,7 @@
         if (errors.Any() || uploadedFile == null)
             return;
 
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+        var userName = userStateService.SessionUser!.Username;
 
         
         var newUrl = await PhotoUploadHelper.UploadProfilePic(
@@ -129,7 +148,7 @@
 
     private async Task DeleteProfilePic()
     {
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+        var userName = userStateService.SessionUser!.Username;
 
         PhotoUploadHelper.DeleteProfilePic(
             errors,

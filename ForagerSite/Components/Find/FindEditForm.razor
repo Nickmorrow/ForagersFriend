@@ -232,7 +232,7 @@
     {
         uploadErrors.Clear();
 
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+        var userName = userStateService.SessionUser.Username;
 
         var newUrls = await PhotoUploadHelper.UploadFindImages(
             newFiles, userName, config, uploadErrors);
@@ -240,6 +240,7 @@
         if (uploadErrors.Any())
             return;
 
+        editModel.AccessLevel = string.IsNullOrEmpty(editModel.AccessLevel) ? "Public" : editModel.AccessLevel;
         editModel.UploadedImageUrls = newUrls;
 
         await OnFindUpdated.InvokeAsync(editModel);

@@ -1,28 +1,36 @@
 ﻿@page "/"
-@using ForagerSite.Services;
-@using DataAccess.Models;
+@using ForagerSite.Services
 @rendermode InteractiveServer
 @inject NavigationManager navigationManager
-@inject IUserService userService
-@inject IJSRuntime JSRuntime
 @inject UserStateService userStateService
 
-
-
-@if (userStateService.IsAuthenticated)
+@if (!_loaded)
 {
-    <p>Welcome, @userStateService.CurrentUser.user.UsrName</p>
-    <ForagerSite.Components.Map.Map/>
+    <p>Loading...</p>
 }
-else
+else if (userStateService.IsAuthenticated)
 {
-    <ForagerSite.Components.Pages.LoginAndRegistration.Login />
+    <p>Welcome, @userStateService.SessionUser!.DisplayName</p>
+    <ForagerSite.Components.Map.Map />
 }
+
 
 @code {
+    private bool _loaded;
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
 
+        await userStateService.Load();
+        _loaded = true;
 
+        if (!userStateService.IsAuthenticated)
+        {
+            navigationManager.NavigateTo("/Login");
+            return;
+        }
 
-
+        StateHasChanged();
+    }
 }

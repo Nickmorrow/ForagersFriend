@@ -5,17 +5,17 @@ using System.Text.Json.Serialization;
 
 namespace DataAccess.Models
 {
-    public class UserViewModel
-    {
-        public User user { get; set; }
-        public UserSecurity userSecurity { get; set; }
+    //public class UserViewModel
+    //{
+    //    public User user { get; set; }
+    //    public UserSecurity userSecurity { get; set; }
 
-        public UserViewModel()
-        {
-            user = new User();
-            userSecurity = new UserSecurity();
-        }
-    }
+    //    public UserViewModel()
+    //    {
+    //        user = new User();
+    //        userSecurity = new UserSecurity();
+    //    }
+    //}
     public class User
     {
         [Key]

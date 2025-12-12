@@ -1,4 +1,5 @@
 ﻿@page "/Login"
+@using ForagerSite.DataContainer;
 @using ForagerSite.Services;
 @using DataAccess.Models;
 @using Microsoft.AspNetCore.Components.Routing
@@ -61,9 +62,8 @@
         return false;
     }
 
-    private void _HandleValidSubmit(EditContext editContext)
+    private async Task _HandleValidSubmit(EditContext editContext)
     {
-
         var newUser = (UserViewModel)editContext.Model;
         _userAuthenticated = _UserAuthenticated(newUser);
 
@@ -71,13 +71,16 @@
         {
             newUser.userSecurity.UssLastLoginDate = DateTime.Now;
             userService.UpdateUserSecurity(newUser.userSecurity);
-            userStateService.SetUserState(true, newUser);
-            navigationManager.NavigateTo("/", true);
+
+            await userStateService.SetUserState(true, newUser);
+            navigationManager.NavigateTo("/");
+
         }
         else
         {
             _errorMessage = "Username or password is incorrect";
-            //StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
+
 }

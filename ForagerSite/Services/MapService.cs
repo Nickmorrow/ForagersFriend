@@ -5,6 +5,7 @@ using Microsoft.JSInterop;
 using Newtonsoft.Json;
 using DataAccess.Data;
 using Microsoft.EntityFrameworkCore;
+using ForagerSite.DataContainer;
 
 
 namespace ForagerSite.Services
@@ -40,7 +41,7 @@ namespace ForagerSite.Services
         private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading);        
         public void UpdateViewModels(Guid userId, UserFindsViewModel viewModel)
         {
-            var currentUserId = _userStateService.CurrentUser.user.UsrId;
+            var currentUserId = _userStateService.SessionUser.UserId;
 
             if (currentUserId == viewModel.userId)
             {               
@@ -98,8 +99,8 @@ namespace ForagerSite.Services
         {
             NotifyLoadingChanged(true);
 
-            var userId = _userStateService.CurrentUser.user.UsrId;
-            var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
+            var userId = _userStateService.SessionUser.UserId;
+            var userName = _userStateService.SessionUser.Username;
 
             var newUserFindViewModel =
             await _userFindService.CreateFind(
@@ -145,8 +146,8 @@ namespace ForagerSite.Services
         List<string>? deletedFileUrls,
         string accessLevel)
         {            
-            var userId = _userStateService.CurrentUser.user.UsrId;
-            var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
+            var userId = _userStateService.SessionUser.UserId;
+            var userName = _userStateService.SessionUser.Username;
 
             NotifyLoadingChanged(true);
 
@@ -191,8 +192,8 @@ namespace ForagerSite.Services
         {
             NotifyLoadingChanged(true);
 
-            var userId = _userStateService.CurrentUser.user.UsrId;
-            var userName = _userStateService.CurrentUser.userSecurity.UssUsername;
+            var userId = _userStateService.SessionUser.UserId;
+            var userName = _userStateService.SessionUser.Username;
             var deletedFindVm = new UserFindsViewModel();
 
             _userFindService.DeleteFind(delFindId, userId, userName);
@@ -209,7 +210,7 @@ namespace ForagerSite.Services
 
         public async Task Vote(Guid vmId, Guid findOrCommentId, int voteValue, string voteType)
         {
-            var userId = _userStateService.CurrentUser.user.UsrId;
+            var userId = _userStateService.SessionUser.UserId;
             var currentVm = CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
             var userVoteDto = await _userFindService.Vote(findOrCommentId, userId, voteType, voteValue);
             var find = new FindDto();

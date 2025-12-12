@@ -1,6 +1,7 @@
 ﻿@using DataAccess.Models
-@using Microsoft.AspNetCore.Components
+@using ForagerSite.DataContainer
 @using ForagerSite.Services
+@using Microsoft.AspNetCore.Components
 @namespace ForagerSite.Components.Find
 
 @inject IUserFindService userFindService
@@ -232,7 +233,7 @@
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        var userId = userStateService.CurrentUser.user.UsrId;
+        var userId = userStateService.SessionUser.UserId;
 
         FindsCommentXrefDto xref;
 
@@ -263,7 +264,7 @@
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        var userId = userStateService.CurrentUser.user.UsrId;
+        var userId = userStateService.SessionUser.UserId;
 
         FindsCommentXrefDto xref;
         xref = await userFindService.AddComment(text, Find.findId, userId, parentCommentId);

@@ -1,6 +1,7 @@
 ﻿@rendermode InteractiveServer
-@inject ForagerSite.Services.UserStateService userStateService
+@inject UserStateService userStateService
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -20,6 +21,7 @@
                     <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
                 </NavLink>
             </div>
+
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="Profile">
                     <span class="bi bi-person" aria-hidden="true"></span> Profile
@@ -73,27 +75,30 @@
                 }
             </div>
 
-            
             <div class="nav-item px-3">
                 <a href="#" class="nav-link" @onclick="HandleLogout">
                     <span class="bi bi-box-arrow-right"></span> Log Out
                 </a>
             </div>
-
-
         }
-        
+@*         else
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/Login">
+                    <span class="bi bi-box-arrow-in-right"></span> Login
+                </NavLink>
+            </div>
+        } *@
+
     </nav>
 </div>
 
 @code {
-
     private bool showNotifications = false;
 
-    // Temporary model & data – later you can load from a real service
     private class NotificationItem
     {
-        public string Message { get; set; }
+        public string Message { get; set; } = "";
         public DateTime CreatedAt { get; set; }
         public bool IsRead { get; set; }
     }
@@ -106,6 +111,27 @@
     };
 
     private int UnreadCount => Notifications?.Count(n => !n.IsRead) ?? 0;
+
+    protected override void OnInitialized()
+    {
+        userStateService.OnChange += OnUserStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // JS interop safe here (ProtectedSessionStorage)
+        await userStateService.Load();
+        StateHasChanged();
+    }
+
+    private void OnUserStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        userStateService.OnChange -= OnUserStateChanged;
+    }
 
     private void ToggleNotifications()
     {
@@ -121,10 +147,9 @@
         }
     }
 
-    private void HandleLogout()
+    private async Task HandleLogout()
     {
-        userStateService.Logout();                
-        Navigation.NavigateTo("/", true);        
+        await userStateService.Logout();
+        Navigation.NavigateTo("/Login");
     }
-
 }

@@ -2,6 +2,7 @@ using ForagerSite.Services;
 using ForagerSite.Components;
 using DataAccess.Data;
 using ForagerSite.Services;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,11 +28,13 @@ namespace ForagerSite
                 .AddCircuitOptions(options =>
                 {
                     options.DetailedErrors = true;
-                }); 
-            builder.Services.AddTransient<IUserService, UserService>();
-            builder.Services.AddTransient<IUserFindService, UserFindService>();
-            builder.Services.AddSingleton<UserStateService>();
+                });
+            builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IUserFindService, UserFindService>();           
             builder.Services.AddScoped<IMapService, MapService>();
+            builder.Services.AddScoped<UserStateService>();
+            builder.Services.AddScoped<ProtectedSessionStorage>();
+
 
             //builder.Services.AddTransient<EmailService>();
             //builder.Services.AddTransient<PasswordResetService>();
@@ -59,7 +62,6 @@ namespace ForagerSite
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode();
 
-            ServiceLocator.ServiceProvider = app.Services;
 
             app.Run();
         }

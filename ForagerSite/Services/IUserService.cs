@@ -1,5 +1,5 @@
 ﻿using DataAccess.Models;
-
+using ForagerSite.DataContainer;
 namespace ForagerSite.Services
 {
     public interface IUserService
@@ -16,5 +16,6 @@ namespace ForagerSite.Services
         Task<string> GetUserProfilePic(User user);
         Task UploadProfilePicUrl(User user, string fileUrl);
         Task DeleteProfilePicUrl(User user);
+        Task<UserViewModel> GetUserViewModelById(Guid userId);
     }
 }

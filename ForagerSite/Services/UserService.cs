@@ -6,6 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.JSInterop;
 using System;
 using static System.Net.Mime.MediaTypeNames;
+using ForagerSite.DataContainer;
 
 
 namespace ForagerSite.Services
@@ -37,6 +38,24 @@ namespace ForagerSite.Services
                 return null;
             }
         }
+        public async Task<UserViewModel> GetUserViewModelById(Guid userId)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+
+            var userSecurity = await context.UserSecurities
+                .Include(us => us.User)
+                .FirstOrDefaultAsync(us => us.UssUsrId == userId);
+
+            if (userSecurity is null)
+                return new UserViewModel();
+
+            return new UserViewModel
+            {
+                user = userSecurity.User,
+                userSecurity = userSecurity
+            };
+        }
+
         public async Task<bool> UsernameExists(string username)
         {
             using (var context = _dbContextFactory.CreateDbContext())

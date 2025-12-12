@@ -1,13 +1,15 @@
-﻿@using Newtonsoft.Json
-@using ForagerSite.Services
-@using DataAccess.Models
-@using Utilities
+﻿@using DataAccess.Models
 @using ForagerSite.Components.Find
+@using ForagerSite.DataContainer
+@using ForagerSite.Services
+@using Newtonsoft.Json
+@using Utilities
 @implements IDisposable
 
 @inject UserStateService userStateService
 @inject IMapService mapService
 @inject IJSRuntime JSRuntime
+@inject IUserService userService
 
 <div id="finds-grid" style="flex: 1; overflow-y: auto; border: 1px solid #ccc; background-color: #f9f9f9;">
     @if (isLoading && !hasLoaded)
@@ -137,7 +139,7 @@
                                                 <p><strong>Notes: </strong><span>@find.description</span></p>
                                             }
 
-                                            @if (vm.userId == userStateService.CurrentUser.user.UsrId)
+                                            @if (vm.userId == userStateService.SessionUser.UserId)
                                             {
                                                 <p><strong>Who can see this? </strong>@find.accessibility</p>
                                             }
@@ -152,7 +154,7 @@
                                                   findOrCommentId="find.findId"
                                                   voteType="find" />
 
-                                            @if (find.findUserId == userStateService.CurrentUser.user.UsrId)
+                                            @if (find.findUserId == userStateService.SessionUser.UserId)
                                             {
                                                 <div style="display: flex; gap: 10px;">
                                                     <button class="btn btn-secondary" @onclick="() =>
@@ -187,7 +189,7 @@
                                             <CommentThread @key="find.findId"
                                                            Find="find"
                                                            VmId="vm.userId"
-                                                           CurrentUserId="userStateService.CurrentUser.user.UsrId"
+                                                           CurrentUserId="userStateService.SessionUser.UserId"
                                                            UserNames="mapService.userNamesKvp" />
                                         </div>
                                     </td>
@@ -334,8 +336,8 @@
 
     private async Task ReInitializeMap()
     {
-        var user = userStateService.CurrentUser.user;
-        if (user == null) return;
+        var userVm = await userService.GetUserViewModelById(userStateService.SessionUser.UserId);
+        if (userVm == null) return;
 
         var json = JsonConvert.SerializeObject(
             mapService.CurrentViewModels,
@@ -348,9 +350,9 @@
         await JSRuntime.InvokeVoidAsync(
             "initializeMap",
             json,
-            user.UsrId.ToString(),
+            userVm.user.UsrId.ToString(),
             mapService.mapFilter,
-            user.UserSecurity.UssUsername);
+            userVm.user.UserSecurity.UssUsername);
     }
     #endregion
     #region Loading + expanding rows

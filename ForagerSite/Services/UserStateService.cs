@@ -1,25 +1,59 @@
-﻿using DataAccess.Models;
+﻿using ForagerSite.DataContainer;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Newtonsoft.Json;
 
-namespace ForagerSite.Services
+public class UserStateService
 {
-    public class UserStateService
+    private readonly ProtectedSessionStorage _session;
+
+    public bool IsAuthenticated { get; private set; }
+    public SessionUserState? SessionUser { get; private set; }
+
+    public event Action? OnChange;
+
+    public UserStateService(ProtectedSessionStorage session)
+        => _session = session;
+
+    public async Task Load()
     {
-        public bool IsAuthenticated { get; set; }
-        public UserViewModel CurrentUser { get; set; }
-
-        public event Action? OnChange;
-
-        public void SetUserState(bool isAuthenticated, UserViewModel currentUser)
+        var json = await _session.GetAsync<string>("SessionUser");
+        if (json.Success && !string.IsNullOrWhiteSpace(json.Value))
         {
-            IsAuthenticated = isAuthenticated;
-            CurrentUser = currentUser;
-            Console.WriteLine($"User authenticated: {IsAuthenticated}, User: {CurrentUser?.user?.UsrName}");
-            OnChange?.Invoke();
+            SessionUser = JsonConvert.DeserializeObject<SessionUserState>(json.Value);
+            IsAuthenticated = SessionUser?.IsAuthenticated == true;
+        }
+        else
+        {
+            SessionUser = null;
+            IsAuthenticated = false;
         }
 
-        public void Logout()
-        {
-            SetUserState(false, null);
-        }
+        OnChange?.Invoke();
     }
+
+    public async Task SetUserState(bool isAuthenticated, UserViewModel? vm)
+    {
+        IsAuthenticated = isAuthenticated;
+
+        if (!isAuthenticated || vm?.user == null || vm.userSecurity == null)
+        {
+            SessionUser = null;
+            await _session.DeleteAsync("SessionUser");
+            OnChange?.Invoke();
+            return;
+        }
+
+        SessionUser = new SessionUserState
+        {
+            IsAuthenticated = true,
+            UserId = vm.user.UsrId,
+            Username = vm.userSecurity.UssUsername,
+            DisplayName = vm.user.UsrName ?? ""
+        };
+
+        await _session.SetAsync("SessionUser", JsonConvert.SerializeObject(SessionUser));
+        OnChange?.Invoke();
+    }
+
+    public Task Logout() => SetUserState(false, null);
 }

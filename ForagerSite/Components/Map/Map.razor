@@ -1,10 +1,11 @@
 ﻿@* @page "/map" *@
 
-@using Newtonsoft.Json
-@using ForagerSite.Services
 @using DataAccess.Models
-@using Utilities
 @using ForagerSite.Components.Find
+@using ForagerSite.DataContainer
+@using ForagerSite.Services
+@using Newtonsoft.Json
+@using Utilities
 @rendermode InteractiveServer
 @inject IJSRuntime JSRuntime
 @inject IConfiguration config
@@ -54,8 +55,8 @@
     {
         if (firstRender)
         {
-            var user = userStateService.CurrentUser.user;
-            if (user != null)
+            var userVm = await userService.GetUserViewModelById(userStateService.SessionUser.UserId);
+            if (userVm != null)
             {
                 isLoading = true;
                 StateHasChanged(); 
@@ -64,7 +65,7 @@
                 {
                     _mapServiceReference = DotNetObjectReference.Create(mapService);
                     mapService.userNamesKvp = await userFindService.GetCommentUserNames();
-                    mapService.CurrentViewModels = await userFindService.GetUserFindsViewModels(user.UsrId);
+                    mapService.CurrentViewModels = await userFindService.GetUserFindsViewModels(userVm.user.UsrId);
                     mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
 
                     var json = JsonConvert.SerializeObject(
@@ -79,9 +80,9 @@
                     await JSRuntime.InvokeVoidAsync(
                         "initializeMap",
                         json,
-                        user.UsrId.ToString(),
+                        userVm.user.UsrId.ToString(),
                         mapService.mapFilter,
-                        user.UserSecurity.UssUsername);
+                        userVm.user.UserSecurity.UssUsername);
                 }
                 catch (Exception ex)
                 {
@@ -101,9 +102,9 @@
     #region Search / filters (called by MapSearch)
     private async Task GetMyFinds()
     {
-        var user = userStateService.CurrentUser.user;
+        var userVm = await userService.GetUserViewModelById(userStateService.SessionUser.UserId);
 
-        if (user != null)
+        if (userVm != null)
         {
             mapService.mapFilter = "UserOnly";
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.MyViewModels);
@@ -115,13 +116,13 @@
             };
 
             var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);
+            await JSRuntime.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, userVm.user.UserSecurity.UssUsername);
         }
     }
 
     private async Task GetAllFinds()
     {
-        var user = userStateService.CurrentUser.user;
+        var userVm = await userService.GetUserViewModelById(userStateService.SessionUser.UserId);
         mapService.mapFilter = "AllUsers";
 
         try
@@ -145,10 +146,10 @@
             };
 
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
-            FilterAccessibility(mapService.CurrentViewModels, user.UsrId);
+            FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
 
             var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-            await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter, user.UserSecurity.UssUsername);
+            await JSRuntime.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, userVm.user.UserSecurity.UssUsername);
         }
         finally
         {
@@ -171,7 +172,7 @@
 
     private async Task HandleSearch(MapSearch.MapSearchCriteria criteria)
     {
-        var user = userStateService.CurrentUser.user;
+        var userVm = await userService.GetUserViewModelById(userStateService.SessionUser.UserId);
 
         var settings = new JsonSerializerSettings
         {
@@ -218,7 +219,7 @@
         }
 
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-        await JSRuntime.InvokeVoidAsync("initializeMap", json, user.UsrId.ToString(), mapService.mapFilter);
+        await JSRuntime.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter);
     }
     #endregion
     public void Dispose()

@@ -1,6 +1,7 @@
 ﻿using Azure.Core;
 using DataAccess.Data;
 using DataAccess.Models;
+using ForagerSite.DataContainer;
 using ForagerSite.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -574,7 +575,7 @@ namespace ForagerSite.Services
 
                 try
                 {
-                    string userDirectory = Path.Combine(_config.GetValue<string>("FileStorage"), userName);
+                    string userDirectory = Path.Combine(_config.GetValue<string>("FileStorageFind_Images"), userName);
                     string filePath = Path.Combine(userDirectory, fileName);
 
                     System.IO.File.Delete(filePath);

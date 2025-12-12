@@ -1,5 +1,5 @@
 ﻿@rendermode InteractiveServer
-@inject ForagerSite.Services.UserStateService userStateService
+@inject UserStateService userStateService
 @inject NavigationManager Navigation
 
 @if (userStateService.IsAuthenticated)
@@ -16,7 +16,7 @@
     private void HandleLogout()
     {
         userStateService.Logout();
-        Navigation.NavigateTo("/", true);
+        Navigation.NavigateTo("/");
     }
 
 }

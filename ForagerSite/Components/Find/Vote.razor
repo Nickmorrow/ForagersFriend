@@ -1,6 +1,7 @@
-﻿@using ForagerSite.Services
-@using DataAccess.Models
+﻿@using DataAccess.Models
 @using ForagerSite.Components.Find
+@using ForagerSite.DataContainer
+@using ForagerSite.Services
 
 @inject UserStateService userStateService
 @inject IMapService mapService
@@ -29,12 +30,12 @@
 
     private async Task HandleUpvote(Guid vmId, Guid findOrCommentId, string voteType)
     {
-        var userId = userStateService.CurrentUser.user.UsrId;
+        var userId = userStateService.SessionUser.UserId;
         await mapService.Vote(vmId, findOrCommentId, 1, voteType);
     }
     private async Task HandleDownVote(Guid vmId, Guid findOrCommentId, string voteType)
     {
-        var userId = userStateService.CurrentUser.user.UsrId;
+        var userId = userStateService.SessionUser.UserId;
         await mapService.Vote(vmId, findOrCommentId, -1, voteType);
     }
 
@@ -72,7 +73,7 @@
     // ---- Current user's vote for this find ----
     private int GetCurrentUserVote(FindDto find = null, FindCommentDto commentDto = null)
     {
-        var userId = userStateService.CurrentUser.user.UsrId;
+        var userId = userStateService.SessionUser.UserId;
         
         var myVote = new UserVoteDto();
 

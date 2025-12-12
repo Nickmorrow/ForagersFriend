@@ -169,8 +169,8 @@
     {
         uploadErrors.Clear(); 
 
-        var userId = userStateService.CurrentUser.user.UsrId;
-        var userName = userStateService.CurrentUser.userSecurity.UssUsername;
+        var userId = userStateService.SessionUser.UserId;
+        var userName = userStateService.SessionUser.Username;
         findModel.UserId = userId;
 
         var uploadedUrls = await PhotoUploadHelper.UploadFindImages(selectedFiles, userName, config, uploadErrors);
@@ -181,6 +181,8 @@
         }
 
         findModel.ImageUrls = uploadedUrls;
+
+        findModel.AccessLevel = string.IsNullOrEmpty(findModel.AccessLevel) ? "Public" : findModel.AccessLevel;
 
         await OnFindCreated.InvokeAsync(findModel);
 

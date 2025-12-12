@@ -1,53 +1,62 @@
 ﻿
 @page "/Profile"
-@using ForagerSite.Services
 @using DataAccess.Models
-@using Utilities
 @using ForagerSite.Components.Profile
+@using ForagerSite.DataContainer
+@using ForagerSite.Services
+@using Utilities
 @rendermode InteractiveServer
 @inject IUserService userService
 @inject UserStateService userStateService
 @inject IUserFindService userFindService
+@inject NavigationManager navigationManager
 
+@if (!_loaded)
+{
+    <p>Loading profile...</p>
+}
+else
+{
+    <h3>Profile</h3>
 
-<h3>Profile</h3>
+    <div id="containers" style="display: flex; gap: 20px;">
+        <div id="profile-container">
 
-<div id="containers" style="display: flex; gap: 20px;">
-    <div id="profile-container">
+            <ProfilePictureEditor UserId="@userVm.user.UsrId" />
 
-        <ProfilePictureEditor />
-
-        @if (!edit)
-        {
-            <div id="profile-details-container">
-                <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
-                <p><strong>Name:</strong> @userVm.user.UsrName</p>
-                <p><strong>Rank:</strong> @GetUserRank(userVm.user.UsrExpScore)</p>
-                <p><strong>Joined:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
-                <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
-                <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
-                <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>
-                <button @onclick="EditProfile">Edit</button>
-            </div>
-        }
-        else
-        {
-            <div id="edit-profile-container">
-                <ProfileDetailsEditor UserVm="userVm"
-                                      OnSaved="HandleProfileSaved"
-                                      OnCancelled="HandleProfileCancelled" />
-            </div>
-        }
+            @if (!edit)
+            {
+                <div id="profile-details-container">
+                    <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
+                    <p><strong>Name:</strong> @userVm.user.UsrName</p>
+                    <p><strong>Rank:</strong> @GetUserRank(userVm.user.UsrExpScore)</p>
+                    <p><strong>Joined:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
+                    <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
+                    <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
+                    <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>
+                    <button @onclick="EditProfile">Edit</button>
+                </div>
+            }
+            else
+            {
+                <div id="edit-profile-container">
+                    <ProfileDetailsEditor UserVm="userVm"
+                                          OnSaved="HandleProfileSaved"
+                                          OnCancelled="HandleProfileCancelled" />
+                </div>
+            }
+        </div>
+        <ProfileFindsList FindsViewModel="userFindsViewModel" />
+        <div id="friends-container">
+            <h3>Friends</h3>
+            <table>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
     </div>
-    <ProfileFindsList FindsViewModel="userFindsViewModel" />
-    <div id="friends-container">
-        <h3>Friends</h3>
-        <table>
-            <tbody>
-            </tbody>
-        </table>
-    </div>
-</div>
+}
+
 @code {
 
     private UserViewModel userVm { get; set; } = new();
@@ -73,12 +82,27 @@
     }
 
 
-    protected override async Task OnInitializedAsync()
+    private bool _loaded;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        userVm = userStateService.CurrentUser;
+        if (!firstRender) return;
+
+        await userStateService.Load();
+
+        if (!userStateService.IsAuthenticated || userStateService.SessionUser is null)
+        {
+            navigationManager.NavigateTo("/Login");
+            return;
+        }
+        userVm = await userService.GetUserViewModelById(userStateService.SessionUser.UserId);
         userFindsViewModel = await userFindService.GetUserFindsViewModel(userVm.user.UsrId);
+
         edit = false;
+        _loaded = true;
+        StateHasChanged();
     }
+
 
     private void EditProfile()
     {
