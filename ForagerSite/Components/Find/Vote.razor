@@ -32,12 +32,12 @@
     private async Task HandleUpvote(Guid vmId, Guid findOrCommentId, string voteType)
     {
         var userId = session.SessionUser.UserId;
-        await mapService.Vote(vmId, findOrCommentId, 1, voteType);
+        await mapService.VoteVm(vmId, findOrCommentId, 1, voteType);
     }
     private async Task HandleDownVote(Guid vmId, Guid findOrCommentId, string voteType)
     {
         var userId = session.SessionUser.UserId;
-        await mapService.Vote(vmId, findOrCommentId, -1, voteType);
+        await mapService.VoteVm(vmId, findOrCommentId, -1, voteType);
     }
 
     // ---- Find-level vote counts ----

@@ -14,6 +14,11 @@ namespace DataAccess.Data
         public DbSet<UserFindsComment> UserFindsComments { get; set; }
         public DbSet<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }
         public DbSet<UserVote> UserVotes { get; set; }
+        public DbSet<FriendRequest> FriendRequests { get; set; } = default!;
+        public DbSet<UserRelationship> UserRelationships { get; set; } = default!;
+        public DbSet<Notification> Notifications { get; set; } = default!;
+
+
         public ForagerDbContext(DbContextOptions<ForagerDbContext> options)
             : base(options)
         {
@@ -36,6 +41,9 @@ namespace DataAccess.Data
             modelBuilder.Entity<UserFindsComment>().ToTable("UserFindsComments");
             modelBuilder.Entity<UserFindsCommentXref>().ToTable("UserFindsCommentXref");
             modelBuilder.Entity<UserVote>().ToTable("UserVotes");
+            modelBuilder.Entity<FriendRequest>().ToTable("FriendRequest");
+            modelBuilder.Entity<UserRelationship>().ToTable("UserRelationship");
+            modelBuilder.Entity<Notification>().ToTable("Notification");
 
             modelBuilder.Entity<User>()
                 .HasOne(u => u.UserSecurity)
@@ -115,6 +123,83 @@ namespace DataAccess.Data
                 .WithMany(c => c.UserVotes)
                 .HasForeignKey(v => v.UsvUscId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<FriendRequest>(entity =>
+            {
+                entity.HasKey(x => x.FrqId);
+
+                entity.HasOne(x => x.RequesterUser)
+                      .WithMany()
+                      .HasForeignKey(x => x.FrqRequesterUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.AddresseeUser)
+                      .WithMany()
+                      .HasForeignKey(x => x.FrqAddresseeUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(x => x.FrqStatus).HasConversion<int>();
+
+                // Prevent duplicate pending requests in the same direction
+                entity.HasIndex(x => new { x.FrqRequesterUserId, x.FrqAddresseeUserId })
+                      .IsUnique();
+            });
+
+            // UserRelationship
+            modelBuilder.Entity<UserRelationship>(entity =>
+            {
+                entity.HasKey(x => x.UrlId);
+
+                entity.HasOne(x => x.UserA)
+                      .WithMany()
+                      .HasForeignKey(x => x.UrlUserAId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.UserB)
+                      .WithMany()
+                      .HasForeignKey(x => x.UrlUserBId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.ActionUser)
+                      .WithMany()
+                      .HasForeignKey(x => x.UrlActionUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(x => x.UrlStatus).HasConversion<int>();
+
+                // Ensure only one relationship row per pair
+                entity.HasIndex(x => new { x.UrlUserAId, x.UrlUserBId })
+                      .IsUnique();
+            });
+
+            //Notification
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                entity.HasKey(x => x.NotId);
+
+                entity.HasOne(x => x.User)
+                      .WithMany()
+                      .HasForeignKey(x => x.NotUserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(x => x.ActorUser)
+                      .WithMany()
+                      .HasForeignKey(x => x.NotActorUserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(x => x.NotType)
+                      .HasMaxLength(50)
+                      .IsRequired();
+
+                entity.Property(x => x.NotEntityType)
+                      .HasMaxLength(50);
+
+                entity.Property(x => x.NotMessage)
+                      .HasMaxLength(500);
+
+                entity.HasIndex(x => new { x.NotUserId, x.NotIsRead });
+            });
+
         }
     }
 }
