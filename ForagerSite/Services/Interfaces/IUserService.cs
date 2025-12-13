@@ -7,7 +7,6 @@ namespace ForagerSite.Services.Interfaces
 {
     public interface IUserService
     {
-        UserDataContainer? AuthenticateUser(string username, string password);
         Task<bool> UsernameExists(string username);
         Task<bool> EmailExists(string email, User? user = null);
         void UpdateUserSecurity(UserSecurity userSecurity);

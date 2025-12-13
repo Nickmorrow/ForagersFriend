@@ -15,7 +15,7 @@
 
 <div>
     <div>
-        <EditForm Model="@userViewModel" OnValidSubmit="_HandleValidSubmit" FormName="userLogin">
+        <EditForm Model="@userViewModel" OnValidSubmit="HandleValidSubmit" FormName="userLogin">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
@@ -49,9 +49,9 @@
 
     public UserDataContainer userViewModel = new UserDataContainer();
 
-    private bool _UserAuthenticated(UserDataContainer userViewModel)
+    private bool UserAuthenticated(UserDataContainer userViewModel)
     {
-        var authenticatedUser = userService.AuthenticateUser(userViewModel.userSecurity.UssUsername, userViewModel.userSecurity.UssPassword);
+        var authenticatedUser = session.AuthenticateUser(userViewModel.userSecurity.UssUsername, userViewModel.userSecurity.UssPassword);
 
         if (authenticatedUser != null)
         {
@@ -63,10 +63,10 @@
         return false;
     }
 
-    private async Task _HandleValidSubmit(EditContext editContext)
+    private async Task HandleValidSubmit(EditContext editContext)
     {
         var newUser = (UserDataContainer)editContext.Model;
-        _userAuthenticated = _UserAuthenticated(newUser);
+        _userAuthenticated = UserAuthenticated(newUser);
 
         if (_userAuthenticated)
         {

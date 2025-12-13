@@ -61,6 +61,6 @@ namespace ForagerSite.Services.Interfaces
 
         Task DeleteFindVm(Guid delFindId);
 
-        Task Vote(Guid vmId, Guid findOrCommentId, int voteValue, string voteType);
+        Task VoteVm(Guid vmId, Guid findOrCommentId, int voteValue, string voteType);
     }
 }

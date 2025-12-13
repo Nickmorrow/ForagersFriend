@@ -20,25 +20,6 @@ namespace ForagerSite.Services
         {
             _dbContextFactory = dbContextFactory;
         }  
-        public UserDataContainer AuthenticateUser(string username, string password)
-        {
-            using (var context = _dbContextFactory.CreateDbContext())
-            {
-                var userSecurity = context.UserSecurities
-                    .Include(us => us.User)
-                    .FirstOrDefault(us => us.UssUsername == username && us.UssPassword == password);
-
-                if (userSecurity != null)
-                {
-                    return new UserDataContainer
-                    {
-                        user = userSecurity.User,
-                        userSecurity = userSecurity
-                    };
-                }
-                return null;
-            }
-        }
         public async Task<UserDataContainer> GetUserViewModelById(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();

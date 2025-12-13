@@ -209,7 +209,7 @@ namespace ForagerSite.Services
             NotifyLoadingChanged(false);
         }
 
-        public async Task Vote(Guid vmId, Guid findOrCommentId, int voteValue, string voteType)
+        public async Task VoteVm(Guid vmId, Guid findOrCommentId, int voteValue, string voteType)
         {
             var userId = session.SessionUser.UserId;
             var currentVm = CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);

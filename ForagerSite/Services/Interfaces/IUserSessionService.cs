@@ -9,13 +9,15 @@ namespace ForagerSite.Services.Interfaces
     {
         SessionUserState? SessionUser { get; }
         bool IsAuthenticated { get; }
-
+        event Action? OnChange;
         Task Load();
         Task Logout();
         Task SetUserState(bool isAuthenticated, UserDataContainer? vm);
+        UserDataContainer AuthenticateUser(string username, string password);
 
-        event Action? OnChange;
-        
+
+
+
 
     }
 }
