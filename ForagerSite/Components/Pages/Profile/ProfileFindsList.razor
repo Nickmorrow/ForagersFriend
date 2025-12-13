@@ -313,26 +313,10 @@
     #endregion
     #region Marker selection + view on map
 
-
-    // private async Task ViewOnMap(Guid userId, Guid findId)
-    // {
-    //     var ufvm = mapService.CurrentViewModels
-    //         .FirstOrDefault(u => u.userId == userId);
-
-    //     var uf = ufvm?.finds
-    //         .FirstOrDefault(f => f.findId == findId);
-
-    //     if (uf == null || uf.findLocation == null)
-    //         return;
-
-    //     double latitude = uf.findLocation.latitude;
-    //     double longitude = uf.findLocation.longitude;
-
-    //     await JSRuntime.InvokeVoidAsync("centerMapOnFind", latitude, longitude);
-    // }
     private void ViewOnMap(Guid userId, Guid findId)
     {
-        navigationManager.NavigateTo($"/map?focusFindId={findId}");
+        navigationManager.NavigateTo($"/map?focusFindId={findId}&focusUserId={userId}");
+
     }
 
     #endregion

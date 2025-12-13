@@ -53,6 +53,8 @@
     private bool isLoading = false;
     private bool hasLoaded = false;
     private Guid? focusFindId;
+    private Guid? focusUserId;
+
 
     private void ReadFocusFromQuery()
     {
@@ -64,6 +66,12 @@
         {
             focusFindId = id;
         }
+        if (query.TryGetValue("focusUserId", out var uval) &&
+            Guid.TryParse(uval.ToString(), out var uid))
+        {
+            focusUserId = uid;
+        }
+
     }
     private async Task WaitForMapReady()
     {
@@ -101,7 +109,7 @@
         // Try current dataset first
         if (TryGetLatLngForFind(focusFindId.Value, mapService.CurrentViewModels, out var lat, out var lng))
         {
-            await JS.InvokeVoidAsync("focusFindAfterDelay", lat, lng, 10);
+            await JS.InvokeVoidAsync("focusFindAfterDelay", lat, lng, 20);
             focusFindId = null;
             return;
         }
@@ -132,7 +140,7 @@
 
         if (TryGetLatLngForFind(focusFindId.Value, mapService.CurrentViewModels, out lat, out lng))
         {
-            await JS.InvokeVoidAsync("focusFindAfterDelay", lat, lng, 10);
+            await JS.InvokeVoidAsync("focusFindAfterDelay", lat, lng, 20);
         }
 
         focusFindId = null;
@@ -149,14 +157,36 @@
             if (userVm != null)
             {
                 isLoading = true;
-                StateHasChanged(); 
+                StateHasChanged();
 
                 try
                 {
                     _mapServiceReference = DotNetObjectReference.Create(mapService);
                     mapService.userNamesKvp = await userFindService.GetCommentUserNames();
-                    mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(userVm.user.UsrId);
-                    mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
+
+                    // ✅ NEW: if focusUserId is present and not me, load AllUsers
+                    var shouldLoadAllUsers =
+                        focusUserId.HasValue && focusUserId.Value != userVm.user.UsrId;
+
+                    if (shouldLoadAllUsers)
+                    {
+                        mapService.mapFilter = "AllUsers";
+
+                        if (!mapService.AllViewModels.Any())
+                            mapService.AllViewModels = await userFindService.GetUserFindsDCs();
+
+                        mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
+
+                        // Hide private finds for non-owners
+                        FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
+                    }
+                    else
+                    {
+                        mapService.mapFilter = "UserOnly";
+
+                        mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(userVm.user.UsrId);
+                        mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
+                    }
 
                     var json = JsonConvert.SerializeObject(
                         mapService.CurrentViewModels,
@@ -174,7 +204,6 @@
                         mapService.mapFilter,
                         userVm.user.UserSecurity.UssUsername
                     );
-                    
 
                     await FocusFindIfRequested(userVm);
                 }
@@ -185,12 +214,13 @@
                 finally
                 {
                     isLoading = false;
-                    hasLoaded = true;       // 👈 important
+                    hasLoaded = true;
                     StateHasChanged();
                 }
             }
         }
     }
+
 
     #endregion
     #region Search / filters (called by MapSearch)
