@@ -1,0 +1,340 @@
+﻿@using ForagerSite.DataContainer
+@using ForagerSite.Services.Interfaces
+@using ForagerSite.Components.Find
+@using Newtonsoft.Json
+@using Utilities
+@implements IDisposable
+
+@inject IUserSessionService session
+@inject IMapService mapService
+@inject IJSRuntime JSRuntime
+@inject IUserService userService
+
+@if (isPanelOpen)
+{
+    <div style="flex: 1; overflow-y: auto; border: 1px solid #ccc; background-color: #f9f9f9; position: relative;">
+        <button class="btn btn-sm btn-light"
+                style="position:absolute; right:10px; top:10px;"
+                @onclick="ClosePanel">
+            ✕
+        </button>
+
+        @if (isLoading && !hasLoaded)
+        {
+            <div class="loading-indicator">
+                <p>Loading...</p>
+            </div>
+        }
+        else if (showCreateForm)
+        {
+            <div style="padding: 15px;">
+                <h5>Create Find</h5>
+
+                <FindCreateForm OnClose="CloseCreateForm"
+                                OnCreated="CloseCreateForm"
+                                OnFindCreated="HandleFindCreated" />
+            </div>
+        }
+        else if (selectedFind != null && selectedVm != null)
+        {
+            <div style="padding: 15px;">
+
+                @if (showEditForm && currentEditModel != null && currentEditModel.FindId == selectedFind.findId)
+                {
+                    <FindEditForm @key="currentEditModel.FindId"
+                                  Model="currentEditModel"
+                                  OnClose="CloseEditForm"
+                                  OnUpdated="CloseEditForm"
+                                  OnFindUpdated="HandleFindUpdated" />
+                }
+                else
+                {
+                    <h5 style="margin-top:0;">@selectedFind.findName</h5>
+
+                    @if (selectedFind.findImages != null && selectedFind.findImages.Any())
+                    {
+                        <div style="margin: 10px 0;">
+                            <div style="font-weight:600; margin-bottom:6px;">Image Gallery</div>
+
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                @foreach (var img in selectedFind.findImages)
+                                {
+                                    <img src="@img.imageData"
+                                         alt="Find Image"
+                                         style="width:100px; height:100px; object-fit:cover; border-radius:6px; cursor:pointer;" />
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p><em>No images uploaded.</em></p>
+                    }
+
+
+                    <p><strong>Discovered:</strong> @selectedFind.findDate.ToString("MMMM dd, yyyy")</p>
+                    <div style="display:flex; align-items:center; gap:12px; margin:10px 0;">
+                        <img src="@selectedVm.profilePic"
+                             alt="Profile Picture"
+                             style="width:50px; height:50px; border-radius:50%; object-fit:cover;" />
+
+                        <div>
+                            <div style="font-weight:600;">Discovered by</div>
+                            <div>@selectedVm.userName</div>
+                        </div>
+                    </div>
+
+
+                    @if (!string.IsNullOrWhiteSpace(selectedFind.speciesName))
+                    {
+                        <p><strong>Species Name:</strong> @selectedFind.speciesName</p>
+                    }
+
+                    <p><strong>Species Type:</strong> @selectedFind.speciesType</p>
+                    <p><strong>Species Category:</strong> @selectedFind.useCategory</p>
+
+                    @if (!string.IsNullOrWhiteSpace(selectedFind.features))
+                    {
+                        <p><strong>Distinguishing Features:</strong> @selectedFind.features</p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(selectedFind.lookAlikes))
+                    {
+                        <p><strong>Dangerous Lookalikes:</strong> @selectedFind.lookAlikes</p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(selectedFind.harvestMethod))
+                    {
+                        <p><strong>Harvest Method:</strong> @selectedFind.harvestMethod</p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(selectedFind.tastesLike))
+                    {
+                        <p><strong>Tastes like:</strong> @selectedFind.tastesLike</p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(selectedFind.description))
+                    {
+                        <p><strong>Notes:</strong> @selectedFind.description</p>
+                    }
+
+                    <Vote find="selectedFind"
+                          comment="@null"
+                          vmUserId="selectedVm.userId"
+                          findOrCommentId="selectedFind.findId"
+                          voteType="find" />
+
+                    @if (selectedFind.findUserId == session.SessionUser.UserId)
+                    {
+                        <div style="display:flex; gap:10px; margin: 10px 0;">
+                            <button class="btn btn-secondary" @onclick="OpenEdit">
+                                Edit
+                            </button>
+
+                            <button class="btn btn-danger" @onclick="() => HandleFindDeleted(selectedFind.findId)">
+                                Delete
+                            </button>
+                        </div>
+                    }
+
+                    <CommentThread @key="selectedFind.findId"
+                                   Find="selectedFind"
+                                   VmId="selectedVm.userId"
+                                   CurrentUserId="session.SessionUser.UserId"
+                                   UserNames="mapService.userNamesKvp" />
+                }
+            </div>
+        }
+        else if (hasLoaded)
+        {
+            <div style="padding: 15px;">
+                <p>Select a marker to view a find, or click the map to create one.</p>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool isLoading { get; set; }
+    [Parameter] public bool hasLoaded { get; set; }
+
+    private bool isPanelOpen = false;
+
+    private bool showCreateForm = false;
+    private bool showEditForm = false;
+
+    private FindEditForm.FindEditTemp? currentEditModel;
+
+    private UserFindsDataContainer? selectedVm;
+    private FindDC? selectedFind;
+
+    private async Task ReInitializeMap()
+    {
+        var userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
+        if (userVm == null) return;
+
+        var json = JsonConvert.SerializeObject(
+            mapService.CurrentViewModels,
+            new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                Formatting = Formatting.Indented
+            });
+
+        await JSRuntime.InvokeVoidAsync(
+            "initializeMap",
+            json,
+            userVm.user.UsrId.ToString(),
+            mapService.mapFilter,
+            userVm.user.UserSecurity.UssUsername);
+    }
+
+    protected override void OnInitialized()
+    {
+        mapService.OnMarkerSelected += HandleMarkerSelected;
+        mapService.OnCreateFormRequested += HandleCreateFormRequested;
+    }
+
+    public void Dispose()
+    {
+        mapService.OnMarkerSelected -= HandleMarkerSelected;
+        mapService.OnCreateFormRequested -= HandleCreateFormRequested;
+    }
+
+    private void ClosePanel()
+    {
+        isPanelOpen = false;
+        showCreateForm = false;
+        showEditForm = false;
+        currentEditModel = null;
+        selectedVm = null;
+        selectedFind = null;
+    }
+
+    private void HandleCreateFormRequested()
+    {
+        isPanelOpen = true;
+        showCreateForm = true;
+
+        // clear selection/edit
+        selectedVm = null;
+        selectedFind = null;
+        showEditForm = false;
+        currentEditModel = null;
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async void HandleMarkerSelected(Guid findId)
+    {
+        var vm = mapService.CurrentViewModels
+            ?.FirstOrDefault(v => v.finds.Any(f => f.findId == findId));
+
+        var find = vm?.finds.FirstOrDefault(f => f.findId == findId);
+        if (vm == null || find == null)
+            return;
+
+        selectedVm = vm;
+        selectedFind = find;
+
+        isPanelOpen = true;
+        showCreateForm = false;
+        showEditForm = false;
+        currentEditModel = null;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenEdit()
+    {
+        if (selectedFind == null) return;
+
+        currentEditModel = new FindEditForm.FindEditTemp
+        {
+            FindId = selectedFind.findId,
+            FindName = selectedFind.findName,
+            SpeciesName = selectedFind.speciesName,
+            SpeciesType = selectedFind.speciesType,
+            UseCategory = selectedFind.useCategory,
+            Features = selectedFind.features,
+            LookAlikes = selectedFind.lookAlikes,
+            HarvestMethod = selectedFind.harvestMethod,
+            TastesLike = selectedFind.tastesLike,
+            Description = selectedFind.description,
+            ExistingImageUrls = selectedFind.findImages.Select(img => img.imageData).ToList(),
+            AccessLevel = selectedFind.accessibility
+        };
+
+        showEditForm = true;
+    }
+
+    private Task CloseEditForm()
+    {
+        showEditForm = false;
+        currentEditModel = null;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private void CloseCreateForm()
+    {
+        showCreateForm = false;
+        mapService.pendingLat = null;
+        mapService.pendingLng = null;
+    }
+
+    private async Task HandleFindCreated(FindCreateForm.FindTemp temp)
+    {
+        await mapService.CreateFindVm(
+            temp.FindName,
+            temp.SpeciesName,
+            temp.SpeciesType,
+            temp.UseCategory,
+            temp.Features,
+            temp.LookAlikes,
+            temp.HarvestMethod,
+            temp.TastesLike,
+            temp.Description,
+            mapService.pendingLat!.Value,
+            mapService.pendingLng!.Value,
+            temp.ImageUrls,
+            temp.AccessLevel);
+
+        CloseCreateForm();
+        await ReInitializeMap();
+        ClosePanel();
+        // keep panel open, could also set selectedFind to the new one if you want
+    }
+
+    private async Task HandleFindUpdated(FindEditForm.FindEditTemp temp)
+    {
+        await mapService.UpdateFindVm(
+            temp.FindId,
+            temp.FindName,
+            temp.SpeciesName ?? string.Empty,
+            temp.SpeciesType,
+            temp.UseCategory,
+            temp.Features ?? string.Empty,
+            temp.LookAlikes ?? string.Empty,
+            temp.HarvestMethod ?? string.Empty,
+            temp.TastesLike ?? string.Empty,
+            temp.Description ?? string.Empty,
+            temp.UploadedImageUrls,
+            temp.DeletedImageUrls,
+            temp.AccessLevel);
+
+        showEditForm = false;
+        currentEditModel = null;
+
+        // refresh selectedFind from updated VMs
+        HandleMarkerSelected(temp.FindId);
+        await ReInitializeMap();
+    }
+
+    private async Task HandleFindDeleted(Guid findId)
+    {
+        await mapService.DeleteFindVm(findId);
+        ClosePanel();
+        await ReInitializeMap();
+    }
+}
