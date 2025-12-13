@@ -1,19 +1,21 @@
-﻿@* @page "/map" *@
+﻿@page "/map"
 
 @using DataAccess.Models
 @using ForagerSite.Components.Find
 @using ForagerSite.DataContainer
 @using ForagerSite.Services
 @using ForagerSite.Services.Interfaces
+@using Microsoft.AspNetCore.WebUtilities
 @using Newtonsoft.Json
 @using Utilities
 @rendermode InteractiveServer
-@inject IJSRuntime JSRuntime
+@inject IJSRuntime JS
 @inject IConfiguration config
 @inject IUserSessionService session
 @inject IUserService userService
 @inject IUserFindService userFindService
 @inject IMapService mapService
+@inject NavigationManager Nav
 
 <div>
     <h4>Search</h4>
@@ -50,11 +52,99 @@
     #region Initialize map + load data
     private bool isLoading = false;
     private bool hasLoaded = false;
+    private Guid? focusFindId;
+
+    private void ReadFocusFromQuery()
+    {
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("focusFindId", out var val) &&
+            Guid.TryParse(val.ToString(), out var id))
+        {
+            focusFindId = id;
+        }
+    }
+    private async Task WaitForMapReady()
+    {
+        // ~2 seconds max, checks every 50ms
+        for (int i = 0; i < 40; i++)
+        {
+            var ready = await JS.InvokeAsync<bool>("isForagerMapReady");
+            if (ready) return;
+            await Task.Delay(50);
+        }
+    }
+
+    private bool TryGetLatLngForFind(Guid findId, List<UserFindsDataContainer> vms, out double lat, out double lng)
+    {
+        lat = 0;
+        lng = 0;
+
+        var find = vms
+            .SelectMany(vm => vm.finds)
+            .FirstOrDefault(f => f.findId == findId);
+
+        if (find?.findLocation == null)
+            return false;
+
+        lat = find.findLocation.latitude;
+        lng = find.findLocation.longitude;
+        return true;
+    }
+
+    private async Task FocusFindIfRequested(UserDataContainer userVm)
+    {
+        if (!focusFindId.HasValue)
+            return;
+
+        // Try current dataset first
+        if (TryGetLatLngForFind(focusFindId.Value, mapService.CurrentViewModels, out var lat, out var lng))
+        {
+            await JS.InvokeVoidAsync("focusFindAfterDelay", lat, lng, 10);
+            focusFindId = null;
+            return;
+        }
+
+        // Not found => switch to AllUsers, rebuild markers, then focus
+        mapService.mapFilter = "AllUsers";
+
+        if (!mapService.AllViewModels.Any())
+            mapService.AllViewModels = await userFindService.GetUserFindsDCs();
+
+        mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
+        FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
+
+        var json = JsonConvert.SerializeObject(
+            mapService.CurrentViewModels,
+            new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                Formatting = Formatting.Indented
+            });
+
+        await JS.InvokeVoidAsync(
+            "initializeMap",
+            json,
+            userVm.user.UsrId.ToString(),
+            mapService.mapFilter,
+            userVm.user.UserSecurity.UssUsername);
+
+        if (TryGetLatLngForFind(focusFindId.Value, mapService.CurrentViewModels, out lat, out lng))
+        {
+            await JS.InvokeVoidAsync("focusFindAfterDelay", lat, lng, 10);
+        }
+
+        focusFindId = null;
+    }
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            ReadFocusFromQuery();
+
             var userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
             if (userVm != null)
             {
@@ -76,13 +166,17 @@
                             Formatting = Formatting.Indented
                         });
 
-                    await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
-                    await JSRuntime.InvokeVoidAsync(
+                    await JS.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
+                    await JS.InvokeVoidAsync(
                         "initializeMap",
                         json,
                         userVm.user.UsrId.ToString(),
                         mapService.mapFilter,
-                        userVm.user.UserSecurity.UssUsername);
+                        userVm.user.UserSecurity.UssUsername
+                    );
+                    
+
+                    await FocusFindIfRequested(userVm);
                 }
                 catch (Exception ex)
                 {
@@ -116,7 +210,7 @@
             };
 
             var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-            await JSRuntime.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, userVm.user.UserSecurity.UssUsername);
+            await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, userVm.user.UserSecurity.UssUsername);
         }
     }
 
@@ -149,7 +243,7 @@
             FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
 
             var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-            await JSRuntime.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, userVm.user.UserSecurity.UssUsername);
+            await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, userVm.user.UserSecurity.UssUsername);
         }
         finally
         {
@@ -219,7 +313,7 @@
         }
 
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-        await JSRuntime.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter);
+        await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter);
     }
     #endregion
     public void Dispose()

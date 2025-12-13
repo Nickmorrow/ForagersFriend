@@ -10,9 +10,10 @@
 @inject IUserService userService
 @inject IUserSessionService session
 @inject IUserFindService userFindService
+@inject IMapService mapService
 @inject NavigationManager navigationManager
 
-@if (!_loaded)
+@if (!Pf_loaded)
 {
     <p>Loading profile...</p>
 }
@@ -47,7 +48,10 @@ else
                 </div>
             }
         </div>
-        <ProfileFindsList FindsViewModel="ufdc" />
+        <ProfileFindsList ViewModels="mapService.CurrentViewModels"
+                          IsLoading="isLoading"
+                          hasLoaded="hasLoaded" />
+
         <div id="friends-container">
             <h3>Friends</h3>
             <table>
@@ -62,7 +66,9 @@ else
 
     private UserDataContainer userVm { get; set; } = new();
     private UserFindsDataContainer ufdc { get; set; } = new();
-    
+    private bool Pf_loaded;
+    private bool isLoading = false;
+    private bool hasLoaded = false;
 
     private bool edit;
 
@@ -83,7 +89,7 @@ else
     }
 
 
-    private bool _loaded;
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -97,11 +103,26 @@ else
             return;
         }
         userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
-        ufdc = await userFindService.GetUserFindsDC(userVm.user.UsrId);
 
-        edit = false;
-        _loaded = true;
+        isLoading = true;
         StateHasChanged();
+        try
+        {
+            mapService.userNamesKvp = await userFindService.GetCommentUserNames();
+            mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(userVm.user.UsrId);
+            mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
+        }
+        catch (Exception ex)
+        {
+            
+        }
+        finally
+        {
+            edit = false;
+            Pf_loaded = true;
+            hasLoaded = true;
+            StateHasChanged();
+        }       
     }
 
 

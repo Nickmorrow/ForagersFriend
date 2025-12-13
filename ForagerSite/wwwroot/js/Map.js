@@ -50,6 +50,11 @@ function onMapClick(e) {
     });
 }
 
+window.focusFindAfterDelay = function (lat, lng, ms) {
+    setTimeout(() => {
+        if (window.map) window.map.setView([lat, lng], 16, { animate: true });
+    }, ms || 400);
+};
 
 window.initializeMap = function (json, currentUserId, mapFilter, userName) {
     let userFindsDCs = JSON.parse(json);
