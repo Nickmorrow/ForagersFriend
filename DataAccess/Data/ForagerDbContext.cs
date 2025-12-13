@@ -200,6 +200,33 @@ namespace DataAccess.Data
                 entity.HasIndex(x => new { x.NotUserId, x.NotIsRead });
             });
 
+            // UserMessage
+            modelBuilder.Entity<UserMessage>(entity =>
+            {
+                entity.HasKey(x => x.UsmId);
+
+                // Sender FK
+                entity.HasOne(x => x.Sender)
+                      .WithMany() // or .WithMany(u => u.SentMessages) if you add nav collections on User
+                      .HasForeignKey(x => x.UsmSenderId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Recipient FK
+                entity.HasOne(x => x.Recipient)
+                      .WithMany() // or .WithMany(u => u.ReceivedMessages)
+                      .HasForeignKey(x => x.UsmRecipientId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Self-referencing reply relationship
+                entity.HasOne(x => x.ParentMessage)
+                      .WithMany(x => x.Replies)
+                      .HasForeignKey(x => x.UsmParentMessageId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Helpful indexes
+                entity.HasIndex(x => x.UsmThreadId);
+                entity.HasIndex(x => new { x.UsmRecipientId, x.UsmStatus, x.UsmSendDate });
+            });
         }
     }
 }
