@@ -91,11 +91,11 @@ namespace DataAccess.Data
                 .WithMany(u => u.UserFindsCommentXrefs)
                 .HasForeignKey(xref => xref.UcxUsrId);
 
-            // One-to-One: findsCommentXref -> findsComment
-            modelBuilder.Entity<UserFindsCommentXref>()
-                .HasOne(xref => xref.UserFindsComment)
-                .WithOne(usc => usc.UserFindsCommentXref)
-                .HasForeignKey<UserFindsCommentXref>(xref => xref.UcxUscId);
+            //// One-to-One: findsCommentXref -> findsComment
+            //modelBuilder.Entity<UserFindsCommentXref>()
+            //    .HasOne(xref => xref.UserFindsComment)
+            //    .WithOne(usc => usc.UserFindsCommentXref)
+            //    .HasForeignKey<UserFindsCommentXref>(xref => xref.UcxUscId);
 
             // Self-referencing relationship for replies
             modelBuilder.Entity<UserFindsComment>()
@@ -170,6 +170,12 @@ namespace DataAccess.Data
                 // Ensure only one relationship row per pair
                 entity.HasIndex(x => new { x.UrlUserAId, x.UrlUserBId })
                       .IsUnique();
+                // Enforce canonical ordering: UrlUserAId must be < UrlUserBId
+                entity.ToTable(t => t.HasCheckConstraint(
+                    "CK_UserRelationship_UserA_LessThan_UserB",
+                    "[UrlUserAId] < [UrlUserBId]"
+                ));
+
             });
 
             //Notification

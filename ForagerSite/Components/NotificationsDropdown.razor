@@ -1,0 +1,110 @@
+﻿@using DataAccess.Models
+@using ForagerSite.Services.Interfaces
+@rendermode InteractiveServer
+@inject IUserSessionService session
+@inject INotificationService notificationService
+
+<div class="notification-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+        @if (UnreadCount > 0)
+        {
+            <span class="notification-badge" style="margin-left:8px;">@UnreadCount</span>
+        }
+    </div>
+
+    <button class="btn btn-sm btn-light" @onclick="Close">✕</button>
+</div>
+
+<hr />
+
+@if (!loaded)
+{
+    <div class="notification-empty">Loading...</div>
+}
+else if (Notifications.Count == 0)
+{
+    <div class="notification-empty">No notifications.</div>
+}
+else
+{
+    <ul class="notification-list">
+        @foreach (var note in Notifications)
+        {
+            <li class="notification-item" style="padding:10px; border-bottom:1px solid #eee;">
+                <div class="notification-message">
+                    <strong>@(note.ActorUser?.UsrName ?? "Someone")</strong>
+                    @note.NotMessage
+                </div>
+
+                <div class="notification-meta" style="font-size:0.85em; opacity:0.8;">
+                    @note.NotCreatedDate.ToLocalTime().ToString("g")
+                </div>
+
+                @if (note.NotType == "FriendRequest" && !note.NotIsRead)
+                {
+                    <div style="margin-top:8px; display:flex; gap:8px;">
+                        <button class="btn btn-sm btn-success" @onclick="() => Accept(note.NotId)">Accept</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => Decline(note.NotId)">Decline</button>
+                    </div>
+                }
+                else if (!note.NotIsRead)
+                {
+                    <div style="margin-top:8px;">
+                        <button class="btn btn-sm btn-secondary" @onclick="() => MarkRead(note.NotId)">Mark read</button>
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool loaded;
+    private int UnreadCount;
+    private List<Notification> Notifications = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await session.Load();
+        await Refresh();
+        loaded = true;
+    }
+
+    private async Task Refresh()
+    {
+        if (!session.IsAuthenticated || session.SessionUser is null)
+        {
+            Notifications.Clear();
+            UnreadCount = 0;
+            return;
+        }
+
+        Notifications = await notificationService.GetNotifications(session.SessionUser.UserId, unreadOnly: false, take: 25);
+        UnreadCount = await notificationService.GetUnreadCount(session.SessionUser.UserId);
+    }
+
+    private async Task MarkRead(Guid id)
+    {
+        await notificationService.MarkRead(id, session.SessionUser.UserId);
+        await Refresh();
+    }
+
+    private async Task Accept(Guid id)
+    {
+        await notificationService.AcceptFriendRequestFromNotification(id, session.SessionUser.UserId);
+        await Refresh();
+    }
+
+    private async Task Decline(Guid id)
+    {
+        await notificationService.DeclineFriendRequestFromNotification(id, session.SessionUser.UserId);
+        await Refresh();
+    }
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+}

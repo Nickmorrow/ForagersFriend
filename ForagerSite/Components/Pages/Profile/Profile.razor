@@ -13,6 +13,7 @@
 @inject IUserSessionService session
 @inject IUserFindService userFindService
 @inject IMapService mapService
+@inject IFriendService friendService
 @inject NavigationManager navigationManager
 
 @if (!Pf_loaded)
@@ -27,6 +28,34 @@ else
         <div id="profile-container">
 
             <ProfilePictureEditor UserId="@userVm.user.UsrId" CanEdit="IsMyProfile" />
+            @if (!IsMyProfile)
+            {
+                <div style="margin: 10px 0;">
+                    @switch (friendStatus)
+                    {
+                        case FriendUiStatus.None:
+                            <button class="btn btn-primary" @onclick="SendFriendRequest">Add Friend</button>
+                            break;
+
+                        case FriendUiStatus.RequestSent:
+                            <button class="btn btn-secondary" disabled>Request Sent</button>
+                            break;
+
+                        case FriendUiStatus.Friends:
+                            <button class="btn btn-success" disabled>Friends</button>
+                            break;
+
+                        case FriendUiStatus.RequestReceived:
+                            <button class="btn btn-success" @onclick="AcceptFriendRequest">Accept</button>
+                            <button class="btn btn-danger" @onclick="DeclineFriendRequest">Decline</button>
+                            break;
+
+                        case FriendUiStatus.Blocked:
+                            <button class="btn btn-secondary" disabled>Blocked</button>
+                            break;
+                    }
+                </div>
+            }
 
             @if (!edit)
             {
@@ -80,6 +109,8 @@ else
     private bool Pf_loaded;
     private bool isLoading = false;
     private bool hasLoaded = false;
+    private FriendUiStatus friendStatus = FriendUiStatus.None;
+
 
     private bool edit;
 
@@ -93,7 +124,7 @@ else
             var x when x < 800 => "Fox",
             var x when x < 1500 => "Hawk",
             var x when x < 3000 => "Owl",
-            var x when x < 6000 => "Ranger",
+            var x when x < 6000 => "Sasquash",
             var x when x < 10000 => "Druid",
             _ => "Forest Spirit"
         };
@@ -124,13 +155,11 @@ else
             userVm = await userService.GetUserViewModelById(viewingUserId);
 
             mapService.userNamesKvp = await userFindService.GetCommentUserNames();
-
-            // Load the viewed user's finds
             mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(viewingUserId);
 
-            // If I'm viewing someone else, hide private finds (for now)
             if (!IsMyProfile && mapService.CurrentViewModels != null)
             {
+                friendStatus = await friendService.GetStatus(session.SessionUser.UserId, viewingUserId);
                 foreach (var vm in mapService.CurrentViewModels)
                 {
                     vm.finds = vm.finds
@@ -149,6 +178,26 @@ else
             isLoading = false;
             StateHasChanged();
         }
+    }
+    private async Task SendFriendRequest()
+    {
+        await friendService.SendRequest(session.SessionUser.UserId, viewingUserId);
+        friendStatus = await friendService.GetStatus(session.SessionUser.UserId, viewingUserId);
+        StateHasChanged();
+    }
+
+    private async Task AcceptFriendRequest()
+    {
+        await friendService.AcceptRequest(session.SessionUser.UserId, viewingUserId);
+        friendStatus = await friendService.GetStatus(session.SessionUser.UserId, viewingUserId);
+        StateHasChanged();
+    }
+
+    private async Task DeclineFriendRequest()
+    {
+        await friendService.DeclineRequest(session.SessionUser.UserId, viewingUserId);
+        friendStatus = await friendService.GetStatus(session.SessionUser.UserId, viewingUserId);
+        StateHasChanged();
     }
 
 

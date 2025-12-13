@@ -1,7 +1,11 @@
 ﻿@using ForagerSite.Services.Interfaces
+@using DataAccess.Models
 @rendermode InteractiveServer
 @inject IUserSessionService session
 @inject NavigationManager Navigation
+@inject INotificationService notificationService
+@inject IUserService userService
+@inject IFriendService friendService
 @implements IDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
@@ -42,38 +46,15 @@
                    @onclick:preventDefault="true">
                     <span class="bi bi-bell"></span>
                     Notifications
-
-                    @if (UnreadCount > 0)
-                    {
-                        <span class="notification-badge">@UnreadCount</span>
-                    }
                 </a>
 
                 @if (showNotifications)
                 {
                     <div class="notification-dropdown">
-                        @if (Notifications != null && Notifications.Any())
-                        {
-                            <ul class="notification-list">
-                                @foreach (var note in Notifications)
-                                {
-                                    <li class="notification-item">
-                                        <div class="notification-message">@note.Message</div>
-                                        <div class="notification-meta">
-                                            @note.CreatedAt.ToLocalTime().ToString("g")
-                                        </div>
-                                    </li>
-                                }
-                            </ul>
-                        }
-                        else
-                        {
-                            <div class="notification-empty">
-                                No notifications.
-                            </div>
-                        }
+                        <NotificationsDropdown OnClose="CloseNotifications" />
                     </div>
                 }
+
             </div>
 
             <div class="nav-item px-3">
@@ -95,23 +76,7 @@
 </div>
 
 @code {
-    private bool showNotifications = false;
-
-    private class NotificationItem
-    {
-        public string Message { get; set; } = "";
-        public DateTime CreatedAt { get; set; }
-        public bool IsRead { get; set; }
-    }
-
-    private List<NotificationItem> Notifications = new()
-    {
-        new NotificationItem { Message = "Welcome to Forager!", CreatedAt = DateTime.UtcNow.AddMinutes(-30), IsRead = false },
-        new NotificationItem { Message = "Your friend Bill commented on your find.", CreatedAt = DateTime.UtcNow.AddHours(-2), IsRead = false },
-        new NotificationItem { Message = "Profile updated successfully.", CreatedAt = DateTime.UtcNow.AddDays(-1), IsRead = true }
-    };
-
-    private int UnreadCount => Notifications?.Count(n => !n.IsRead) ?? 0;
+    private bool showNotifications;
 
     protected override void OnInitialized()
     {
@@ -121,32 +86,16 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-
-        // JS interop safe here (ProtectedSessionStorage)
         await session.Load();
         StateHasChanged();
     }
 
+    private void ToggleNotifications() => showNotifications = !showNotifications;
+    private void CloseNotifications() => showNotifications = false;
+
     private void OnUserStateChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose()
-    {
-        session.OnChange -= OnUserStateChanged;
-    }
-
-    private void ToggleNotifications()
-    {
-        showNotifications = !showNotifications;
-
-        // Optional: mark all as read when opened
-        if (showNotifications && Notifications != null)
-        {
-            foreach (var n in Notifications)
-            {
-                n.IsRead = true;
-            }
-        }
-    }
+    public void Dispose() => session.OnChange -= OnUserStateChanged;
 
     private async Task HandleLogout()
     {
