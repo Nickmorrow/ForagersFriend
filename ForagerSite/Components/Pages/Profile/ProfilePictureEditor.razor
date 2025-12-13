@@ -20,9 +20,12 @@ else
             <div>
                 <img src="@profileImageUrl" alt="Profile Picture" style="max-width: 400px;" />
             </div>
-            <p style="cursor: pointer;">
-                <a @onclick="EditProfilePic">Edit profile picture</a>
-            </p>
+            @if (CanEdit)
+            {
+                <p style="cursor: pointer;">
+                    <a @onclick="EditProfilePic">Edit profile picture</a>
+                </p>
+            }
         }
         else
         {
@@ -62,6 +65,7 @@ else
 
 @code {
     [Parameter] public Guid UserId { get; set; }
+    [Parameter] public bool CanEdit { get; set; }   
 
     private UserDataContainer userVm = new();
     private bool editProfilePic;
@@ -79,9 +83,20 @@ else
     //     profileImageUrl = await GetProfileImageUrl();
     // }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (!firstRender) return;
+
+    //     userVm = await userService.GetUserViewModelById(UserId);
+    //     profileImageUrl = await GetProfileImageUrl();
+
+    //     _loaded = true;
+    //     StateHasChanged();
+    // }
+    protected override async Task OnParametersSetAsync()
     {
-        if (!firstRender) return;
+        _loaded = false;
+        StateHasChanged();
 
         userVm = await userService.GetUserViewModelById(UserId);
         profileImageUrl = await GetProfileImageUrl();

@@ -1,5 +1,7 @@
 ﻿
 @page "/Profile"
+@page "/profile/{UserId:guid}"
+
 @using DataAccess.Models
 @using ForagerSite.Components.Profile
 @using ForagerSite.DataContainer
@@ -24,7 +26,7 @@ else
     <div id="containers" style="display: flex; gap: 20px;">
         <div id="profile-container">
 
-            <ProfilePictureEditor UserId="@userVm.user.UsrId" />
+            <ProfilePictureEditor UserId="@userVm.user.UsrId" CanEdit="IsMyProfile" />
 
             @if (!edit)
             {
@@ -36,16 +38,22 @@ else
                     <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
                     <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
                     <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>
-                    <button @onclick="EditProfile">Edit</button>
+                    @if (IsMyProfile)
+                    {
+                        <button @onclick="EditProfile">Edit</button>
+                    }
                 </div>
             }
             else
             {
-                <div id="edit-profile-container">
-                    <ProfileDetailsEditor UserVm="userVm"
-                                          OnSaved="HandleProfileSaved"
-                                          OnCancelled="HandleProfileCancelled" />
-                </div>
+                @if (edit && IsMyProfile)
+                {
+                    <div id="edit-profile-container">
+                        <ProfileDetailsEditor UserVm="userVm"
+                                              OnSaved="HandleProfileSaved"
+                                              OnCancelled="HandleProfileCancelled" />
+                    </div>
+                }
             }
         </div>
         <ProfileFindsList ViewModels="mapService.CurrentViewModels"
@@ -63,7 +71,10 @@ else
 }
 
 @code {
+    [Parameter] public Guid? UserId { get; set; }
 
+    private Guid viewingUserId;
+    private bool IsMyProfile => viewingUserId == session.SessionUser.UserId;
     private UserDataContainer userVm { get; set; } = new();
     private UserFindsDataContainer ufdc { get; set; } = new();
     private bool Pf_loaded;
@@ -102,28 +113,44 @@ else
             navigationManager.NavigateTo("/Login");
             return;
         }
-        userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
+
+        viewingUserId = UserId ?? session.SessionUser.UserId;
 
         isLoading = true;
         StateHasChanged();
+
         try
         {
+            userVm = await userService.GetUserViewModelById(viewingUserId);
+
             mapService.userNamesKvp = await userFindService.GetCommentUserNames();
-            mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(userVm.user.UsrId);
+
+            // Load the viewed user's finds
+            mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(viewingUserId);
+
+            // If I'm viewing someone else, hide private finds (for now)
+            if (!IsMyProfile && mapService.CurrentViewModels != null)
+            {
+                foreach (var vm in mapService.CurrentViewModels)
+                {
+                    vm.finds = vm.finds
+                        .Where(f => f.accessibility != "Private")
+                        .ToList();
+                }
+            }
+
             mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
-        }
-        catch (Exception ex)
-        {
-            
         }
         finally
         {
             edit = false;
             Pf_loaded = true;
             hasLoaded = true;
+            isLoading = false;
             StateHasChanged();
-        }       
+        }
     }
+
 
 
     private void EditProfile()

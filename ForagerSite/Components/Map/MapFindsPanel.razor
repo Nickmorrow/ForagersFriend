@@ -9,6 +9,7 @@
 @inject IMapService mapService
 @inject IJSRuntime JSRuntime
 @inject IUserService userService
+@inject NavigationManager navigationManager
 
 @if (isPanelOpen)
 {
@@ -80,9 +81,18 @@
 
                         <div>
                             <div style="font-weight:600;">Discovered by</div>
-                            <div>@selectedVm.userName</div>
+                            <a href="/profile/@selectedVm.userId"
+                               @onclick:stopPropagation="true"
+                               @onclick:preventDefault="true"
+                               @onclick="() => GoToProfile(selectedVm.userId)"
+                               style="cursor:pointer; text-decoration:underline;">
+                                @selectedVm.userName
+                            </a>
+
+
                         </div>
                     </div>
+                    
 
 
                     @if (!string.IsNullOrWhiteSpace(selectedFind.speciesName))
@@ -167,6 +177,12 @@
 
     private UserFindsDataContainer? selectedVm;
     private FindDC? selectedFind;
+
+    private void GoToProfile(Guid userId)
+    {
+        navigationManager.NavigateTo($"/profile/{userId}");
+    }
+
 
     private async Task ReInitializeMap()
     {
