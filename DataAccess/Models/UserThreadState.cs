@@ -21,6 +21,8 @@ namespace DataAccess.Models
         public DateTime? UtsLastReadUtc { get; set; }   // read/unread = compare vs last message time
         public DateTime? UtsArchivedUtc { get; set; }   // null = not archived
         public DateTime? UtsDeletedUtc { get; set; }    // null = still visible
+        public DateTime? UtsLastInboundUtc { get; set; } // last message where Recipient = this user
+        public DateTime? UtsLastOutboundUtc { get; set; } // last message where Sender = this user
 
         public DateTime UtsUpdatedUtc { get; set; } = DateTime.UtcNow;
     }
