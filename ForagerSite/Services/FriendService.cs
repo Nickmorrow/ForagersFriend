@@ -202,5 +202,42 @@ namespace ForagerSite.Services
             req.FrqStatus = FriendRequestStatus.Declined;
             await ctx.SaveChangesAsync();
         }
+
+        public async Task Unfriend(Guid me, Guid other)
+        {
+            if (me == other) return;
+
+            using var ctx = _db.CreateDbContext();
+
+            var (a, b) = NormalizePair(me, other);
+
+            // Delete relationship row (Friends/Blocked lives here)
+            var rel = await ctx.UserRelationships
+                .FirstOrDefaultAsync(r => r.UrlUserAId == a && r.UrlUserBId == b);
+
+            if (rel != null && rel.UrlStatus == RelationshipStatus.Friends)
+            {
+                ctx.UserRelationships.Remove(rel);
+            }
+
+            // Optional cleanup:
+            // keep FriendRequests history, OR reset last accepted to Declined, OR leave alone.
+            // I recommend leaving it, but if you want to clear "accepted" so UI is simpler:
+            var accepted = await ctx.FriendRequests
+                .Where(fr =>
+                    ((fr.FrqRequesterUserId == me && fr.FrqAddresseeUserId == other) ||
+                     (fr.FrqRequesterUserId == other && fr.FrqAddresseeUserId == me))
+                    && fr.FrqStatus == FriendRequestStatus.Accepted)
+                .ToListAsync();
+
+            foreach (var fr in accepted)
+            {
+                fr.FrqStatus = FriendRequestStatus.Declined; // effectively "not friends anymore"
+                                                             // fr.FrqAcceptedDate = null; // optional
+            }
+
+            await ctx.SaveChangesAsync();
+        }
+
     }
 }

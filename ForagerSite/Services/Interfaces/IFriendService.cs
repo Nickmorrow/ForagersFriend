@@ -17,5 +17,7 @@ namespace ForagerSite.Services.Interfaces
         Task SendRequest(Guid me, Guid other);
         Task AcceptRequest(Guid me, Guid other);
         Task DeclineRequest(Guid me, Guid other);
+        Task Unfriend(Guid me, Guid other);
+
     }
 }

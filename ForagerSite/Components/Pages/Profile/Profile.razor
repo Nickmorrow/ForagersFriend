@@ -42,8 +42,14 @@ else
                             break;
 
                         case FriendUiStatus.Friends:
-                            <button class="btn btn-success" disabled>Friends</button>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-success" disabled>Friends</button>
+                                <button class="btn btn-outline-danger" @onclick="Unfriend">
+                                    Unfriend
+                                </button>
+                            </div>
                             break;
+
 
                         case FriendUiStatus.RequestReceived:
                             <button class="btn btn-success" @onclick="AcceptFriendRequest">Accept</button>
@@ -196,6 +202,13 @@ else
     private async Task DeclineFriendRequest()
     {
         await friendService.DeclineRequest(session.SessionUser.UserId, viewingUserId);
+        friendStatus = await friendService.GetStatus(session.SessionUser.UserId, viewingUserId);
+        StateHasChanged();
+    }
+
+    private async Task Unfriend()
+    {
+        await friendService.Unfriend(session.SessionUser.UserId, viewingUserId);
         friendStatus = await friendService.GetStatus(session.SessionUser.UserId, viewingUserId);
         StateHasChanged();
     }
