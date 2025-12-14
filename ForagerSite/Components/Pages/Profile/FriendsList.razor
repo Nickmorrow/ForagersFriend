@@ -1,0 +1,54 @@
+﻿@using ForagerSite.DataContainer
+@using ForagerSite.Services.Interfaces
+@rendermode InteractiveServer
+@inject IFriendService friendService
+@inject NavigationManager navigationManager
+
+<div id="friends-container">
+    <h3>Friends (@friends.Count)</h3>
+
+    @if (!_loaded)
+    {
+        <p>Loading friends...</p>
+    }
+    else if (friends.Count == 0)
+    {
+        <p>No friends yet.</p>
+    }
+    else
+    {
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            @foreach (var f in friends)
+            {
+                <a href="@($"/profile/{f.UserId}")"
+                   style="display:flex; align-items:center; gap:10px; text-decoration:none; color:inherit;">
+                    <img src="@f.ProfilePicUrl"
+                         style="width:40px; height:40px; border-radius:50%; object-fit:cover;" />
+                    <span>@f.UserName</span>
+                </a>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Guid ViewingUserId { get; set; }
+
+    private bool _loaded;
+    private List<FriendListItem> friends = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loaded = false;
+
+        if (ViewingUserId == Guid.Empty)
+        {
+            friends.Clear();
+            _loaded = true;
+            return;
+        }
+
+        friends = await friendService.GetFriends(ViewingUserId);
+        _loaded = true;
+    }
+}

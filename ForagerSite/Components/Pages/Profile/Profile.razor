@@ -95,13 +95,8 @@ else
                           IsLoading="isLoading"
                           hasLoaded="hasLoaded" />
 
-        <div id="friends-container">
-            <h3>Friends</h3>
-            <table>
-                <tbody>
-                </tbody>
-            </table>
-        </div>
+        <FriendsList ViewingUserId="viewingUserId" />
+
     </div>
 }
 
@@ -109,6 +104,10 @@ else
     [Parameter] public Guid? UserId { get; set; }
 
     private Guid viewingUserId;
+
+    private bool _sessionLoaded;
+    private Guid? _lastLoadedViewingUserId;
+
     private bool IsMyProfile => viewingUserId == session.SessionUser.UserId;
     private UserDataContainer userVm { get; set; } = new();
     private UserFindsDataContainer ufdc { get; set; } = new();
@@ -116,6 +115,7 @@ else
     private bool isLoading = false;
     private bool hasLoaded = false;
     private FriendUiStatus friendStatus = FriendUiStatus.None;
+
 
 
     private bool edit;
@@ -135,37 +135,51 @@ else
             _ => "Forest Spirit"
         };
     }
-
-
-
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-
-        await session.Load();
-
-        if (!session.IsAuthenticated || session.SessionUser is null)
+        if (firstRender)
         {
-            navigationManager.NavigateTo("/Login");
-            return;
+            await session.Load();
+            _sessionLoaded = true;
+
+            if (!session.IsAuthenticated || session.SessionUser is null)
+            {
+                navigationManager.NavigateTo("/Login");
+                return;
+            }
+
+            // If route param is empty, it's "my profile"
+            if (viewingUserId == Guid.Empty)
+                viewingUserId = session.SessionUser.UserId;
         }
 
-        viewingUserId = UserId ?? session.SessionUser.UserId;
-
+        // After session is loaded, reload when the viewed user changes
+        if (_sessionLoaded && _lastLoadedViewingUserId != viewingUserId)
+        {
+            _lastLoadedViewingUserId = viewingUserId;
+            await LoadProfile(viewingUserId);
+            StateHasChanged();
+        }
+    }
+    private async Task LoadProfile(Guid userIdToLoad)
+    {
         isLoading = true;
+        Pf_loaded = false;
         StateHasChanged();
 
         try
         {
-            userVm = await userService.GetUserViewModelById(viewingUserId);
+            userVm = await userService.GetUserViewModelById(userIdToLoad);
 
             mapService.userNamesKvp = await userFindService.GetCommentUserNames();
-            mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(viewingUserId);
+            mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(userIdToLoad);
+
+            // recompute IsMyProfile now that viewingUserId is known
+            if (session.SessionUser is not null)
+                friendStatus = await friendService.GetStatus(session.SessionUser.UserId, userIdToLoad);
 
             if (!IsMyProfile && mapService.CurrentViewModels != null)
             {
-                friendStatus = await friendService.GetStatus(session.SessionUser.UserId, viewingUserId);
                 foreach (var vm in mapService.CurrentViewModels)
                 {
                     vm.finds = vm.finds
@@ -182,9 +196,61 @@ else
             Pf_loaded = true;
             hasLoaded = true;
             isLoading = false;
-            StateHasChanged();
         }
     }
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (!firstRender) return;
+
+    //     await session.Load();
+
+    //     if (!session.IsAuthenticated || session.SessionUser is null)
+    //     {
+    //         navigationManager.NavigateTo("/Login");
+    //         return;
+    //     }
+
+    //     viewingUserId = UserId ?? session.SessionUser.UserId;
+
+    //     isLoading = true;
+    //     StateHasChanged();
+
+    //     try
+    //     {
+    //         userVm = await userService.GetUserViewModelById(viewingUserId);
+    //         mapService.userNamesKvp = await userFindService.GetCommentUserNames();
+    //         mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(viewingUserId);
+
+    //         if (!IsMyProfile && mapService.CurrentViewModels != null)
+    //         {
+    //             friendStatus = await friendService.GetStatus(session.SessionUser.UserId, viewingUserId);
+    //             foreach (var vm in mapService.CurrentViewModels)
+    //             {
+    //                 vm.finds = vm.finds
+    //                     .Where(f => f.accessibility != "Private")
+    //                     .ToList();
+    //             }
+    //         }
+
+    //         mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
+    //     }
+    //     finally
+    //     {
+    //         edit = false;
+    //         Pf_loaded = true;
+    //         hasLoaded = true;
+    //         isLoading = false;
+    //         StateHasChanged();
+    //     }
+    // }
+    protected override void OnParametersSet()
+    {
+        // Safe: no JS interop here
+        viewingUserId = UserId ?? Guid.Empty;
+    }
+
+
     private async Task SendFriendRequest()
     {
         await friendService.SendRequest(session.SessionUser.UserId, viewingUserId);

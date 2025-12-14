@@ -1,5 +1,6 @@
 ﻿using DataAccess.Data;
 using DataAccess.Models;
+using ForagerSite.DataContainer;
 using ForagerSite.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -238,6 +239,56 @@ namespace ForagerSite.Services
 
             await ctx.SaveChangesAsync();
         }
+        public async Task<List<FriendListItem>> GetFriends(Guid userId)
+        {
+            using var ctx = _db.CreateDbContext();
+
+            // Get friend IDs
+            var friendIds = await ctx.UserRelationships
+                .AsNoTracking()
+                .Where(r =>
+                    r.UrlStatus == RelationshipStatus.Friends &&
+                    (r.UrlUserAId == userId || r.UrlUserBId == userId))
+                .Select(r => r.UrlUserAId == userId ? r.UrlUserBId : r.UrlUserAId)
+                .Distinct()
+                .ToListAsync();
+
+            if (!friendIds.Any())
+                return new();
+
+            // Fetch usernames
+            var users = await ctx.Users
+                .AsNoTracking()
+                .Where(u => friendIds.Contains(u.UsrId))
+                .Select(u => new
+                {
+                    u.UsrId,
+                    UserName = u.UserSecurity.UssUsername
+                })
+                .ToListAsync();
+
+            // Fetch profile images ONLY
+            var profileImages = await ctx.UserImages
+                .AsNoTracking()
+                .Where(img =>
+                    img.UsiUsrId != null &&
+                    img.UsiUsfId == null &&
+                    friendIds.Contains(img.UsiUsrId.Value))
+                .ToListAsync();
+
+            return users
+                .Select(u => new FriendListItem
+                {
+                    UserId = u.UsrId,
+                    UserName = u.UserName,
+                    ProfilePicUrl =
+                        profileImages.FirstOrDefault(p => p.UsiUsrId == u.UsrId)?.UsiImageData
+                        ?? "UserProfileImages/Shared/PlaceHolder.jpeg"
+                })
+                .OrderBy(x => x.UserName)
+                .ToList();
+        }
+
 
     }
 }

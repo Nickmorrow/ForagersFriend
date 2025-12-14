@@ -1,4 +1,5 @@
 ﻿using DataAccess.Models;
+using ForagerSite.DataContainer;
 
 namespace ForagerSite.Services.Interfaces
 {
@@ -18,6 +19,8 @@ namespace ForagerSite.Services.Interfaces
         Task AcceptRequest(Guid me, Guid other);
         Task DeclineRequest(Guid me, Guid other);
         Task Unfriend(Guid me, Guid other);
+        Task<List<FriendListItem>> GetFriends(Guid userId);
+
 
     }
 }
