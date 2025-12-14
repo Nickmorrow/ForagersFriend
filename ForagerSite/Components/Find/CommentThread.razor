@@ -8,6 +8,8 @@
 @inject IUserFindService userFindService
 @inject IMapService mapService
 @inject IUserSessionService session
+@inject NavigationManager Nav
+
 
 
 <div id="commentSection">
@@ -55,7 +57,12 @@
                                             </div>
                                             <div>
                                                 <p>
-                                                    <a>@GetUserName(xref.comxUserId)</a>
+                                                    <a href=""
+                                                       @onclick="() => GoToProfile(xref.comxUserId)"
+                                                       @onclick:preventDefault="true">
+                                                        @GetUserName(xref.comxUserId)
+                                                    </a>
+
                                                 </p>
                                             </div>
                                         </div>
@@ -119,7 +126,12 @@
                                                                             </div>
                                                                             <div>
                                                                                 <p>
-                                                                                    <a>@GetUserName(reply.comxUserId)</a>
+                                                                                    <a href=""
+                                                                                        @onclick="() => GoToProfile(reply.comxUserId)"
+                                                                                        @onclick:preventDefault="true">
+                                                                                        @GetUserName(reply.comxUserId)
+                                                                                    </a>
+
                                                                                 </p>
                                                                             </div>
                                                                         </div>
@@ -320,5 +332,10 @@
         mapService.UpdateViewModels(VmId, newViewModel);
     }
     #endregion
+    private void GoToProfile(Guid userId)
+    {
+        Nav.NavigateTo($"/profile/{userId}");
+    }
+
 }
 

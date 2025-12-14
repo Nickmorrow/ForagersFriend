@@ -12,7 +12,10 @@
 @inject IUserService userService
 @inject NavigationManager navigationManager
 
+<div id="finds-Container">
+<h3>Finds (@ViewModels[0].finds.Count)</h3>
 <div id="finds-grid" style="flex: 1; overflow-y: auto; border: 1px solid #ccc; background-color: #f9f9f9;">
+    
     @if (isLoading && !hasLoaded)
     {
         <div class="loading-indicator">
@@ -21,6 +24,7 @@
     }
     else if (ViewModels != null && ViewModels.Any())
     {
+        
         <table style="width: 100%; border-collapse: collapse;">
             <tbody>
 
@@ -188,7 +192,7 @@
         </div>
     }
 </div>
-
+</div>
 @code {
 
     private bool showCreateForm = false;
