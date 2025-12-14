@@ -40,22 +40,22 @@
             </div>
 
             <div class="nav-item px-3">
-                <a href=""
-                   class="nav-link"
-                   @onclick="ToggleNotifications"
-                   @onclick:preventDefault="true">
+                <button type="button"
+                        class="nav-link btn btn-link text-start w-100"
+                        @onclick="ToggleNotifications"
+                        @onclick:stopPropagation="true">
                     <span class="bi bi-bell"></span>
                     Notifications
-                </a>
+                </button>
 
                 @if (showNotifications)
                 {
-                    <div class="notification-dropdown">
+                    <div class="notification-dropdown" style="background:white !important;"@onclick:stopPropagation="true">
                         <NotificationsDropdown OnClose="CloseNotifications" />
                     </div>
                 }
-
             </div>
+
 
             <div class="nav-item px-3">
                 <a href="#" class="nav-link" @onclick="HandleLogout">

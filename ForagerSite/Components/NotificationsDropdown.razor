@@ -6,13 +6,14 @@
 
 <div class="notification-header" style="display:flex; justify-content:space-between; align-items:center;">
     <div>
+
         @if (UnreadCount > 0)
         {
             <span class="notification-badge" style="margin-left:8px;">@UnreadCount</span>
         }
     </div>
 
-    <button class="btn btn-sm btn-light" @onclick="Close">✕</button>
+    @* <button class="btn btn-sm btn-light" @onclick="Close">✕</button> *@
 </div>
 
 <hr />
