@@ -17,7 +17,8 @@
         </button>
 
         <button id="get-friends-finds"
-                class="btn btn-primary btn-lg">
+                class="btn btn-primary btn-lg"
+                @onclick="() => OnGetFriendFinds.InvokeAsync()">
             Friend's Finds
         </button>
     </div>
@@ -106,7 +107,7 @@
     // ---- Callbacks to parent (Map.razor) ----
     [Parameter] public EventCallback OnGetAllFinds { get; set; }
     [Parameter] public EventCallback OnGetMyFinds { get; set; }
-
+    [Parameter] public EventCallback OnGetFriendFinds { get; set; }
     // Parent will do the actual filtering & map re-init
     [Parameter] public EventCallback<MapSearchCriteria> OnSearch { get; set; }
 

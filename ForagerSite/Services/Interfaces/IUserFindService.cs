@@ -12,11 +12,10 @@ namespace ForagerSite.Services.Interfaces
         Task<Dictionary<Guid, string>> GetCommentUserNames();
 
         Task<UserFindsDataContainer> GetUserFindsDC(Guid userId);
-
-        Task<List<UserFindsDataContainer>> GetUserFindsDCs(Guid userId);
-
-        Task<List<UserFindsDataContainer>> GetUserFindsDCs();
-
+        Task<List<UserFindsDataContainer>> GetUserFindsDCsUser(Guid userId);
+        Task<List<UserFindsDataContainer>> GetUserFindsDCsFriends(Guid viewerUserId);
+        Task<List<UserFindsDataContainer>> GetUserFindsDCsAll();
+        Task<List<UserFindsDataContainer>> GetUserFindsDCs(List<Guid> userIds);
         Task<List<UserFindLocation>> GetUserFindLocations(Guid userId);
 
         Task<UserFind> GetFindById(Guid findId);

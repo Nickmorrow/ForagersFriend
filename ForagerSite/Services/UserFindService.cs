@@ -56,6 +56,120 @@ namespace ForagerSite.Services
                 .AsNoTracking()
                 .ToDictionaryAsync(u => u.UsrId, u => u.UserSecurity.UssUsername);
         }
+        public async Task<List<UserFindsDataContainer>> GetUserFindsDCs(List<Guid> userIds)
+        {
+            if (userIds == null || userIds.Count == 0)
+                return new List<UserFindsDataContainer>();
+
+            using var context = _dbContextFactory.CreateDbContext();
+
+            // 1) Load ONLY those users
+            var users = await context.Users
+                .Where(u => userIds.Contains(u.UsrId))
+                .Include(u => u.UserSecurity)
+                .AsNoTracking()
+                .ToListAsync();
+
+            if (users.Count == 0)
+                return new List<UserFindsDataContainer>();
+
+            var ids = users.Select(u => u.UsrId).ToList();
+
+            // 2) Load finds ONLY for those users
+            var userFinds = await context.UserFinds
+                .Where(uf => ids.Contains(uf.UsfUsrId))
+                .Include(uf => uf.UserFindLocation)
+                .Include(uf => uf.UserImages)
+                .Include(uf => uf.UserVotes)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.UserFindsComment)
+                        .ThenInclude(comment => comment.UserVotes)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.User)
+                        .ThenInclude(commentUser => commentUser.UserSecurity)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // 3) Preload profile pics for owners + comment authors (so we don’t query in a loop)
+            var commentUserIds = userFinds
+                .SelectMany(uf => uf.UserFindsCommentXrefs)
+                .Select(x => x.UcxUsrId) // adjust if needed
+                .Distinct()
+                .ToList();
+
+            var allPicUserIds = ids
+                .Concat(commentUserIds)
+                .Distinct()
+                .ToList();
+
+            var profilePicByUserId = await context.UserImages
+                .AsNoTracking()
+                .Where(ui =>
+                    ui.UsiUsrId.HasValue &&
+                    allPicUserIds.Contains(ui.UsiUsrId.Value) &&
+                    ui.UsiUsfId == null &&
+                    ui.UsiImageData.StartsWith("/UserProfileImages"))
+                .GroupBy(ui => ui.UsiUsrId!.Value)
+                .Select(g => new { UserId = g.Key, Pic = g.Select(x => x.UsiImageData).FirstOrDefault() })
+                .ToDictionaryAsync(x => x.UserId, x => x.Pic);
+
+            // 4) Build containers
+            var list = new List<UserFindsDataContainer>();
+
+            foreach (var user in users)
+            {
+                var findsForUser = userFinds.Where(uf => uf.UsfUsrId == user.UsrId).ToList();
+                profilePicByUserId.TryGetValue(user.UsrId, out var ownerPic);
+
+                var vm = new UserFindsDataContainer
+                {
+                    userId = user.UsrId,
+                    profilePic = ownerPic ?? UserFindsDataContainer.PlaceholderImageUrl,
+                    userName = user.UserSecurity.UssUsername,
+                    finds = findsForUser.Select(uf => new FindDC(uf)).ToList(),
+                };
+
+                foreach (var find in vm.finds)
+                {
+                    find.findLocation = userFinds
+                        .Where(uf => uf.UsfId == find.findId)
+                        .Select(uf => uf.UserFindLocation)
+                        .Where(ufl => ufl != null)
+                        .Select(ufl => new FindLocationDC(ufl))
+                        .FirstOrDefault();
+
+                    find.findImages = userFinds
+                        .Where(uf => uf.UsfId == find.findId)
+                        .SelectMany(uf => uf.UserImages)
+                        .Select(ui => new ImageDC(ui))
+                        .ToList();
+
+                    find.findsCommentXrefs = userFinds
+                        .Where(uf => uf.UsfId == find.findId)
+                        .SelectMany(uf => uf.UserFindsCommentXrefs)
+                        .Select(xref => new FindsCommentXrefDC(xref))
+                        .ToList();
+
+                    find.findVotes = userFinds
+                        .Where(uf => uf.UsfId == find.findId)
+                        .SelectMany(uf => uf.UserVotes)
+                        .Select(uv => new UserVoteDC(uv))
+                        .ToList();
+
+                    foreach (var xref in find.findsCommentXrefs)
+                    {
+                        profilePicByUserId.TryGetValue(xref.comxUserId, out var commentPic);
+                        xref.CommentUserProfilePic = commentPic ?? UserFindsDataContainer.PlaceholderImageUrl;
+                    }
+                }
+
+                list.Add(vm);
+            }
+
+            return list;
+        }
+
+
         public async Task<UserFindsDataContainer> GetUserFindsDC(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
@@ -132,7 +246,7 @@ namespace ForagerSite.Services
             }
             return userViewModel;
         }
-        public async Task<List<UserFindsDataContainer>> GetUserFindsDCs(Guid userId)
+        public async Task<List<UserFindsDataContainer>> GetUserFindsDCsUser(Guid userId)
         {
             using var context = _dbContextFactory.CreateDbContext();
 
@@ -208,7 +322,129 @@ namespace ForagerSite.Services
 
             return new List<UserFindsDataContainer> { userViewModel };
         }
-        public async Task<List<UserFindsDataContainer>> GetUserFindsDCs()
+        public async Task<List<UserFindsDataContainer>> GetUserFindsDCsFriends(Guid viewerUserId)
+        {
+            using var context = _dbContextFactory.CreateDbContext();
+
+            // 1) Get friend ids (normalized pair means viewer can be A or B)
+            var friendIds = await context.UserRelationships
+                .AsNoTracking()
+                .Where(r =>
+                    r.UrlStatus == RelationshipStatus.Friends &&
+                    (r.UrlUserAId == viewerUserId || r.UrlUserBId == viewerUserId))
+                .Select(r => r.UrlUserAId == viewerUserId ? r.UrlUserBId : r.UrlUserAId)
+                .Distinct()
+                .ToListAsync();
+
+            if (friendIds.Count == 0)
+                return new List<UserFindsDataContainer>();
+
+            // 2) Load ONLY those users (friends)
+            var users = await context.Users
+                .Where(u => friendIds.Contains(u.UsrId))
+                .Include(u => u.UserSecurity)
+                .AsNoTracking()
+                .ToListAsync();
+
+            var userIds = users.Select(u => u.UsrId).ToList();
+
+            // 3) Load finds ONLY for those users
+            var userFinds = await context.UserFinds
+                .Where(uf => userIds.Contains(uf.UsfUsrId))
+                .Include(uf => uf.UserFindLocation)
+                .Include(uf => uf.UserImages)
+                .Include(uf => uf.UserVotes)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.UserFindsComment)
+                        .ThenInclude(comment => comment.UserVotes)
+                .Include(uf => uf.UserFindsCommentXrefs)
+                    .ThenInclude(xref => xref.User)
+                        .ThenInclude(commentUser => commentUser.UserSecurity)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // 4) Preload profile pics for all "users we will display pics for"
+            //    - find owners (friends)
+            //    - comment authors in those finds
+            var commentUserIds = userFinds
+                .SelectMany(uf => uf.UserFindsCommentXrefs)
+                .Select(x => x.UcxUsrId) // adjust if your property name differs
+                .Distinct()
+                .ToList();
+
+            var allPicUserIds = userIds
+                .Concat(commentUserIds)
+                .Distinct()
+                .ToList();
+
+            var profilePicByUserId = await context.UserImages
+                .AsNoTracking()
+                .Where(ui =>
+                    allPicUserIds.Contains(ui.UsiUsrId!.Value) &&
+                    ui.UsiUsfId == null &&
+                    ui.UsiImageData.StartsWith("/UserProfileImages"))
+                .GroupBy(ui => ui.UsiUsrId!.Value)
+                .Select(g => new { UserId = g.Key, Pic = g.Select(x => x.UsiImageData).FirstOrDefault() })
+                .ToDictionaryAsync(x => x.UserId, x => x.Pic);
+
+            // 5) Build containers (same shape as your existing method)
+            var userViewModelsList = new List<UserFindsDataContainer>();
+
+            foreach (var user in users)
+            {
+                var userFindsForUser = userFinds.Where(uf => uf.UsfUsrId == user.UsrId).ToList();
+
+                profilePicByUserId.TryGetValue(user.UsrId, out var ownerPic);
+
+                var userViewModel = new UserFindsDataContainer
+                {
+                    userId = user.UsrId,
+                    profilePic = ownerPic ?? UserFindsDataContainer.PlaceholderImageUrl,
+                    userName = user.UserSecurity.UssUsername,
+                    finds = userFindsForUser.Select(uf => new FindDC(uf)).ToList(),
+                };
+
+                foreach (var find in userViewModel.finds)
+                {
+                    find.findLocation = userFinds
+                        .Where(uf => uf.UsfId == find.findId)
+                        .Select(uf => uf.UserFindLocation)
+                        .Where(ufl => ufl != null)
+                        .Select(ufl => new FindLocationDC(ufl))
+                        .FirstOrDefault();
+
+                    find.findImages = userFinds
+                        .Where(uf => uf.UsfId == find.findId)
+                        .SelectMany(uf => uf.UserImages)
+                        .Select(ui => new ImageDC(ui))
+                        .ToList();
+
+                    find.findsCommentXrefs = userFinds
+                        .Where(uf => uf.UsfId == find.findId)
+                        .SelectMany(uf => uf.UserFindsCommentXrefs)
+                        .Select(xref => new FindsCommentXrefDC(xref))
+                        .ToList();
+
+                    find.findVotes = userFinds
+                        .Where(uf => uf.UsfId == find.findId)
+                        .SelectMany(uf => uf.UserVotes)
+                        .Select(uv => new UserVoteDC(uv))
+                        .ToList();
+
+                    foreach (var xref in find.findsCommentXrefs)
+                    {
+                        profilePicByUserId.TryGetValue(xref.comxUserId, out var commentPic);
+                        xref.CommentUserProfilePic = commentPic ?? UserFindsDataContainer.PlaceholderImageUrl;
+                    }
+                }
+
+                userViewModelsList.Add(userViewModel);
+            }
+
+            return userViewModelsList;
+        }
+
+        public async Task<List<UserFindsDataContainer>> GetUserFindsDCsAll()
         {
             using var context = _dbContextFactory.CreateDbContext();
 

@@ -25,10 +25,15 @@ namespace ForagerSite.Services
         public event Action<bool> OnLoadingChange;
         public event Action? OnCreateFormRequested;
         public event Action<Guid>? OnMarkerSelected;
+
+        public Guid? FriendCacheOwnerUserId { get; private set; }
+        public Guid? MyCacheOwnerUserId { get; private set; }
+        public Guid? AllCacheOwnerUserId { get; private set; }
         public string mapFilter { get; set; } = MapFilters[0];
         public double? pendingLat { get; set; }
         public double? pendingLng { get; set; }
         public List<UserFindsDataContainer> MyViewModels { get; set; } = new();
+        public List<UserFindsDataContainer> FriendViewModels { get; set; } = new();
         public List<UserFindsDataContainer> AllViewModels { get; set; } = new();
         public List<UserFindsDataContainer> CurrentViewModels { get; set; } = new();
         public Dictionary<Guid, string> userNamesKvp { get; set; }
@@ -38,26 +43,49 @@ namespace ForagerSite.Services
             this.session = session;
             this.userFindService = userFindService;
         }
+        public void SetFriendCacheOwner(Guid userId) => FriendCacheOwnerUserId = userId;
+        public void SetMyCacheOwner(Guid userId) => MyCacheOwnerUserId = userId;
+        public void SetAllCacheOwner(Guid userId) => AllCacheOwnerUserId = userId;
         private void NotifyStateChanged() => OnChange?.Invoke();
-        private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading);        
+        private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading);
+        public void ClearFriendCache(Guid userId)
+        {
+            FriendViewModels.Clear();
+            FriendCacheOwnerUserId = userId;
+        }
+        public void ResetAllCaches()
+        {
+            mapFilter = MapFilters[0];
+            pendingLat = null;
+            pendingLng = null;
+
+            MyViewModels.Clear();
+            FriendViewModels.Clear();
+            AllViewModels.Clear();
+            CurrentViewModels.Clear();
+
+            FriendCacheOwnerUserId = null;
+            MyCacheOwnerUserId = null;
+            AllCacheOwnerUserId = null;
+
+            OnChange?.Invoke();
+        }
         public void UpdateViewModels(Guid userId, UserFindsDataContainer viewModel)
         {
             var currentUserId = session.SessionUser.UserId;
 
-            if (currentUserId == viewModel.userId)
-            {               
-                MyViewModels[0] = VmUtilities.Copy(viewModel);               
-            }
+            if (MyViewModels.Count > 0 && currentUserId == viewModel.userId)
+                MyViewModels[0] = VmUtilities.Copy(viewModel);
 
-            if (AllViewModels.Count > 0)
-            {
-                var backupVmlAllIndex = AllViewModels.FindIndex(vm => vm.userId == userId);
-                if (backupVmlAllIndex != -1)
-                {
-                    AllViewModels[backupVmlAllIndex] = VmUtilities.Copy(viewModel);
-                }
-            }
+            var friendIndex = FriendViewModels.FindIndex(vm => vm.userId == userId);
+            if (friendIndex != -1)
+                FriendViewModels[friendIndex] = VmUtilities.Copy(viewModel);
+
+            var allIndex = AllViewModels.FindIndex(vm => vm.userId == userId);
+            if (allIndex != -1)
+                AllViewModels[allIndex] = VmUtilities.Copy(viewModel);
         }
+
         public UserFindsDataContainer GetViewModel(Guid userId)
         {
             return CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
@@ -197,7 +225,7 @@ namespace ForagerSite.Services
             var userName = session.SessionUser.Username;
             var deletedFindVm = new UserFindsDataContainer();
 
-            userFindService.DeleteFind(delFindId, userId, userName);
+            await userFindService.DeleteFind(delFindId, userId, userName);
 
             var currentViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
             var find = currentViewModel.finds.FirstOrDefault(f => f.findId == delFindId);

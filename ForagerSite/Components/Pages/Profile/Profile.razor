@@ -172,7 +172,7 @@ else
             userVm = await userService.GetUserViewModelById(userIdToLoad);
 
             mapService.userNamesKvp = await userFindService.GetCommentUserNames();
-            mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(userIdToLoad);
+            mapService.CurrentViewModels = await userFindService.GetUserFindsDCsUser(userIdToLoad);
 
             // recompute IsMyProfile now that viewingUserId is known
             if (session.SessionUser is not null)
@@ -199,51 +199,6 @@ else
         }
     }
 
-    // protected override async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (!firstRender) return;
-
-    //     await session.Load();
-
-    //     if (!session.IsAuthenticated || session.SessionUser is null)
-    //     {
-    //         navigationManager.NavigateTo("/Login");
-    //         return;
-    //     }
-
-    //     viewingUserId = UserId ?? session.SessionUser.UserId;
-
-    //     isLoading = true;
-    //     StateHasChanged();
-
-    //     try
-    //     {
-    //         userVm = await userService.GetUserViewModelById(viewingUserId);
-    //         mapService.userNamesKvp = await userFindService.GetCommentUserNames();
-    //         mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(viewingUserId);
-
-    //         if (!IsMyProfile && mapService.CurrentViewModels != null)
-    //         {
-    //             friendStatus = await friendService.GetStatus(session.SessionUser.UserId, viewingUserId);
-    //             foreach (var vm in mapService.CurrentViewModels)
-    //             {
-    //                 vm.finds = vm.finds
-    //                     .Where(f => f.accessibility != "Private")
-    //                     .ToList();
-    //             }
-    //         }
-
-    //         mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
-    //     }
-    //     finally
-    //     {
-    //         edit = false;
-    //         Pf_loaded = true;
-    //         hasLoaded = true;
-    //         isLoading = false;
-    //         StateHasChanged();
-    //     }
-    // }
     protected override void OnParametersSet()
     {
         // Safe: no JS interop here

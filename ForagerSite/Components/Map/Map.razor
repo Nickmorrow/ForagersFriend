@@ -15,13 +15,16 @@
 @inject IUserService userService
 @inject IUserFindService userFindService
 @inject IMapService mapService
+@inject IFriendService friendService
 @inject NavigationManager Nav
 
 <div>
     <h4>Search</h4>
     <MapSearch OnGetAllFinds="GetAllFinds"
                OnGetMyFinds="GetMyFinds"
+               OnGetFriendFinds="GetFriendFinds"
                OnSearch="HandleSearch" />
+
 
     <div id="map-container" style="display: flex; height: 800px;">
         <div id="map" style="flex: 2; height: 100%;"></div>
@@ -118,7 +121,7 @@
         mapService.mapFilter = "AllUsers";
 
         if (!mapService.AllViewModels.Any())
-            mapService.AllViewModels = await userFindService.GetUserFindsDCs();
+            mapService.AllViewModels = await userFindService.GetUserFindsDCsAll();
 
         mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
         FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
@@ -173,7 +176,7 @@
                         mapService.mapFilter = "AllUsers";
 
                         if (!mapService.AllViewModels.Any())
-                            mapService.AllViewModels = await userFindService.GetUserFindsDCs();
+                            mapService.AllViewModels = await userFindService.GetUserFindsDCsAll();
 
                         mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
 
@@ -184,7 +187,7 @@
                     {
                         mapService.mapFilter = "UserOnly";
 
-                        mapService.CurrentViewModels = await userFindService.GetUserFindsDCs(userVm.user.UsrId);
+                        mapService.CurrentViewModels = await userFindService.GetUserFindsDCsUser(userVm.user.UsrId);
                         mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
                     }
 
@@ -243,6 +246,44 @@
             await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, userVm.user.UserSecurity.UssUsername);
         }
     }
+    private async Task GetFriendFinds()
+    {
+        var userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
+        if (userVm == null) return;
+
+        mapService.mapFilter = "FriendUsers";
+
+        if (mapService.FriendCacheOwnerUserId != userVm.user.UsrId)
+        {
+            mapService.ClearFriendCache(userVm.user.UsrId);
+        }
+
+        var friends = await friendService.GetFriends(userVm.user.UsrId);
+        var friendIds = friends.Select(f => f.UserId).ToList();
+
+        if (!mapService.FriendViewModels.Any())
+            mapService.FriendViewModels = await userFindService.GetUserFindsDCs(friendIds);
+
+        mapService.CurrentViewModels = VmUtilities.Copy(mapService.FriendViewModels);
+
+        FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
+
+        var json = JsonConvert.SerializeObject(
+            mapService.CurrentViewModels,
+            new JsonSerializerSettings
+            {
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                Formatting = Formatting.Indented
+            });
+
+        await JS.InvokeVoidAsync("initializeMap",
+            json,
+            userVm.user.UsrId.ToString(),
+            mapService.mapFilter,
+            userVm.user.UserSecurity.UssUsername);
+    }
+
+
 
     private async Task GetAllFinds()
     {
@@ -255,7 +296,7 @@
             {
                 try
                 {
-                    mapService.AllViewModels = await userFindService.GetUserFindsDCs();
+                    mapService.AllViewModels = await userFindService.GetUserFindsDCsAll();
                 }
                 catch (Exception ex)
                 {
@@ -309,6 +350,11 @@
         {
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.MyViewModels);
         }
+        else if (mapService.mapFilter == "FriendUsers")
+        {
+            mapService.CurrentViewModels = VmUtilities.Copy(mapService.FriendViewModels);
+        }
+
         else if (mapService.mapFilter == "AllUsers")
         {
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
@@ -343,7 +389,8 @@
         }
 
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-        await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter);
+        await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, userVm.user.UserSecurity.UssUsername);
+
     }
     #endregion
     public void Dispose()

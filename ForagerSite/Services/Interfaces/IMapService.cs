@@ -11,8 +11,10 @@ namespace ForagerSite.Services.Interfaces
         string mapFilter { get; set; }
         double? pendingLat { get; set; }
         double? pendingLng { get; set; }
-
+        Guid? FriendCacheOwnerUserId { get; }
+        
         List<UserFindsDataContainer> MyViewModels { get; set; }
+        List<UserFindsDataContainer> FriendViewModels { get; set; }
         List<UserFindsDataContainer> AllViewModels { get; set; }
         List<UserFindsDataContainer> CurrentViewModels { get; set; }
 
@@ -22,7 +24,8 @@ namespace ForagerSite.Services.Interfaces
         event Action<bool> OnLoadingChange;
         event Action? OnCreateFormRequested;
         event Action<Guid>? OnMarkerSelected;
-
+        void SetFriendCacheOwner(Guid userId);
+        void ClearFriendCache(Guid userId); // optional convenience
         void UpdateViewModels(Guid userId, UserFindsDataContainer viewModel);
         UserFindsDataContainer? GetViewModel(Guid userId);
 
