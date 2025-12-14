@@ -347,13 +347,38 @@ namespace DataAccess.Migrations
 
                     b.HasIndex("UsmParentMessageId");
 
+                    b.HasIndex("UsmRecipientId");
+
                     b.HasIndex("UsmSenderId");
 
                     b.HasIndex("UsmThreadId");
 
-                    b.HasIndex("UsmRecipientId", "UsmStatus", "UsmSendDate");
-
                     b.ToTable("UserMessages", (string)null);
+                });
+
+            modelBuilder.Entity("DataAccess.Models.UserMessageThread", b =>
+                {
+                    b.Property<Guid>("UmtId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UmtCreatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UmtUserAId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UmtUserBId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("UmtId");
+
+                    b.HasIndex("UmtUserBId");
+
+                    b.HasIndex("UmtUserAId", "UmtUserBId")
+                        .IsUnique();
+
+                    b.ToTable("UserMessageThreads", (string)null);
                 });
 
             modelBuilder.Entity("DataAccess.Models.UserRelationship", b =>
@@ -389,7 +414,10 @@ namespace DataAccess.Migrations
                     b.HasIndex("UrlUserAId", "UrlUserBId")
                         .IsUnique();
 
-                    b.ToTable("UserRelationship", (string)null);
+                    b.ToTable("UserRelationship", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_UserRelationship_UserA_LessThan_UserB", "[UrlUserAId] < [UrlUserBId]");
+                        });
                 });
 
             modelBuilder.Entity("DataAccess.Models.UserSecurity", b =>
@@ -421,6 +449,40 @@ namespace DataAccess.Migrations
                         .IsUnique();
 
                     b.ToTable("UserSecurity", (string)null);
+                });
+
+            modelBuilder.Entity("DataAccess.Models.UserThreadState", b =>
+                {
+                    b.Property<Guid>("UtsId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UtsArchivedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UtsDeletedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UtsLastReadUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UtsThreadId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UtsUpdatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UtsUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("UtsId");
+
+                    b.HasIndex("UtsUserId");
+
+                    b.HasIndex("UtsThreadId", "UtsUserId")
+                        .IsUnique();
+
+                    b.ToTable("UserThreadStates", (string)null);
                 });
 
             modelBuilder.Entity("DataAccess.Models.UserVote", b =>
@@ -566,7 +628,7 @@ namespace DataAccess.Migrations
             modelBuilder.Entity("DataAccess.Models.UserMessage", b =>
                 {
                     b.HasOne("DataAccess.Models.UserMessage", "ParentMessage")
-                        .WithMany("Replies")
+                        .WithMany()
                         .HasForeignKey("UsmParentMessageId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -582,11 +644,38 @@ namespace DataAccess.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("DataAccess.Models.UserMessageThread", "Thread")
+                        .WithMany("Messages")
+                        .HasForeignKey("UsmThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("ParentMessage");
 
                     b.Navigation("Recipient");
 
                     b.Navigation("Sender");
+
+                    b.Navigation("Thread");
+                });
+
+            modelBuilder.Entity("DataAccess.Models.UserMessageThread", b =>
+                {
+                    b.HasOne("DataAccess.Models.User", "UserA")
+                        .WithMany()
+                        .HasForeignKey("UmtUserAId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DataAccess.Models.User", "UserB")
+                        .WithMany()
+                        .HasForeignKey("UmtUserBId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserA");
+
+                    b.Navigation("UserB");
                 });
 
             modelBuilder.Entity("DataAccess.Models.UserRelationship", b =>
@@ -622,6 +711,25 @@ namespace DataAccess.Migrations
                         .HasForeignKey("DataAccess.Models.UserSecurity", "UssUsrId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DataAccess.Models.UserThreadState", b =>
+                {
+                    b.HasOne("DataAccess.Models.UserMessageThread", "Thread")
+                        .WithMany()
+                        .HasForeignKey("UtsThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DataAccess.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UtsUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Thread");
 
                     b.Navigation("User");
                 });
@@ -688,9 +796,9 @@ namespace DataAccess.Migrations
                     b.Navigation("UserVotes");
                 });
 
-            modelBuilder.Entity("DataAccess.Models.UserMessage", b =>
+            modelBuilder.Entity("DataAccess.Models.UserMessageThread", b =>
                 {
-                    b.Navigation("Replies");
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }

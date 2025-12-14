@@ -17,16 +17,12 @@
 	<ItemGroup>
 	  <Compile Remove="Components\Pages\Finds\**" />
 	  <Compile Remove="Components\Pages\Friends\**" />
-	  <Compile Remove="Components\Pages\Inbox\**" />
 	  <Content Remove="Components\Pages\Finds\**" />
 	  <Content Remove="Components\Pages\Friends\**" />
-	  <Content Remove="Components\Pages\Inbox\**" />
 	  <EmbeddedResource Remove="Components\Pages\Finds\**" />
 	  <EmbeddedResource Remove="Components\Pages\Friends\**" />
-	  <EmbeddedResource Remove="Components\Pages\Inbox\**" />
 	  <None Remove="Components\Pages\Finds\**" />
 	  <None Remove="Components\Pages\Friends\**" />
-	  <None Remove="Components\Pages\Inbox\**" />
 	</ItemGroup>
 
 	<ItemGroup>

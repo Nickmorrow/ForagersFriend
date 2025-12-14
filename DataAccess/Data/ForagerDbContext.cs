@@ -7,7 +7,9 @@ namespace DataAccess.Data
     {
         public DbSet<User> Users { get; set; }
         public DbSet<UserSecurity> UserSecurities { get; set; }
-        public DbSet<UserMessage> UserMessages { get; set; }
+        public DbSet<UserMessage> UserMessages { get; set; } = default!;
+        public DbSet<UserThreadState> UserThreadStates { get; set; } = default!;
+        public DbSet<UserMessageThread> UserMessageThreads { get; set; } = default!;
         public DbSet<UserFind> UserFinds { get; set; }
         public DbSet<UserFindLocation> UserFindLocations { get; set; }
         public DbSet<UserImage> UserImages { get; set; }
@@ -35,6 +37,8 @@ namespace DataAccess.Data
             modelBuilder.Entity<User>().ToTable("Users");
             modelBuilder.Entity<UserSecurity>().ToTable("UserSecurity");
             modelBuilder.Entity<UserMessage>().ToTable("UserMessages");
+            modelBuilder.Entity<UserMessageThread>().ToTable("UserMessageThreads");
+            modelBuilder.Entity<UserThreadState>().ToTable("UserThreadStates");
             modelBuilder.Entity<UserFind>().ToTable("UserFinds");
             modelBuilder.Entity<UserFindLocation>().ToTable("UserFindLocation");
             modelBuilder.Entity<UserImage>().ToTable("UserImages");
@@ -91,12 +95,6 @@ namespace DataAccess.Data
                 .WithMany(u => u.UserFindsCommentXrefs)
                 .HasForeignKey(xref => xref.UcxUsrId);
 
-            //// One-to-One: findsCommentXref -> findsComment
-            //modelBuilder.Entity<UserFindsCommentXref>()
-            //    .HasOne(xref => xref.UserFindsComment)
-            //    .WithOne(usc => usc.UserFindsCommentXref)
-            //    .HasForeignKey<UserFindsCommentXref>(xref => xref.UcxUscId);
-
             // Self-referencing relationship for replies
             modelBuilder.Entity<UserFindsComment>()
                 .HasOne(usc => usc.ParentComment)
@@ -124,6 +122,7 @@ namespace DataAccess.Data
                 .HasForeignKey(v => v.UsvUscId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            //Friend Request
             modelBuilder.Entity<FriendRequest>(entity =>
             {
                 entity.HasKey(x => x.FrqId);
@@ -205,34 +204,108 @@ namespace DataAccess.Data
 
                 entity.HasIndex(x => new { x.NotUserId, x.NotIsRead });
             });
+           
+            // UserMessage / Inbox
 
-            // UserMessage
+            // UserMessageThread (one thread per pair of users)
+            modelBuilder.Entity<UserMessageThread>(entity =>
+            {
+                entity.ToTable("UserMessageThreads");
+
+                entity.HasKey(t => t.UmtId);
+
+                // IMPORTANT: prevent SQL Server "multiple cascade paths"
+                // Two FKs to Users can't both be CASCADE, so we use Restrict.
+                entity.HasOne(t => t.UserA)
+                    .WithMany()
+                    .HasForeignKey(t => t.UmtUserAId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(t => t.UserB)
+                    .WithMany()
+                    .HasForeignKey(t => t.UmtUserBId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // One thread has many messages
+                entity.HasMany(t => t.Messages)
+                    .WithOne(m => m.Thread)
+                    .HasForeignKey(m => m.UsmThreadId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Ensure you can’t have duplicate threads for the same pair
+                entity.HasIndex(t => new { t.UmtUserAId, t.UmtUserBId })
+                    .IsUnique();
+            });
+
+
+            // UserThreadState (per-user state for a thread: unread counts, last read, archived, etc.)
+            modelBuilder.Entity<UserThreadState>(entity =>
+            {
+                entity.ToTable("UserThreadStates");
+
+                entity.HasKey(s => s.UtsId);
+
+                // One row per (Thread, User)
+                entity.HasIndex(s => new { s.UtsThreadId, s.UtsUserId })
+                    .IsUnique();
+
+                entity.HasOne(s => s.Thread)
+                    .WithMany()
+                    .HasForeignKey(s => s.UtsThreadId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // If a user gets deleted, you can safely delete their thread-state rows
+                entity.HasOne(s => s.User)
+                    .WithMany()
+                    .HasForeignKey(s => s.UtsUserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+
+            // UserMessage (the individual messages inside a thread)
             modelBuilder.Entity<UserMessage>(entity =>
             {
-                entity.HasKey(x => x.UsmId);
+                entity.ToTable("UserMessages");
 
-                // Sender FK
-                entity.HasOne(x => x.Sender)
-                      .WithMany() // or .WithMany(u => u.SentMessages) if you add nav collections on User
-                      .HasForeignKey(x => x.UsmSenderId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                entity.HasKey(m => m.UsmId);
 
-                // Recipient FK
-                entity.HasOne(x => x.Recipient)
-                      .WithMany() // or .WithMany(u => u.ReceivedMessages)
-                      .HasForeignKey(x => x.UsmRecipientId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                // Message belongs to one thread
+                entity.HasOne(m => m.Thread)
+                    .WithMany(t => t.Messages)
+                    .HasForeignKey(m => m.UsmThreadId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
-                // Self-referencing reply relationship
-                entity.HasOne(x => x.ParentMessage)
-                      .WithMany(x => x.Replies)
-                      .HasForeignKey(x => x.UsmParentMessageId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                // Sender and Recipient both point to Users.
+                // Restrict avoids multiple cascade paths on SQL Server.
+                entity.HasOne(m => m.Sender)
+                    .WithMany()
+                    .HasForeignKey(m => m.UsmSenderId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
-                // Helpful indexes
-                entity.HasIndex(x => x.UsmThreadId);
-                entity.HasIndex(x => new { x.UsmRecipientId, x.UsmStatus, x.UsmSendDate });
+                entity.HasOne(m => m.Recipient)
+                    .WithMany()
+                    .HasForeignKey(m => m.UsmRecipientId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Optional reply-to / parent message (in same table)
+                entity.HasOne(m => m.ParentMessage)
+                    .WithMany()
+                    .HasForeignKey(m => m.UsmParentMessageId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(m => m.UsmSubject)
+                    .HasMaxLength(200)
+                    .IsRequired();
+
+                entity.Property(m => m.UsmStatus)
+                    .HasMaxLength(20)
+                    .IsRequired();
             });
+
+
+
+
+
         }
     }
 }
