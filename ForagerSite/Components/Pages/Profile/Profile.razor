@@ -122,6 +122,7 @@ else
 
     private static string GetUserRank(int? expScore)
     {
+        if (expScore == null) expScore = 0;
         return expScore switch
         {
             var x when x < 50 => "Sapling",
@@ -131,8 +132,7 @@ else
             var x when x < 1500 => "Hawk",
             var x when x < 3000 => "Owl",
             var x when x < 6000 => "Sasquash",
-            var x when x < 10000 => "Druid",
-            _ => "Forest Spirit"
+            var x when x < 10000 => "Forest Spirit",           
         };
     }
     protected override async Task OnAfterRenderAsync(bool firstRender)
