@@ -176,7 +176,7 @@ window.updateMarkers = function (userFindsDCs, currentUserId, mapFilter, userNam
                         if (find.findImages && find.findImages.length > 0) {
                             imageHtml = find.findImages.map(image => {
                                 if (image && image.imageData && typeof image.imageData === 'string') {
-                                    const fullUrl = `https://localhost:7007${image.imageData}`;
+                                    const fullUrl = image.imageData;
                                     return `<img src="${fullUrl}" alt="Image" style="max-width: 100%; height: auto; margin-bottom: 5px;">`;
                                 } else {
                                     console.error('Invalid image data:', image);
@@ -187,7 +187,7 @@ window.updateMarkers = function (userFindsDCs, currentUserId, mapFilter, userNam
                         if (find.findImages && find.findImages.length > 0) {
                             const image = find.findImages[0]; // Access the first image
                             if (image && image.imageData && typeof image.imageData === 'string') {
-                                const fullUrl = `https://localhost:7007${image.imageData}`;
+                                const fullUrl = image.imageData;
                                 imageHtml = `<img src="${fullUrl}" alt="Image" style="max-width: 100%; height: auto; margin-bottom: 5px;">`;
                             } else {
                                 console.error('Invalid image data:', image);
