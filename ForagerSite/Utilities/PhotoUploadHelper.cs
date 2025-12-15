@@ -4,6 +4,9 @@ using ForagerSite.Services;
 using Microsoft.AspNetCore.Components.Forms;
 using ForagerSite.DataContainer;
 using ForagerSite.Services.Interfaces;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
 
 namespace ForagerSite.Utilities
@@ -115,10 +118,18 @@ namespace ForagerSite.Utilities
                 foreach (var existingFile in Directory.GetFiles(userDirectory))
                     File.Delete(existingFile);
 
-                // Save the new file
+                // Save the new file (resized/compressed)
+                newFileName = $"{Path.GetRandomFileName()}.jpg"; // recommended: always save as jpg
                 string filePath = Path.Combine(userDirectory, newFileName);
-                await using var fs = new FileStream(filePath, FileMode.Create);
-                await uploadedFile.OpenReadStream(maxFileSize).CopyToAsync(fs);
+
+                await using var readStream = uploadedFile.OpenReadStream(maxFileSize);
+                await ResizeAndSaveImageAsync(
+                    readStream,
+                    filePath,
+                    maxWidth: 256,   // profile pics should be small
+                    quality: 70
+                );
+
 
                 // Public URL (what you store in DB)
                 string fileUrl = $"/{relativeFolder}/{userName}/{newFileName}";
@@ -206,26 +217,23 @@ namespace ForagerSite.Utilities
                     var ext = Path.GetExtension(file.Name).ToLowerInvariant();
                     if (!allowedExtensions.Contains(ext))
                     {
-                        errors.Add($"File '{file.Name}' has an invalid extension. Only .jpg, .jpeg, .png are allowed.");
+                        errors.Add($"File '{file.Name}' has an invalid extension.");
                         continue;
                     }
 
                     if (file.Size > maxFileSize)
                     {
-                        errors.Add($"File '{file.Name}' exceeds the {maxFileSize / (1024 * 1024)} MB limit.");
+                        errors.Add($"File '{file.Name}' exceeds size limit.");
                         continue;
                     }
 
-                    var newFileName = Path.ChangeExtension(Path.GetRandomFileName(), ext);
+                    var newFileName = $"{Path.GetRandomFileName()}.jpg";
                     var filePath = Path.Combine(userDirectory, newFileName);
 
                     await using var readStream = file.OpenReadStream(maxFileSize);
-                    await using var writeStream = new FileStream(filePath, FileMode.Create);
-                    await readStream.CopyToAsync(writeStream);
+                    await ResizeAndSaveImageAsync(readStream, filePath);
 
-                    //savedFileUrls.Add($"/FindImageUploads/{userName}/{newFileName}");
                     savedFileUrls.Add($"/{relativeFolder}/{userName}/{newFileName}");
-
                 }
                 catch (Exception ex)
                 {
@@ -233,7 +241,34 @@ namespace ForagerSite.Utilities
                 }
             }
 
+
             return savedFileUrls;
+        }
+        public static async Task ResizeAndSaveImageAsync(
+        Stream input,
+        string outputPath,
+        int maxWidth = 1280,
+        int quality = 75)
+        {
+            using var image = await Image.LoadAsync(input);
+
+            if (image.Width > 8000 || image.Height > 8000)
+                throw new Exception("Image dimensions too large.");
+
+            if (image.Width > maxWidth)
+            {
+                var ratio = (double)maxWidth / image.Width;
+                var newHeight = (int)(image.Height * ratio);
+
+                image.Mutate(x => x.Resize(maxWidth, newHeight));
+            }
+
+            var encoder = new JpegEncoder
+            {
+                Quality = quality
+            };
+
+            await image.SaveAsync(outputPath, encoder);
         }
 
     }
