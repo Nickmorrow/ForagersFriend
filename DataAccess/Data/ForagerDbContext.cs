@@ -93,7 +93,8 @@ namespace DataAccess.Data
             modelBuilder.Entity<UserFindsCommentXref>()
                 .HasOne(xref => xref.User)
                 .WithMany(u => u.UserFindsCommentXrefs)
-                .HasForeignKey(xref => xref.UcxUsrId);
+                .HasForeignKey(xref => xref.UcxUsrId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Self-referencing relationship for replies
             modelBuilder.Entity<UserFindsComment>()
