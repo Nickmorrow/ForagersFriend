@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace DataAccess.Models
 {
@@ -14,14 +15,14 @@ namespace DataAccess.Models
 
         // enforce “two-user only”
         public Guid UmtUserAId { get; set; }
-        public User UserA { get; set; } = default!;
+        [JsonIgnore] public User UserA { get; set; } = default!;
 
         public Guid UmtUserBId { get; set; }
-        public User UserB { get; set; } = default!;
+        [JsonIgnore] public User UserB { get; set; } = default!;
 
         public DateTime UmtCreatedUtc { get; set; } = DateTime.UtcNow;
 
-        public ICollection<UserMessage> Messages { get; set; } = new List<UserMessage>();
+        [JsonIgnore] public ICollection<UserMessage> Messages { get; set; } = new List<UserMessage>();
     }
 
 }

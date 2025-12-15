@@ -41,22 +41,50 @@ public class UserSessionService : IUserSessionService
             return null;
         }
     }
+    //public async Task Load()
+    //{
+    //    var json = await _session.GetAsync<string>("SessionUser");
+    //    if (json.Success && !string.IsNullOrWhiteSpace(json.Value))
+    //    {
+    //        SessionUser = JsonConvert.DeserializeObject<SessionUserState>(json.Value);
+    //        IsAuthenticated = SessionUser?.IsAuthenticated == true;
+    //    }
+    //    else
+    //    {
+    //        SessionUser = null;
+    //        IsAuthenticated = false;
+    //    }
+
+    //    OnChange?.Invoke();
+    //}
     public async Task Load()
     {
-        var json = await _session.GetAsync<string>("SessionUser");
-        if (json.Success && !string.IsNullOrWhiteSpace(json.Value))
+        try
         {
-            SessionUser = JsonConvert.DeserializeObject<SessionUserState>(json.Value);
-            IsAuthenticated = SessionUser?.IsAuthenticated == true;
+            var json = await _session.GetAsync<string>("SessionUser");
+            if (json.Success && !string.IsNullOrWhiteSpace(json.Value))
+            {
+                SessionUser = JsonConvert.DeserializeObject<SessionUserState>(json.Value);
+                IsAuthenticated = SessionUser?.IsAuthenticated == true;
+            }
+            else
+            {
+                SessionUser = null;
+                IsAuthenticated = false;
+            }
         }
-        else
+        catch (InvalidOperationException ex) when (ex.Message.Contains("statically rendered"))
         {
+            // We are prerendering; JS interop is not available yet.
+            // Do NOT call DeleteAsync here.
             SessionUser = null;
             IsAuthenticated = false;
+            return;
         }
 
         OnChange?.Invoke();
     }
+
 
     public async Task SetUserState(bool isAuthenticated, UserDataContainer? vm)
     {

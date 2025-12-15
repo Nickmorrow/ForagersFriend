@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using ForagerSite.Services
 @using ForagerSite.Services.Interfaces
+@using ForagerSite.Components.Pages.Map
 @rendermode InteractiveServer
 @inject NavigationManager navigationManager
 @inject IUserSessionService session
@@ -12,7 +13,7 @@
 else if (session.IsAuthenticated)
 {
     <p>Welcome, @session.SessionUser!.DisplayName</p>
-    <ForagerSite.Components.Map.Map />
+    <Map/>
 }
 
 

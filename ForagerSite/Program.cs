@@ -36,6 +36,8 @@ namespace ForagerSite
             builder.Services.AddScoped<IFriendService, FriendService>();
             builder.Services.AddScoped<IUserSessionService, UserSessionService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<IInboxService, InboxService>();
+
             builder.Services.AddScoped<ProtectedSessionStorage>();
 
 
