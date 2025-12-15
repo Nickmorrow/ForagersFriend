@@ -1,0 +1,40 @@
+﻿@using ForagerSite.DataContainer
+
+<table class="table table-sm">
+    <thead>
+        <tr>
+            <th style="width:220px;">User</th>
+            <th>Subject</th>
+            <th style="width:180px;">Last</th>
+            <th style="width:260px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var t in Threads)
+        {
+            <tr style="cursor:pointer; opacity:@(t.IsUnread ? "1" : ".6")"
+                @onclick="() => OnOpenThread.InvokeAsync(t.ThreadId)">
+                <td>@t.OtherUserName</td>
+                <td>
+                    <div><strong>@t.Subject</strong></div>
+                    <div style="font-size:.85em;">@t.Preview</div>
+                </td>
+                <td>@t.LastMessageUtc.ToLocalTime().ToString("g")</td>
+                <td @onclick:stopPropagation="true">
+                    <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => OnMarkRead.InvokeAsync(t.ThreadId)">Mark read</button>
+                    <button class="btn btn-sm btn-outline-warning me-1" @onclick="() => OnArchive.InvokeAsync(t.ThreadId)">Archive</button>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="() => OnTrash.InvokeAsync(t.ThreadId)">Trash</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public List<ThreadListItemDc> Threads { get; set; } = new();
+
+    [Parameter] public EventCallback<Guid> OnOpenThread { get; set; }
+    [Parameter] public EventCallback<Guid> OnMarkRead { get; set; }
+    [Parameter] public EventCallback<Guid> OnArchive { get; set; }
+    [Parameter] public EventCallback<Guid> OnTrash { get; set; }
+}

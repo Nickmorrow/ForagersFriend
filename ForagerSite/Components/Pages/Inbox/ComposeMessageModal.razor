@@ -1,0 +1,183 @@
+﻿@using ForagerSite.DataContainer
+@using ForagerSite.Services.Interfaces
+
+@inject IInboxService inboxService
+
+@if (IsOpen)
+{
+    <div class="modal-backdrop show" style="display:block;"></div>
+
+    <div class="modal show" style="display:block;" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Compose</h5>
+                    <button type="button" class="btn-close" @onclick="Cancel"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (!string.IsNullOrWhiteSpace(error))
+                    {
+                        <div class="alert alert-danger">@error</div>
+                    }
+
+                    <div class="mb-2">
+                        <label class="form-label">To</label>
+                        <input class="form-control"
+                               placeholder="Type a name or username..."
+                               value="@toSearch"
+                               @oninput="OnToInput" />
+
+                        @if (suggestions.Count > 0)
+                        {
+                            <div class="list-group mt-1">
+                                @foreach (var s in suggestions)
+                                {
+                                    <button type="button"
+                                            class="list-group-item list-group-item-action"
+                                            @onclick="() => SelectRecipient(s)">
+                                        <strong>@s.DisplayName</strong>
+                                        <span style="opacity:.7;">(@s.Username)</span>
+                                    </button>
+                                }
+                            </div>
+                        }
+
+                        @if (recipient is not null)
+                        {
+                            <div class="mt-2">
+                                <span class="badge bg-secondary">
+                                    To: @recipient.DisplayName (@recipient.Username)
+                                </span>
+                                <button type="button" class="btn btn-sm btn-link" @onclick="ClearRecipient">change</button>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">Subject</label>
+                        <input class="form-control" @bind="subject" />
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-control" rows="7" @bind="body"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="Cancel" disabled="@sending">Cancel</button>
+                    <button class="btn btn-primary" @onclick="Send" disabled="@sending">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public Guid CurrentUserId { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<Guid> OnSent { get; set; } // returns threadId to open
+
+    private string toSearch = "";
+    private List<UserPickItemDc> suggestions = new();
+    private UserPickItemDc? recipient;
+
+    private string subject = "";
+    private string body = "";
+    private string? error;
+    private bool sending;
+
+    private async Task OnToInput(ChangeEventArgs e)
+    {
+        toSearch = e.Value?.ToString() ?? "";
+        error = null;
+
+        // If they already picked someone, typing again means "change"
+        recipient = null;
+
+        if (toSearch.Trim().Length < 2)
+        {
+            suggestions.Clear();
+            return;
+        }
+
+        suggestions = await inboxService.SearchUsers(toSearch, CurrentUserId, take: 8);
+    }
+
+    private void SelectRecipient(UserPickItemDc u)
+    {
+        recipient = u;
+        suggestions.Clear();
+        toSearch = "";
+        error = null;
+    }
+
+    private void ClearRecipient()
+    {
+        recipient = null;
+        suggestions.Clear();
+        toSearch = "";
+    }
+
+    private async Task Send()
+    {
+        error = null;
+
+        if (recipient is null)
+        {
+            error = "Pick a recipient.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(subject))
+        {
+            error = "Subject is required.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            error = "Message body is required.";
+            return;
+        }
+
+        sending = true;
+        try
+        {
+            var threadId = await inboxService.SendMessage(
+                senderId: CurrentUserId,
+                recipientId: recipient.UserId,
+                subject: subject.Trim(),
+                body: body.Trim(),
+                threadId: null);
+
+            // reset
+            recipient = null;
+            toSearch = "";
+            suggestions.Clear();
+            subject = "";
+            body = "";
+
+            await OnSent.InvokeAsync(threadId);
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            sending = false;
+        }
+    }
+
+    private async Task Cancel()
+    {
+        error = null;
+        suggestions.Clear();
+        recipient = null;
+        toSearch = "";
+        subject = "";
+        body = "";
+        await OnCancel.InvokeAsync();
+    }
+}

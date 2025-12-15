@@ -1,0 +1,32 @@
+﻿@using ForagerSite.DataContainer
+
+<div id="SideBar-Container">
+    <button class="btn btn-sm btn-primary w-100 mb-2" @onclick="OnCompose">Compose</button>
+
+    <div class="list-group">
+        <button class="list-group-item list-group-item-action @(Folder == MailboxFolder.Inbox ? "active" : "")"
+                @onclick="() => OnFolderChanged.InvokeAsync(MailboxFolder.Inbox)">
+            Inbox
+        </button>
+
+        <button class="list-group-item list-group-item-action @(Folder == MailboxFolder.Sent ? "active" : "")"
+                @onclick="() => OnFolderChanged.InvokeAsync(MailboxFolder.Sent)">
+            Sent
+        </button>
+
+        <button class="list-group-item list-group-item-action @(Folder == MailboxFolder.Archive ? "active" : "")"
+                @onclick="() => OnFolderChanged.InvokeAsync(MailboxFolder.Archive)">
+            Archive
+        </button>
+
+        <button class="list-group-item list-group-item-action @(Folder == MailboxFolder.Trash ? "active" : "")"
+                @onclick="() => OnFolderChanged.InvokeAsync(MailboxFolder.Trash)">
+            Trash
+        </button>
+    </div>
+</div>
+@code {
+    [Parameter] public MailboxFolder Folder { get; set; }
+    [Parameter] public EventCallback<MailboxFolder> OnFolderChanged { get; set; }
+    [Parameter] public EventCallback OnCompose { get; set; }
+}

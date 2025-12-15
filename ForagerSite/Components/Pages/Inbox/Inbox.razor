@@ -2,15 +2,11 @@
 @page "/Inbox/{threadId:guid}"
 @rendermode InteractiveServer
 
-@using DataAccess.Models
 @using ForagerSite.DataContainer
 @using ForagerSite.Services.Interfaces
-
 @inject IUserSessionService session
 @inject IInboxService inboxService
 @inject NavigationManager nav
-
-<h3>Inbox</h3>
 
 @if (!loaded)
 {
@@ -24,104 +20,39 @@ else
 {
     <div style="display:flex; gap:16px; align-items:flex-start;">
 
-        <!-- Left menu -->
-        <div style="min-width:180px;">
-            <button class="btn btn-sm btn-primary w-100 mb-2" @onclick="OpenCompose">Compose</button>
+        <InboxSidebar Folder="folder"
+                      OnFolderChanged="ChangeFolder"
+                      OnCompose="OpenCompose" />
 
-            <div class="list-group">
-                <button class="list-group-item list-group-item-action @(folder == MailboxFolder.Inbox ? "active" : "")"
-                        @onclick="() => ChangeFolder(MailboxFolder.Inbox)">
-                    Inbox
-                </button>
-
-                <button class="list-group-item list-group-item-action @(folder == MailboxFolder.Sent ? "active" : "")"
-                        @onclick="() => ChangeFolder(MailboxFolder.Sent)">
-                    Sent
-                </button>
-
-                <button class="list-group-item list-group-item-action @(folder == MailboxFolder.Archive ? "active" : "")"
-                        @onclick="() => ChangeFolder(MailboxFolder.Archive)">
-                    Archive
-                </button>
-
-                <button class="list-group-item list-group-item-action @(folder == MailboxFolder.Trash ? "active" : "")"
-                        @onclick="() => ChangeFolder(MailboxFolder.Trash)">
-                    Trash
-                </button>
-            </div>
-        </div>
-
-        <!-- Main -->
         <div style="flex:1;">
-            <input class="form-control mb-2" placeholder="Search..." @bind="search" @bind:event="oninput" />
+            <InboxSearchBar Search="search" OnSearchChanged="OnSearchChanged" />
 
             @if (threadId is null)
             {
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th style="width:220px;">User</th>
-                            <th>Subject</th>
-                            <th style="width:180px;">Last</th>
-                            <th style="width:260px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var t in threads)
-                        {
-                            <tr style="cursor:pointer; opacity:@(t.IsUnread ? "1" : ".6")"
-                                @onclick="() => OpenThread(t.ThreadId)">
-                                <td>@t.OtherUserName</td>
-                                <td>
-                                    <div><strong>@t.Subject</strong></div>
-                                    <div style="font-size:.85em;">@t.Preview</div>
-                                </td>
-                                <td>@t.LastMessageUtc.ToLocalTime().ToString("g")</td>
-                                <td @onclick:stopPropagation="true">
-                                    <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => MarkRead(t.ThreadId)">Mark read</button>
-
-                                    <button class="btn btn-sm btn-outline-warning me-1" @onclick="() => Archive(t.ThreadId)">Archive</button>
-
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => Trash(t.ThreadId)">Trash</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <ThreadList Threads="threads"
+                            OnOpenThread="OpenThread"
+                            OnMarkRead="MarkRead"
+                            OnArchive="Archive"
+                            OnTrash="Trash" />
             }
             else
             {
-                <button class="btn btn-sm btn-link" @onclick="BackToList">← Back</button>
-
-                @if (thread is null)
-                {
-                    <p>Loading thread...</p>
-                }
-                else
-                {
-                    <h5>Conversation with @thread.OtherUserName</h5>
-
-                    <div class="border rounded p-2 mb-2" style="background:#fff;">
-                        @foreach (var m in thread.Messages)
-                        {
-                            <div class="mb-2">
-                                <div style="font-size:.85em; opacity:.8;">
-                                    <strong>@m.SenderName</strong> • @m.SentUtc.ToLocalTime().ToString("g")
-                                </div>
-                                <div>@m.Body</div>
-                            </div>
-                            <hr />
-                        }
-                    </div>
-                }
+                <ThreadView Thread="thread"
+                            OnBack="BackToList" />
             }
         </div>
     </div>
+    <ComposeMessageModal IsOpen="showCompose"
+                         CurrentUserId="session.SessionUser!.UserId"
+                         OnCancel="CloseCompose"
+                         OnSent="OnComposeSent" />
+
 }
 
 @code {
     [Parameter] public Guid? threadId { get; set; }
 
+    private bool showCompose;
     private bool loaded;
     private MailboxFolder folder = MailboxFolder.Inbox;
     private string search = "";
@@ -155,7 +86,6 @@ else
     private async Task LoadList()
     {
         if (!session.IsAuthenticated || session.SessionUser is null) return;
-
         threads = await inboxService.GetThreads(session.SessionUser.UserId, folder, search, take: 50);
         StateHasChanged();
     }
@@ -169,32 +99,30 @@ else
         await LoadList();
     }
 
-    private void OpenThread(Guid id) => nav.NavigateTo($"/Inbox/{id}");
+    private async Task OnSearchChanged(string term)
+    {
+        search = term;
+        threadId = null;
+        thread = null;
+        nav.NavigateTo("/Inbox");
+        await LoadList();
+    }
 
+    private void OpenThread(Guid id) => nav.NavigateTo($"/Inbox/{id}");
     private void BackToList() => nav.NavigateTo("/Inbox");
 
-    private async Task MarkRead(Guid id)
+    private async Task MarkRead(Guid id) { await inboxService.MarkRead(session.SessionUser!.UserId, id); await LoadList(); }
+    private async Task Archive(Guid id) { await inboxService.ArchiveThread(session.SessionUser!.UserId, id); await LoadList(); }
+    private async Task Trash(Guid id) { await inboxService.TrashThread(session.SessionUser!.UserId, id); await LoadList(); }
+
+    private void OpenCompose() => showCompose = true;
+    private void CloseCompose() => showCompose = false;
+
+    private void OnComposeSent(Guid newThreadId)
     {
-        await inboxService.MarkRead(session.SessionUser!.UserId, id);
-        await LoadList();
+        showCompose = false;
+        nav.NavigateTo($"/Inbox/{newThreadId}");
     }
 
-    private async Task Archive(Guid id)
-    {
-        await inboxService.ArchiveThread(session.SessionUser!.UserId, id);
-        await LoadList();
-    }
 
-    private async Task Trash(Guid id)
-    {
-        await inboxService.TrashThread(session.SessionUser!.UserId, id);
-        await LoadList();
-    }
-
-    private void OpenCompose()
-    {
-        // next step: we’ll add Compose modal component.
-        // For now this is a placeholder so the button does something.
-        Console.WriteLine("Compose clicked");
-    }
 }

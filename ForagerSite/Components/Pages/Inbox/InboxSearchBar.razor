@@ -1,0 +1,12 @@
+﻿<input class="form-control mb-2"
+       placeholder="Search..."
+       value="@Search"
+       @oninput="HandleInput" />
+
+@code {
+    [Parameter] public string Search { get; set; } = "";
+    [Parameter] public EventCallback<string> OnSearchChanged { get; set; }
+
+    private async Task HandleInput(ChangeEventArgs e)
+        => await OnSearchChanged.InvokeAsync(e.Value?.ToString() ?? "");
+}

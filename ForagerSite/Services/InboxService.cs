@@ -193,19 +193,21 @@ public class InboxService : IInboxService
 
         var other = thread.UmtUserAId == userId ? thread.UserB : thread.UserA;
 
-        var messages = await ctx.UserMessages
-            .AsNoTracking()
-            .Where(m => m.UsmThreadId == threadId)
-            .OrderBy(m => m.UsmSendDate)
-            .Select(m => new MessageDc
-            {
-                MessageId = m.UsmId,
-                SenderId = m.UsmSenderId,
-                SenderName = m.Sender.UsrName,
-                Body = m.UsmMessage,
-                SentUtc = m.UsmSendDate
-            })
-            .ToListAsync();
+        var messages =
+            await (from m in ctx.UserMessages.AsNoTracking()
+                   join u in ctx.Users.AsNoTracking() on m.UsmSenderId equals u.UsrId
+                   where m.UsmThreadId == threadId
+                   orderby m.UsmSendDate
+                   select new MessageItemDc
+                   {
+                       MessageId = m.UsmId,
+                       SenderId = m.UsmSenderId,
+                       SenderName = u.UsrName,
+                       Subject = m.UsmSubject,
+                       Body = m.UsmMessage,
+                       SentUtc = m.UsmSendDate
+                   })
+                  .ToListAsync();
 
         return new ThreadDc
         {
@@ -215,6 +217,54 @@ public class InboxService : IInboxService
             Messages = messages
         };
     }
+    //public async Task<List<UserPickItemDc>> SearchUsers(string term, Guid excludeUserId, int take = 10)
+    //{
+    //    using var ctx = _db.CreateDbContext();
+
+    //    term = term?.Trim() ?? "";
+    //    if (term.Length < 1) return new();
+
+    //    return await ctx.Users
+    //        .AsNoTracking()
+    //        .Where(u => u.UsrId != excludeUserId &&
+    //                    (u.UsrName.Contains(term) || u.UserSecurity.UssUsername.Contains(term)))
+    //        .OrderBy(u => u.UsrName)
+    //        .Select(u => new UserPickItemDc
+    //        {
+    //            UserId = u.UsrId,
+    //            DisplayName = u.UsrName,
+    //            Username = u.UserSecurity.UssUsername
+    //        })
+    //        .Take(take)
+    //        .ToListAsync();
+    //}
+    public async Task<List<UserPickItemDc>> SearchUsers(string term, Guid currentUserId, int take = 8)
+    {
+        using var ctx = _db.CreateDbContext();
+        term = term.Trim();
+
+        if (term.Length < 2) return new();
+
+        // Search by username OR display name.
+        // IMPORTANT: UserId must be Users.UsrId
+        var results =
+            await (from us in ctx.UserSecurities.AsNoTracking()
+                   join u in ctx.Users.AsNoTracking() on us.UssUsrId equals u.UsrId
+                   where u.UsrId != currentUserId
+                   where us.UssUsername.Contains(term) || u.UsrName.Contains(term)
+                   orderby u.UsrName
+                   select new UserPickItemDc
+                   {
+                       UserId = u.UsrId,          // ✅ this is what fixes your FK error
+                       DisplayName = u.UsrName,   // or whatever your display field is
+                       Username = us.UssUsername
+                   })
+                  .Take(take)
+                  .ToListAsync();
+
+        return results;
+    }
+
 
     public async Task MarkRead(Guid userId, Guid threadId)
     {
@@ -319,6 +369,43 @@ public class InboxService : IInboxService
         // Updating UtsUpdatedUtc is enough for now; unread is computed by last inbound > last read.
         await ctx.SaveChangesAsync();
         return thread.UmtId;
+    }
+    public async Task SendReply(Guid senderId, Guid threadId, string body)
+    {
+        using var ctx = _db.CreateDbContext();
+
+        var thread = await ctx.UserMessageThreads
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.UmtId == threadId);
+
+        if (thread is null)
+            throw new InvalidOperationException("Thread not found.");
+
+        var recipientId =
+            thread.UmtUserAId == senderId
+                ? thread.UmtUserBId
+                : thread.UmtUserAId;
+
+        var now = DateTime.UtcNow;
+
+        var msg = new UserMessage
+        {
+            UsmId = Guid.NewGuid(),
+            UsmThreadId = threadId,
+            UsmSenderId = senderId,
+            UsmRecipientId = recipientId,
+            UsmSubject = "", // subject already known from first message
+            UsmMessage = body.Trim(),
+            UsmSendDate = now,
+            UsmStatus = "unread"
+        };
+
+        ctx.UserMessages.Add(msg);
+
+        await EnsureThreadState(ctx, senderId, threadId);
+        await EnsureThreadState(ctx, recipientId, threadId);
+
+        await ctx.SaveChangesAsync();
     }
 
     private static async Task EnsureThreadState(ForagerDbContext ctx, Guid userId, Guid threadId)
