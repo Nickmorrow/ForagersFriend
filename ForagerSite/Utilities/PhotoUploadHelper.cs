@@ -58,45 +58,73 @@ namespace ForagerSite.Utilities
                 return (null, null);
             }
         }
-        public static async Task<string?> UploadProfilePic(List<string> errors, string userName, IBrowserFile? uploadedFile, IConfiguration config, IUserService userService, UserDataContainer userVm)
-        {
+        public static async Task<string?> UploadProfilePic(
+        List<string> errors,
+        string userName,
+        IBrowserFile? uploadedFile,
+        IConfiguration config,
+        IWebHostEnvironment env,
+        IUserService userService,
+        UserDataContainer userVm)
+        { 
             if (errors.Any())
+                return null;
+
+            if (uploadedFile is null)
             {
-                return null; // Prevent saving if there are validation errors
+                errors.Add("No file selected.");
+                return null;
             }
 
-            var file = uploadedFile; // Assume the file was saved during HandleFileChange
-            var fileExtension = Path.GetExtension(file.Name).ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(userName))
+            {
+                errors.Add("User name is missing.");
+                return null;
+            }
+
+            var relativeFolder = config.GetValue<string>("FileStoragePf_Pics");
+            if (string.IsNullOrWhiteSpace(relativeFolder))
+            {
+                errors.Add("FileStoragePf_Pics is not configured.");
+                return null;
+            }
+
+            var fileExtension = Path.GetExtension(uploadedFile.Name).ToLowerInvariant();
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                errors.Add("Only image files (JPG, JPEG, PNG) are allowed.");
+                return null;
+            }
+
+            if (uploadedFile.Size > maxFileSize)
+            {
+                errors.Add($"File size exceeds the maximum allowed limit of {maxFileSize / (1024 * 1024)} MB.");
+                return null;
+            }
 
             try
             {
                 string newFileName = Path.ChangeExtension(Path.GetRandomFileName(), fileExtension);
-                string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
-                string filePath = Path.Combine(userDirectory, newFileName);
 
-                if (!Directory.Exists(userDirectory))
-                {
-                    Directory.CreateDirectory(userDirectory);
-                }
-                // Remove existing files if the directory exists
-                if (Directory.Exists(userDirectory))
-                {
-                    var existingFiles = Directory.GetFiles(userDirectory);
-                    foreach (var existingFile in existingFiles)
-                    {
-                        File.Delete(existingFile);
-                    }
-                }
+                // Physical path (disk)
+                string rootFolder = Path.Combine(env.WebRootPath, relativeFolder);
+                string userDirectory = Path.Combine(rootFolder, userName);
+                Directory.CreateDirectory(userDirectory);
+
+                // Remove existing files
+                foreach (var existingFile in Directory.GetFiles(userDirectory))
+                    File.Delete(existingFile);
+
                 // Save the new file
+                string filePath = Path.Combine(userDirectory, newFileName);
                 await using var fs = new FileStream(filePath, FileMode.Create);
-                await file.OpenReadStream(maxFileSize).CopyToAsync(fs);
+                await uploadedFile.OpenReadStream(maxFileSize).CopyToAsync(fs);
 
-                // Generate file URL and update database
-                string fileUrl = $"/UserProfileImages/{userName}/{newFileName}";
+                // Public URL (what you store in DB)
+                string fileUrl = $"/{relativeFolder}/{userName}/{newFileName}";
                 await userService.UploadProfilePicUrl(userVm.user, fileUrl);
 
-                return fileUrl; // Return the URL of the uploaded file
-
+                return fileUrl;
             }
             catch (Exception ex)
             {
@@ -104,11 +132,22 @@ namespace ForagerSite.Utilities
                 return null;
             }
         }
-        public static async Task DeleteProfilePic(List<string> errors, string userName, IBrowserFile? uploadedFile, IConfiguration config, IUserService userService, UserDataContainer userVm)
+
+        public static async Task DeleteProfilePic(List<string> errors, string userName, IBrowserFile? uploadedFile, IConfiguration config, IWebHostEnvironment env, IUserService userService, UserDataContainer userVm)
         {
             var file = uploadedFile; // Assume the file was saved during HandleFileChange
 
-            string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
+            //string userDirectory = Path.Combine(config.GetValue<string>("FileStoragePf_Pics"), userName);
+            var relativeFolder = config.GetValue<string>("FileStoragePf_Pics");
+
+            if (string.IsNullOrWhiteSpace(relativeFolder) || string.IsNullOrWhiteSpace(userName))
+            {
+                errors.Add("Profile picture storage is not configured correctly.");
+                return;
+            }
+
+            var rootFolder = Path.Combine(env.WebRootPath, relativeFolder);
+            var userDirectory = Path.Combine(rootFolder, userName);
 
             // Remove existing files if the directory exists
             if (Directory.Exists(userDirectory))
@@ -121,7 +160,7 @@ namespace ForagerSite.Utilities
             }
             await userService.DeleteProfilePicUrl(userVm.user);
         }
-        public static async Task<List<string>> UploadFindImages(IReadOnlyList<IBrowserFile> files, string userName, IConfiguration config, List<string> errors)
+        public static async Task<List<string>> UploadFindImages(IReadOnlyList<IBrowserFile> files, string userName, IConfiguration config, IWebHostEnvironment env, List<string> errors)
         {
             var savedFileUrls = new List<string>();
 
@@ -134,13 +173,20 @@ namespace ForagerSite.Utilities
                 return savedFileUrls;
             }
 
-            var rootFolder = config.GetValue<string>("FileStorageFind_Images");
-            if (string.IsNullOrWhiteSpace(rootFolder))
+            //var rootFolder = config.GetValue<string>("FileStorageFind_Images");
+            //if (string.IsNullOrWhiteSpace(rootFolder))
+            //{
+            //    errors.Add("FileStorageFind_Images is not configured.");
+            //    return savedFileUrls;
+            //}
+            var relativeFolder = config.GetValue<string>("FileStorageFind_Images");
+            if (string.IsNullOrWhiteSpace(relativeFolder))
             {
                 errors.Add("FileStorageFind_Images is not configured.");
                 return savedFileUrls;
             }
 
+            var rootFolder = Path.Combine(env.WebRootPath, relativeFolder);
             if (string.IsNullOrWhiteSpace(userName))
             {
                 errors.Add("User name is missing.");
@@ -177,7 +223,9 @@ namespace ForagerSite.Utilities
                     await using var writeStream = new FileStream(filePath, FileMode.Create);
                     await readStream.CopyToAsync(writeStream);
 
-                    savedFileUrls.Add($"/FindImageUploads/{userName}/{newFileName}");
+                    //savedFileUrls.Add($"/FindImageUploads/{userName}/{newFileName}");
+                    savedFileUrls.Add($"/{relativeFolder}/{userName}/{newFileName}");
+
                 }
                 catch (Exception ex)
                 {

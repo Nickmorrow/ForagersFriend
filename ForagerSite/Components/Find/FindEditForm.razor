@@ -7,6 +7,7 @@
 @using DataAccess.Models
 @inject IUserSessionService session
 @inject IConfiguration config
+@inject IWebHostEnvironment env
 
 <EditForm Model="editModel" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
@@ -236,7 +237,7 @@
         var userName = session.SessionUser.Username;
 
         var newUrls = await PhotoUploadHelper.UploadFindImages(
-            newFiles, userName, config, uploadErrors);
+            newFiles, userName, config, env, uploadErrors);
 
         if (uploadErrors.Any())
             return;

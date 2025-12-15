@@ -17,11 +17,15 @@ namespace ForagerSite.Services
 
         private IDbContextFactory<ForagerDbContext> _dbContextFactory;
 
-        private readonly IConfiguration _config;        
-        public UserFindService(IDbContextFactory<ForagerDbContext> dbContextFactory, IConfiguration config)
+        private readonly IConfiguration _config;
+        private readonly IWebHostEnvironment _env;
+
+        public UserFindService(IDbContextFactory<ForagerDbContext> dbContextFactory, IConfiguration config, IWebHostEnvironment env)
         {
             _dbContextFactory = dbContextFactory;
             _config = config;
+            _env = env;
+
         }
         public async Task RecalculateUserExpScore(Guid userId)
         {
@@ -812,7 +816,11 @@ namespace ForagerSite.Services
 
                 try
                 {
-                    string userDirectory = Path.Combine(_config.GetValue<string>("FileStorageFind_Images"), userName);
+                    //string userDirectory = Path.Combine(_config.GetValue<string>("FileStorageFind_Images"), userName);
+                    var root = _env.WebRootPath;
+
+                    string basePath = _config.GetValue<string>("FileStorageFind_Images");
+                    string userDirectory = Path.Combine(root, basePath, userName);
                     string filePath = Path.Combine(userDirectory, fileName);
 
                     System.IO.File.Delete(filePath);

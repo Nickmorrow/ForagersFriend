@@ -6,6 +6,7 @@
 @using ForagerSite.Components.Utility
 @inject IUserSessionService session
 @inject IConfiguration config
+@inject IWebHostEnvironment env
 
 <div>
 <EditForm Model="findModel" OnValidSubmit="HandleValidSubmit">
@@ -174,7 +175,7 @@
         var userName = session.SessionUser.Username;
         findModel.UserId = userId;
 
-        var uploadedUrls = await PhotoUploadHelper.UploadFindImages(selectedFiles, userName, config, uploadErrors);
+        var uploadedUrls = await PhotoUploadHelper.UploadFindImages(selectedFiles, userName, config, env, uploadErrors);
 
         if (uploadErrors.Any())
         {

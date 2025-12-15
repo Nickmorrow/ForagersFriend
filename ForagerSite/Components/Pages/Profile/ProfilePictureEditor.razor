@@ -7,6 +7,7 @@
 @inject IUserService userService
 @inject IUserSessionService session
 @inject IConfiguration config
+@inject IWebHostEnvironment env
 
 @if (!_loaded)
 {
@@ -143,6 +144,7 @@ else
             userName,
             uploadedFile,
             config,
+            env,
             userService,
             userVm);
 
@@ -171,6 +173,7 @@ else
             userName,
             uploadedFile,
             config,
+            env,
             userService,
             userVm);
 
