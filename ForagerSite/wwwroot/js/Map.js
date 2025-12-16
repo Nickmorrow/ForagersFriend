@@ -50,6 +50,17 @@ function onMapClick(e) {
     });
 }
 
+window.openDirections = function (lat, lng) {
+    const latLng = `${lat},${lng}`;
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+    const url = isIos
+        ? `https://maps.apple.com/?daddr=${latLng}&dirflg=d`
+        : `https://www.google.com/maps/dir/?api=1&destination=${latLng}`;
+
+    window.open(url, "_blank");
+};
+
 window.focusFindAfterDelay = function (lat, lng, ms) {
     setTimeout(() => {
         if (window.map) window.map.setView([lat, lng], 16, { animate: true });

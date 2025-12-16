@@ -51,7 +51,13 @@
                 else
                 {
                     <h5 style="margin-top:0;">@selectedFind.findName</h5>
-
+                    <button class="btn btn-sm btn-outline-primary"
+                            @onclick="() => GetDirections(selectedFind.findLocation.latitude, selectedFind.findLocation.longitude)">
+                        📍 Get Directions
+                    </button>
+                    @* <button onclick="openDirections(45.12345, -84.98765)">
+                        📍 Get Directions
+                    </button> *@
                     @if (selectedFind.findImages != null && selectedFind.findImages.Any())
                     {
                         <div style="margin: 10px 0;">
@@ -93,6 +99,7 @@
                         </div>
                     </div>
                     
+
 
 
                     @if (!string.IsNullOrWhiteSpace(selectedFind.speciesName))
@@ -353,4 +360,11 @@
         ClosePanel();
         await ReInitializeMap();
     }
+
+    private async Task GetDirections(double lat, double lng)
+    {
+        await DirectionsHelper.OpenAsync(JSRuntime, lat, lng);
+    }
+
+
 }
