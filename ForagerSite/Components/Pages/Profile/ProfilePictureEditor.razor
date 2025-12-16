@@ -168,10 +168,9 @@ else
     {
         var userName = session.SessionUser!.Username;
 
-        PhotoUploadHelper.DeleteProfilePic(
+        await PhotoUploadHelper.DeleteProfilePic(
             errors,
             userName,
-            uploadedFile,
             config,
             env,
             userService,
@@ -184,4 +183,5 @@ else
 
         profileImageUrl = await GetProfileImageUrl();
     }
+
 }

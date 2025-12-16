@@ -810,40 +810,61 @@ namespace ForagerSite.Services
             var userFindCommentXrefs = await context.UserFindsCommentXrefs.Where(xref => xref.UcxUsfId == findId).ToListAsync();
             var userFindComments = await context.UserFindsCommentXrefs.Where(xref => xref.UcxUsfId == findId).ToListAsync();
 
+            var storageMode = _config["ImageStorage"] ?? "Local";
+            var blobConnStr = _config["BlobStorage:ConnectionString"];
+
             foreach (var image in images)
             {
-                var fileName = Path.GetFileName(image.UsiImageData);
-
                 try
                 {
-                    //string userDirectory = Path.Combine(_config.GetValue<string>("FileStorageFind_Images"), userName);
-                    var root = _env.WebRootPath;
+                    var imagePathOrUrl = image.UsiImageData; // you currently store string path/url here
 
-                    string basePath = _config.GetValue<string>("FileStorageFind_Images");
-                    string userDirectory = Path.Combine(root, basePath, userName);
-                    string filePath = Path.Combine(userDirectory, fileName);
+                    if (storageMode.Equals("Blob", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (string.IsNullOrWhiteSpace(blobConnStr))
+                            throw new InvalidOperationException("Blob storage connection string missing.");
 
-                    System.IO.File.Delete(filePath);
+                        // imagePathOrUrl should be full https://...blob.core.windows.net/<container>/<blob>
+                        await BlobDeleteHelper.DeleteByUrlIfExistsAsync(imagePathOrUrl, blobConnStr);
+                    }
+                    else
+                    {
+                        // Local disk: imagePathOrUrl likely looks like "/FindImageUploads/user/file.jpg"
+                        var relativeUrl = imagePathOrUrl?.TrimStart('/');
+
+                        if (!string.IsNullOrWhiteSpace(relativeUrl))
+                        {
+                            var filePath = Path.Combine(_env.WebRootPath, relativeUrl.Replace('/', Path.DirectorySeparatorChar));
+                            if (System.IO.File.Exists(filePath))
+                                System.IO.File.Delete(filePath);
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
-                    throw new InvalidOperationException($"Error deleting file {fileName}: {ex.Message}", ex);
+                    // I'd recommend NOT throwing here, so a missing file doesn't block DB cleanup.
+                    // But keeping your behavior:
+                    throw new InvalidOperationException($"Error deleting image '{image.UsiImageData}': {ex.Message}", ex);
                 }
                 finally
                 {
                     context.UserImages.Remove(image);
                 }
             }
+
             foreach (var xref in userFindCommentXrefs)
             {
+                // Remove xref + its comment (assuming 1:1 as your model indicates)
                 context.UserFindsCommentXrefs.Remove(xref);
-                context.UserFindsComments.Remove(xref.UserFindsComment);
+                if (xref.UserFindsComment != null)
+                    context.UserFindsComments.Remove(xref.UserFindsComment);
             }
-            if (userFind != null)
-            {
+
+            if (userFindLocation != null)
                 context.UserFindLocations.Remove(userFindLocation);
-                context.UserFinds.Remove(userFind);               
-            }
+
+            context.UserFinds.Remove(userFind);
+
             await context.SaveChangesAsync();
             await RecalculateUserExpScore(userId);
         } 

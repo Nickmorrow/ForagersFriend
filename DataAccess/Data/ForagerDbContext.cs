@@ -61,9 +61,10 @@ namespace DataAccess.Data
                 .HasForeignKey(uf => uf.UsfUsrId);
 
             modelBuilder.Entity<User>()
-                .HasOne(u => u.UserImage)
+                .HasMany(u => u.UserImages)
                 .WithOne(ui => ui.User)
-                .HasForeignKey<UserImage>(ui => ui.UsiUsrId);
+                .HasForeignKey(ui => ui.UsiUsrId);
+
 
             // One-to-One: UserFind -> UserFindLocation
             modelBuilder.Entity<UserFind>()
