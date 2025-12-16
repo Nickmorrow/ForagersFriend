@@ -2,6 +2,7 @@
 using DataAccess.Models;
 using ForagerSite.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Data.SqlTypes;
 
 namespace ForagerSite.Services
 {
@@ -95,8 +96,11 @@ namespace ForagerSite.Services
             req.FrqStatus = FriendRequestStatus.Accepted;
             req.FrqAcceptedDate = DateTime.UtcNow;
 
-            // Upsert relationship
-            var (a, b) = NormalizePair(req.FrqRequesterUserId, req.FrqAddresseeUserId);
+            // Upsert relationship - MUST satisfy CK_UserRelationship_UserA_LessThan_UserB
+            var user1 = req.FrqRequesterUserId;
+            var user2 = req.FrqAddresseeUserId;
+
+            var (a, b) = NormalizePair(user1, user2);
 
             var rel = await ctx.UserRelationships
                 .FirstOrDefaultAsync(r => r.UrlUserAId == a && r.UrlUserBId == b);
@@ -110,7 +114,8 @@ namespace ForagerSite.Services
                     UrlUserBId = b,
                     UrlStatus = RelationshipStatus.Friends,
                     UrlActionUserId = me,
-                    UrlCreatedDate = DateTime.UtcNow
+                    UrlCreatedDate = DateTime.UtcNow,
+                    UrlUpdatedDate = null
                 });
             }
             else
@@ -119,6 +124,7 @@ namespace ForagerSite.Services
                 rel.UrlActionUserId = me;
                 rel.UrlUpdatedDate = DateTime.UtcNow;
             }
+
 
             // Mark the friend request notification read
             note.NotIsRead = true;
@@ -183,10 +189,17 @@ namespace ForagerSite.Services
             await ctx.SaveChangesAsync();
         }
 
+        //private static (Guid A, Guid B) NormalizePair(Guid u1, Guid u2)
+        //    => u1.CompareTo(u2) < 0 ? (u1, u2) : (u2, u1);
         private static (Guid A, Guid B) NormalizePair(Guid u1, Guid u2)
-            => u1.CompareTo(u2) < 0 ? (u1, u2) : (u2, u1);
+        {
+            var s1 = new SqlGuid(u1);
+            var s2 = new SqlGuid(u2);
+
+            return s1.CompareTo(s2) < 0 ? (u1, u2) : (u2, u1);
+        }
 
 
-        
+
     }
 }

@@ -3,6 +3,7 @@ using DataAccess.Models;
 using ForagerSite.DataContainer;
 using ForagerSite.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Data.SqlTypes;
 
 namespace ForagerSite.Services
 {
@@ -18,8 +19,15 @@ namespace ForagerSite.Services
             _notificationService = notificationService;
         }
 
+        //private static (Guid A, Guid B) NormalizePair(Guid u1, Guid u2)
+        //    => u1.CompareTo(u2) < 0 ? (u1, u2) : (u2, u1);
         private static (Guid A, Guid B) NormalizePair(Guid u1, Guid u2)
-            => u1.CompareTo(u2) < 0 ? (u1, u2) : (u2, u1);
+        {
+            var s1 = new SqlGuid(u1);
+            var s2 = new SqlGuid(u2);
+
+            return s1.CompareTo(s2) < 0 ? (u1, u2) : (u2, u1);
+        }
 
         public async Task<FriendUiStatus> GetStatus(Guid me, Guid other)
         {
