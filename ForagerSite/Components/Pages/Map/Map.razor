@@ -153,77 +153,97 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (!firstRender) return;
+
+        try
         {
             ReadFocusFromQuery();
 
-            var userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
-            if (userVm != null)
+            // ✅ Guard: session / user not ready (common on first load or unauth)
+            var sessionUserId = session?.SessionUser?.UserId;
+            if (sessionUserId == null || sessionUserId == Guid.Empty)
             {
-                isLoading = true;
-                StateHasChanged();
-
-                try
-                {
-                    _mapServiceReference = DotNetObjectReference.Create(mapService);
-                    mapService.userNamesKvp = await userFindService.GetCommentUserNames();
-
-                    // ✅ NEW: if focusUserId is present and not me, load AllUsers
-                    var shouldLoadAllUsers =
-                        focusUserId.HasValue && focusUserId.Value != userVm.user.UsrId;
-
-                    if (shouldLoadAllUsers)
-                    {
-                        mapService.mapFilter = "AllUsers";
-
-                        if (!mapService.AllViewModels.Any())
-                            mapService.AllViewModels = await userFindService.GetUserFindsDCsAll();
-
-                        mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
-
-                        // Hide private finds for non-owners
-                        FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
-                    }
-                    else
-                    {
-                        mapService.mapFilter = "UserOnly";
-
-                        mapService.CurrentViewModels = await userFindService.GetUserFindsDCsUser(userVm.user.UsrId);
-                        mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
-                    }
-
-                    var json = JsonConvert.SerializeObject(
-                        mapService.CurrentViewModels,
-                        new JsonSerializerSettings
-                        {
-                            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                            Formatting = Formatting.Indented
-                        });
-
-                    await JS.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
-                    await JS.InvokeVoidAsync(
-                        "initializeMap",
-                        json,
-                        userVm.user.UsrId.ToString(),
-                        mapService.mapFilter,
-                        userVm.user.UserSecurity.UssUsername
-                    );
-
-                    await FocusFindIfRequested(userVm);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error fetching ViewModels: {ex.Message}");
-                }
-                finally
-                {
-                    isLoading = false;
-                    hasLoaded = true;
-                    StateHasChanged();
-                }
+                Console.WriteLine("Map: session user not available yet.");
+                return;
             }
+
+            var userVm = await userService.GetUserViewModelById(sessionUserId.Value);
+            if (userVm?.user == null)
+            {
+                Console.WriteLine("Map: userVm or userVm.user was null.");
+                return;
+            }
+
+            isLoading = true;
+            StateHasChanged();
+
+            _mapServiceReference = DotNetObjectReference.Create(mapService);
+
+            mapService.userNamesKvp = await userFindService.GetCommentUserNames();
+
+            // ✅ Guard: lists should never be null
+            mapService.AllViewModels ??= new();
+            mapService.CurrentViewModels ??= new();
+            mapService.MyViewModels ??= new();
+
+            var shouldLoadAllUsers =
+                focusUserId.HasValue && focusUserId.Value != userVm.user.UsrId;
+
+            if (shouldLoadAllUsers)
+            {
+                mapService.mapFilter = "AllUsers";
+
+                if (!mapService.AllViewModels.Any())
+                    mapService.AllViewModels = await userFindService.GetUserFindsDCsAll();
+
+                mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
+
+                FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
+            }
+            else
+            {
+                mapService.mapFilter = "UserOnly";
+
+                mapService.CurrentViewModels =
+                    await userFindService.GetUserFindsDCsUser(userVm.user.UsrId);
+
+                mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
+            }
+
+            var json = JsonConvert.SerializeObject(
+                mapService.CurrentViewModels ?? new(),
+                new JsonSerializerSettings
+                {
+                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                    Formatting = Formatting.Indented
+                });
+
+            // ✅ Guard username (don’t assume UserSecurity is loaded)
+            var username = userVm.user.UserSecurity?.UssUsername ?? "(unknown)";
+
+            await JS.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
+            await JS.InvokeVoidAsync(
+                "initializeMap",
+                json,
+                userVm.user.UsrId.ToString(),
+                mapService.mapFilter,
+                username
+            );
+
+            await FocusFindIfRequested(userVm);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Map OnAfterRenderAsync failed: " + ex);
+        }
+        finally
+        {
+            isLoading = false;
+            hasLoaded = true;
+            StateHasChanged();
         }
     }
+
 
 
     #endregion
