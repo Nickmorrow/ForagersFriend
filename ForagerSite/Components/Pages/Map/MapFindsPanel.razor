@@ -58,7 +58,7 @@
                     @* <button onclick="openDirections(45.12345, -84.98765)">
                         📍 Get Directions
                     </button> *@
-                    @if (selectedFind.findImages != null && selectedFind.findImages.Any())
+                    @* @if (selectedFind.findImages != null && selectedFind.findImages.Any())
                     {
                         <div style="margin: 10px 0;">
                             <div style="font-weight:600; margin-bottom:6px;">Image Gallery</div>
@@ -76,7 +76,8 @@
                     else
                     {
                         <p><em>No images uploaded.</em></p>
-                    }
+                    } *@
+                    <FindImageGallery Images="selectedFind.findImages" />
 
 
                     <p><strong>Discovered:</strong> @selectedFind.findDate.ToString("MMMM dd, yyyy")</p>

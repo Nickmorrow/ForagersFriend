@@ -1,0 +1,170 @@
+﻿@using ForagerSite.DataContainer
+
+@if (Images == null || Images.Count == 0)
+{
+    if (ShowEmptyState)
+    {
+        <p><em>No images uploaded.</em></p>
+    }
+}
+else
+{
+    <div>
+        @if (ShowInlineThumbnails)
+        {
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                @for (int i = 0; i < Images.Count; i++)
+                {
+                    <img src="@Images[i].imageData"
+                         alt="Find Image"
+                         style="width:100px; height:100px; object-fit:cover; border-radius:6px; cursor:pointer;"
+                         @onclick="() => Open(i)" />
+                }
+            </div>
+        }
+
+        <button class="btn btn-sm btn-outline-primary" @onclick="() => Open(0)">
+            🖼️ View images (@Images.Count)
+        </button>
+    </div>
+}
+
+@if (_isOpen)
+{
+    <div tabindex="0"
+         @onkeydown="HandleKeyDown"
+         style="
+            position:fixed; inset:0;
+            background:rgba(0,0,0,0.75);
+            z-index:2000;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:20px;">
+
+        <div style="
+            width:min(1200px, 96vw);
+            height:min(780px, 92vh);
+            background:#111;
+            border-radius:12px;
+            overflow:hidden;
+            display:flex;
+            flex-direction:column;">
+
+            <!-- Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#1a1a1a;">
+                <div style="color:#fff; font-weight:600;">
+                    Image @(_activeIndex + 1) of @Images!.Count
+                </div>
+
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-sm btn-light" @onclick="Prev">◀</button>
+                    <button class="btn btn-sm btn-light" @onclick="Next">▶</button>
+                    <button class="btn btn-sm btn-light" @onclick="Close">✕</button>
+                </div>
+            </div>
+
+            <!-- Main image scroller -->
+            <div @ref="_scroller"
+                 style="
+                    flex:1;
+                    display:flex;
+                    overflow-x:auto;
+                    scroll-snap-type:x mandatory;
+                    align-items:center;
+                    padding:16px;">
+                @for (int i = 0; i < Images!.Count; i++)
+                {
+                    <div style="
+                        flex:0 0 100%;
+                        height:100%;
+                        scroll-snap-align:center;
+                        display:flex;
+                        justify-content:center;
+                        align-items:center;">
+                        <img src="@Images[i].imageData"
+                             alt="Find image"
+                             style="max-width:100%; max-height:100%; object-fit:contain;" />
+                    </div>
+                }
+            </div>
+
+            <!-- Thumbnail rail -->
+            <div style="background:#1a1a1a; padding:10px; overflow-x:auto;">
+                <div style="display:flex; gap:10px;">
+                    @for (int i = 0; i < Images!.Count; i++)
+                    {
+                        var active = i == _activeIndex;
+                        <img src="@Images[i].imageData"
+         alt="thumb"
+         style="
+            width:72px;
+            height:72px;
+            object-fit:cover;
+            border-radius:8px;
+            cursor:pointer;
+            border:@(active ? "2px solid white" : "2px solid transparent");"
+         @onclick="() => JumpTo(i)" />
+
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public List<ImageDC>? Images { get; set; }
+
+    [Parameter] public bool ShowInlineThumbnails { get; set; } = false;
+    [Parameter] public bool ShowEmptyState { get; set; } = true;
+
+    private bool _isOpen;
+    private int _activeIndex;
+    private ElementReference _scroller;
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private async Task Open(int index)
+    {
+        if (Images == null || Images.Count == 0) return;
+
+        _activeIndex = Math.Clamp(index, 0, Images.Count - 1);
+        _isOpen = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        await ScrollToIndex(_activeIndex);
+    }
+
+    private void Close() => _isOpen = false;
+
+    private async Task Prev()
+    {
+        _activeIndex = (_activeIndex - 1 + Images!.Count) % Images.Count;
+        await ScrollToIndex(_activeIndex);
+    }
+
+    private async Task Next()
+    {
+        _activeIndex = (_activeIndex + 1) % Images!.Count;
+        await ScrollToIndex(_activeIndex);
+    }
+
+    private async Task JumpTo(int index)
+    {
+        _activeIndex = index;
+        await ScrollToIndex(index);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") Close();
+        else if (e.Key == "ArrowLeft") await Prev();
+        else if (e.Key == "ArrowRight") await Next();
+    }
+
+    private async Task ScrollToIndex(int index)
+    {
+        await JS.InvokeVoidAsync("findGallery.scrollToChild", _scroller, index);
+    }
+}
