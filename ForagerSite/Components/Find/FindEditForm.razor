@@ -20,12 +20,12 @@
     </div>
 
     <div>
-        <label for="speciesName">Species Name:</label>
+        <label for="speciesName">Species:</label>
         <InputText id="speciesName" @bind-Value="editModel.SpeciesName" />
     </div>
 
     <div>
-        <label for="speciesType">Species Type:</label>
+        <label for="speciesType">Category:</label>
         <InputSelect id="speciesType" @bind-Value="editModel.SpeciesType">
             <option value="">Select Type</option>
             <option value="tree">Tree</option>
@@ -36,7 +36,7 @@
     </div>
 
     <div>
-        <label for="useCategory">Use Category:</label>
+        <label for="useCategory">Use:</label>
         <InputSelect id="useCategory" @bind-Value="editModel.UseCategory">
             <option value="">Select Category</option>
             <option value="medicinal">Medicinal</option>
@@ -55,7 +55,7 @@
         <InputText id="lookAlikes" @bind-Value="editModel.LookAlikes" />
     </div>
 
-    <div>
+    @* <div>
         <label for="harvestMethod">Harvest Method:</label>
         <InputText id="harvestMethod" @bind-Value="editModel.HarvestMethod" />
     </div>
@@ -63,7 +63,7 @@
     <div>
         <label for="tastesLike">Tastes Like:</label>
         <InputText id="tastesLike" @bind-Value="editModel.TastesLike" />
-    </div>
+    </div> *@
 
     <div>
         <label for="description">Notes:</label>

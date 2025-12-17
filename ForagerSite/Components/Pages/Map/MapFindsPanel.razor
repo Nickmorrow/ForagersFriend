@@ -105,11 +105,11 @@
 
                     @if (!string.IsNullOrWhiteSpace(selectedFind.speciesName))
                     {
-                        <p><strong>Species Name:</strong> @selectedFind.speciesName</p>
+                        <p><strong>Species:</strong> @selectedFind.speciesName</p>
                     }
 
-                    <p><strong>Species Type:</strong> @selectedFind.speciesType</p>
-                    <p><strong>Species Category:</strong> @selectedFind.useCategory</p>
+                    <p><strong>Category:</strong> @selectedFind.speciesType</p>
+                    <p><strong>Use:</strong> @selectedFind.useCategory</p>
 
                     @if (!string.IsNullOrWhiteSpace(selectedFind.features))
                     {
@@ -121,15 +121,15 @@
                         <p><strong>Dangerous Lookalikes:</strong> @selectedFind.lookAlikes</p>
                     }
 
-                    @if (!string.IsNullOrWhiteSpace(selectedFind.harvestMethod))
+                    @* @if (!string.IsNullOrWhiteSpace(selectedFind.harvestMethod))
                     {
                         <p><strong>Harvest Method:</strong> @selectedFind.harvestMethod</p>
-                    }
+                    } *@
 
-                    @if (!string.IsNullOrWhiteSpace(selectedFind.tastesLike))
+                    @* @if (!string.IsNullOrWhiteSpace(selectedFind.tastesLike))
                     {
                         <p><strong>Tastes like:</strong> @selectedFind.tastesLike</p>
-                    }
+                    } *@
 
                     @if (!string.IsNullOrWhiteSpace(selectedFind.description))
                     {
