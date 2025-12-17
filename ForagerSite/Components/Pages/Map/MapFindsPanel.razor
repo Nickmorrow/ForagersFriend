@@ -51,36 +51,7 @@
                 else
                 {
                     <h5 style="margin-top:0;">@selectedFind.findName</h5>
-                    <button class="btn btn-sm btn-outline-primary"
-                            @onclick="() => GetDirections(selectedFind.findLocation.latitude, selectedFind.findLocation.longitude)">
-                        📍 Get Directions
-                    </button>
-                    @* <button onclick="openDirections(45.12345, -84.98765)">
-                        📍 Get Directions
-                    </button> *@
-                    @* @if (selectedFind.findImages != null && selectedFind.findImages.Any())
-                    {
-                        <div style="margin: 10px 0;">
-                            <div style="font-weight:600; margin-bottom:6px;">Image Gallery</div>
-
-                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                                @foreach (var img in selectedFind.findImages)
-                                {
-                                    <img src="@img.imageData"
-                                         alt="Find Image"
-                                         style="width:100px; height:100px; object-fit:cover; border-radius:6px; cursor:pointer;" />
-                                }
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <p><em>No images uploaded.</em></p>
-                    } *@
-                    <FindImageGallery Images="selectedFind.findImages" />
-
-
-                    <p><strong>Discovered:</strong> @selectedFind.findDate.ToString("MMMM dd, yyyy")</p>
+                    <p><strong></strong> @selectedFind.findDate.ToString("MMMM dd, yyyy")</p>
                     <div style="display:flex; align-items:center; gap:12px; margin:10px 0;">
                         <img src="@selectedVm.profilePic"
                              alt="Profile Picture"
@@ -99,17 +70,34 @@
 
                         </div>
                     </div>
+                    <button class="btn btn-sm btn-outline-primary"
+                            @onclick="() => GetDirections(selectedFind.findLocation.latitude, selectedFind.findLocation.longitude)">
+                        📍 Get Directions
+                    </button>
+                    @if (selectedFind.findImages != null && selectedFind.findImages.Any())
+                    {
+                        <div style="margin: 10px 0;">
+                            
+                            <img src="@selectedFind.findImages.First().imageData"
+                                    alt="Find Image"
+                                    style="width:400px; height:400px; object-fit:cover; border-radius:6px; cursor:pointer;" />
+                        </div>
+                    }
+                    else
+                    {
+                        <p><em>No images uploaded.</em></p>
+                    }
                     
-
-
+                    <FindImageGallery Images="selectedFind.findImages" />
+                    @* <div style="font-weight:600; margin-bottom:6px;">Image Gallery</div> *@
 
                     @if (!string.IsNullOrWhiteSpace(selectedFind.speciesName))
                     {
                         <p><strong>Species:</strong> @selectedFind.speciesName</p>
                     }
 
-                    <p><strong>Category:</strong> @selectedFind.speciesType</p>
-                    <p><strong>Use:</strong> @selectedFind.useCategory</p>
+                    <p><strong></strong> @selectedFind.speciesType</p>
+                    <p><strong>Category: </strong> @selectedFind.useCategory</p>
 
                     @if (!string.IsNullOrWhiteSpace(selectedFind.features))
                     {
