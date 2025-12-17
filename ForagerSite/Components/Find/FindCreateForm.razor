@@ -1,9 +1,11 @@
-﻿@using Microsoft.AspNetCore.Components.Forms
+﻿@using ForagerSite.CommonRules.ForagerSite.CommonRules
+@using Microsoft.AspNetCore.Components.Forms
 @using System.ComponentModel.DataAnnotations
 @using ForagerSite.Services
 @using ForagerSite.Services.Interfaces
 @using ForagerSite.Utilities
 @using ForagerSite.Components.Utility
+@using ForagerSite.CommonRules
 @inject IUserSessionService session
 @inject IConfiguration config
 @inject IWebHostEnvironment env
@@ -22,27 +24,34 @@
         <label for="speciesName">Species:</label>
         <InputText id="speciesName" @bind-Value="findModel.SpeciesName" />
     </div>
-
     <div>
-        <label for="speciesType">Category:</label>
-        <InputSelect id="speciesType" @bind-Value="findModel.SpeciesType">
+        <InputSelect id="speciesType"
+                     @bind-Value="findModel.SpeciesType"
+                     @bind-Value:after="OnSpeciesTypeChanged">
             <option value="">Select Type</option>
-            <option value="tree">Tree</option>
-            <option value="mushroom">Mushroom</option>
-            <option value="fruit">Fruit</option>
-            <option value="herb">Herb</option>
+
+            @foreach (var category in ForageCategories.ForageCategory)
+            {
+                <option value="@category">@category</option>
+            }
         </InputSelect>
     </div>
 
     <div>
-        <label for="useCategory">Use:</label>
-        <InputSelect id="useCategory" @bind-Value="findModel.UseCategory">
-            <option value="">Select Category</option>
-            <option value="medicinal">Medicinal</option>
-            <option value="gourmet">Gourmet</option>
-            <option value="crafting">Crafting</option>
-        </InputSelect>
+        @if (!string.IsNullOrWhiteSpace(findModel.SpeciesType))
+        {
+            <InputSelect id="useCategory" @bind-Value="findModel.UseCategory">
+                <option value="">Select Subcategory</option>
+
+                @foreach (var sub in AvailableSubcategories)
+                {
+                    <option value="@sub">@sub</option>
+                }
+            </InputSelect>
+        }
     </div>
+
+
 
     <div>
         <label for="features">Distinguishing Features:</label>
@@ -125,6 +134,24 @@
 
     [Parameter]
     public EventCallback OnClose { get; set; }
+
+    private IReadOnlyList<string> AvailableSubcategories =>
+    string.IsNullOrWhiteSpace(findModel.SpeciesType)
+        ? Array.Empty<string>()
+        : ForageCategories.Subcategories.TryGetValue(
+            findModel.SpeciesType,
+            out var subs)
+            ? subs
+            : Array.Empty<string>();
+    
+    private void OnSpeciesTypeChanged()
+    {
+        findModel.UseCategory = "";
+        if (string.IsNullOrWhiteSpace(findModel.SpeciesType))
+            findModel.UseCategory = "";
+    }
+
+
 
     private Task OnImagesUploaded(ImageUploadResult result)
     {
