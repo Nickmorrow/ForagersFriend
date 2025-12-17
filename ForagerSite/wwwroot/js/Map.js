@@ -5,6 +5,10 @@ var tempMarker = null;
 var userMarker = null;
 var dotNetObjectReference = null;
 
+window.getSelectedValues = (selectElement) => {
+    return Array.from(selectElement.selectedOptions).map(o => o.value);
+};
+
 function onMapClick(e) {
     if (window.tempMarker) {
         window.map.removeLayer(window.tempMarker);

@@ -37,20 +37,82 @@
             }
         </InputSelect>
     </div>
+    @if (!string.IsNullOrWhiteSpace(editModel.SpeciesType))
+    {
+        <div>
+            <label for="useCategory">Subcategories:</label>
 
-    <div>
-        @if (!string.IsNullOrWhiteSpace(editModel.SpeciesType))
-        {
-            <InputSelect id="useCategory" @bind-Value="editModel.UseCategory">
-                <option value="">Select Subcategory</option>
+            @if (!string.IsNullOrWhiteSpace(editModel.SpeciesType))
+            {
+                <div style="margin-top:10px;">
+                    <label>Subcategories:</label>
 
-                @foreach (var sub in AvailableSubcategories)
-                {
-                    <option value="@sub">@sub</option>
-                }
-            </InputSelect>
-        }
-    </div>
+                    <!-- Available list -->
+                    <div style="border:1px solid #ccc; border-radius:6px; padding:8px; max-width:420px;">
+                        @if (AvailableSubcategoriesExcludingSelected.Count == 0)
+                        {
+                            <small class="text-muted">No more subcategories to add.</small>
+                        }
+                        else
+                        {
+                            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                @foreach (var sub in AvailableSubcategoriesExcludingSelected)
+                                {
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            @onclick="() => AddSubcategory(sub)">
+                                        + @sub
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Selected list -->
+                    <div style="margin-top:10px;">
+                        <label class="d-block">Selected:</label>
+
+                        @if (selectedSubcategories.Count == 0)
+                        {
+                            <small class="text-muted">None selected yet.</small>
+                        }
+                        else
+                        {
+                            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                @foreach (var sub in selectedSubcategories)
+                                {
+                                    <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border:1px solid #aaa; border-radius:999px;">
+                                        @sub
+                                        <button type="button"
+                                                class="btn btn-sm btn-link"
+                                                style="padding:0; text-decoration:none;"
+                                                @onclick="() => RemoveSubcategory(sub)">
+                                            ✕
+                                        </button>
+                                    </span>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Optional: show stored string -->
+                    @if (!string.IsNullOrWhiteSpace(editModel.UseCategory))
+                    {
+                        <div style="margin-top:6px;">
+                            <small class="text-muted">Stored: @editModel.UseCategory</small>
+                        </div>
+                    }
+                </div>
+            }
+
+
+
+            @if (!string.IsNullOrWhiteSpace(editModel.UseCategory))
+            {
+                <small>Selected: @editModel.UseCategory</small>
+            }
+        </div>
+    }
 
     <div>
         <label for="features">Distinguishing Features:</label>
@@ -187,26 +249,71 @@
                 UploadedImageUrls = new List<string>()
             };
 
+            HydrateSelectedFromModel(); // ✅ ADD THIS
+
             existingImagePreviews = new List<string>(editModel.ExistingImageUrls);
             newImagePreviews.Clear();
             newFiles.Clear();
             uploadErrors.Clear();
         }
     }
+    private List<string> selectedSubcategories = new();
+
     private IReadOnlyList<string> AvailableSubcategories =>
-    string.IsNullOrWhiteSpace(editModel.SpeciesType)
-        ? Array.Empty<string>()
-        : ForageCategories.Subcategories.TryGetValue(
-            editModel.SpeciesType,
-            out var subs)
-            ? subs
-            : Array.Empty<string>();
+        string.IsNullOrWhiteSpace(editModel.SpeciesType)
+            ? Array.Empty<string>()
+            : ForageCategories.Subcategories.TryGetValue(editModel.SpeciesType, out var subs)
+                ? subs
+                : Array.Empty<string>();
+
+    private List<string> AvailableSubcategoriesExcludingSelected =>
+        AvailableSubcategories
+            .Where(s => !selectedSubcategories.Contains(s))
+            .ToList();
+
+    private void AddSubcategory(string sub)
+    {
+        if (!selectedSubcategories.Contains(sub))
+            selectedSubcategories.Add(sub);
+
+        SyncUseCategoryString();
+    }
+
+    private void RemoveSubcategory(string sub)
+    {
+        selectedSubcategories.Remove(sub);
+        SyncUseCategoryString();
+    }
+
+    private void SyncUseCategoryString()
+    {
+        // store as comma-separated string in your model
+        editModel.UseCategory = string.Join(", ", selectedSubcategories);
+    }
 
     private void OnSpeciesTypeChanged()
     {
+        selectedSubcategories.Clear();
         editModel.UseCategory = "";
-        if (string.IsNullOrWhiteSpace(editModel.SpeciesType))
-            editModel.UseCategory = "";
+    }
+    private void HydrateSelectedFromModel()
+    {
+        var parsed = (editModel.UseCategory ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // Only keep values that exist for the currently selected SpeciesType
+        var allowed = new HashSet<string>(AvailableSubcategories, StringComparer.OrdinalIgnoreCase);
+
+        selectedSubcategories = parsed
+            .Where(allowed.Contains)
+            .ToList();
+
+        // Normalize stored string (nice formatting + removes invalids)
+        SyncUseCategoryString();
     }
 
     private Task OnImagesUploaded(ImageUploadResult result)

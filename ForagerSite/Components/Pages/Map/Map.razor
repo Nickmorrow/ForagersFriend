@@ -301,6 +301,19 @@
         }
     }
 
+    private static bool HasSubcategory(string? stored, string? selected)
+    {
+        if (string.IsNullOrWhiteSpace(selected)) return true;      // no filter
+        if (string.IsNullOrWhiteSpace(stored)) return false;
+
+        var sel = selected.Trim();
+
+        return stored
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Any(s => s.Equals(sel, StringComparison.OrdinalIgnoreCase));
+    }
+
     private async Task HandleSearch(MapSearch.MapSearchCriteria criteria)
     {
         var userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
@@ -336,12 +349,12 @@
                     .Where(f =>
                         (string.IsNullOrEmpty(criteria.SelectedSpeciesType) ||
                             f.speciesType.Equals(criteria.SelectedSpeciesType, StringComparison.OrdinalIgnoreCase))
-                        && (string.IsNullOrEmpty(criteria.SelectedUseCategory) ||
-                            f.useCategory.Equals(criteria.SelectedUseCategory, StringComparison.OrdinalIgnoreCase))
+                        && HasSubcategory(f.useCategory, criteria.SelectedUseCategory)
                         && (string.IsNullOrEmpty(criteria.KeywordSearchTerm) ||
                             f.findName.Contains(criteria.KeywordSearchTerm, StringComparison.OrdinalIgnoreCase))
                     )
                     .ToList();
+
             }
         }
 

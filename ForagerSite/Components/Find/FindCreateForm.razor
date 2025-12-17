@@ -9,6 +9,8 @@
 @inject IUserSessionService session
 @inject IConfiguration config
 @inject IWebHostEnvironment env
+@inject IJSRuntime JS
+
 
 <div>
 <EditForm Model="findModel" OnValidSubmit="HandleValidSubmit">
@@ -37,21 +39,82 @@
         </InputSelect>
     </div>
 
-    <div>
-        @if (!string.IsNullOrWhiteSpace(findModel.SpeciesType))
-        {
-            <InputSelect id="useCategory" @bind-Value="findModel.UseCategory">
-                <option value="">Select Subcategory</option>
+    @if (!string.IsNullOrWhiteSpace(findModel.SpeciesType))
+    {
+        <div>
+            <label for="useCategory">Subcategories:</label>
 
-                @foreach (var sub in AvailableSubcategories)
-                {
-                    <option value="@sub">@sub</option>
-                }
-            </InputSelect>
-        }
-    </div>
+                    @if (!string.IsNullOrWhiteSpace(findModel.SpeciesType))
+                    {
+                        <div style="margin-top:10px;">
+                            <label>Subcategories:</label>
+
+                            <!-- Available list -->
+                            <div style="border:1px solid #ccc; border-radius:6px; padding:8px; max-width:420px;">
+                                @if (AvailableSubcategoriesExcludingSelected.Count == 0)
+                                {
+                                    <small class="text-muted">No more subcategories to add.</small>
+                                }
+                                else
+                                {
+                                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                        @foreach (var sub in AvailableSubcategoriesExcludingSelected)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-secondary"
+                                                    @onclick="() => AddSubcategory(sub)">
+                                                + @sub
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Selected list -->
+                            <div style="margin-top:10px;">
+                                <label class="d-block">Selected:</label>
+
+                                @if (selectedSubcategories.Count == 0)
+                                {
+                                    <small class="text-muted">None selected yet.</small>
+                                }
+                                else
+                                {
+                                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                        @foreach (var sub in selectedSubcategories)
+                                        {
+                                            <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border:1px solid #aaa; border-radius:999px;">
+                                                @sub
+                                                <button type="button"
+                                                        class="btn btn-sm btn-link"
+                                                        style="padding:0; text-decoration:none;"
+                                                        @onclick="() => RemoveSubcategory(sub)">
+                                                    ✕
+                                                </button>
+                                            </span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- Optional: show stored string -->
+                            @if (!string.IsNullOrWhiteSpace(findModel.UseCategory))
+                            {
+                                <div style="margin-top:6px;">
+                                    <small class="text-muted">Stored: @findModel.UseCategory</small>
+                                </div>
+                            }
+                        </div>
+                    }
 
 
+
+            @if (!string.IsNullOrWhiteSpace(findModel.UseCategory))
+            {
+                <small>Selected: @findModel.UseCategory</small>
+            }
+        </div>
+    }
 
     <div>
         <label for="features">Distinguishing Features:</label>
@@ -135,23 +198,56 @@
     [Parameter]
     public EventCallback OnClose { get; set; }
 
+    private ElementReference useCategorySelect;
+
+    private List<string> selectedSubcategories = new();
+
     private IReadOnlyList<string> AvailableSubcategories =>
-    string.IsNullOrWhiteSpace(findModel.SpeciesType)
-        ? Array.Empty<string>()
-        : ForageCategories.Subcategories.TryGetValue(
-            findModel.SpeciesType,
-            out var subs)
-            ? subs
-            : Array.Empty<string>();
-    
-    private void OnSpeciesTypeChanged()
+        string.IsNullOrWhiteSpace(findModel.SpeciesType)
+            ? Array.Empty<string>()
+            : ForageCategories.Subcategories.TryGetValue(findModel.SpeciesType, out var subs)
+                ? subs
+                : Array.Empty<string>();
+
+    private List<string> AvailableSubcategoriesExcludingSelected =>
+        AvailableSubcategories
+            .Where(s => !selectedSubcategories.Contains(s))
+            .ToList();
+
+    private void AddSubcategory(string sub)
     {
-        findModel.UseCategory = "";
-        if (string.IsNullOrWhiteSpace(findModel.SpeciesType))
-            findModel.UseCategory = "";
+        if (!selectedSubcategories.Contains(sub))
+            selectedSubcategories.Add(sub);
+
+        SyncUseCategoryString();
     }
 
+    private void RemoveSubcategory(string sub)
+    {
+        selectedSubcategories.Remove(sub);
+        SyncUseCategoryString();
+    }
 
+    private void SyncUseCategoryString()
+    {
+        // store as comma-separated string in your model
+        findModel.UseCategory = string.Join(", ", selectedSubcategories);
+    }
+
+    private void OnSpeciesTypeChanged()
+    {
+        selectedSubcategories.Clear();
+        findModel.UseCategory = "";
+    }
+    private void HydrateSelectedFromModel()
+    {
+        selectedSubcategories = (findModel.UseCategory ?? "")
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Distinct()
+            .ToList();
+    }
 
     private Task OnImagesUploaded(ImageUploadResult result)
     {
