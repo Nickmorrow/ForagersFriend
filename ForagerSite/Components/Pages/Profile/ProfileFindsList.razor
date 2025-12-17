@@ -1,5 +1,6 @@
 ﻿@using DataAccess.Models
 @using ForagerSite.Components.Find
+@using ForagerSite.Components.Pages.Map
 @using ForagerSite.DataContainer
 @using ForagerSite.Services
 @using ForagerSite.Services.Interfaces
@@ -75,14 +76,20 @@
                                 <tr>
                                     <td colspan="4" style="padding: 10px; border-bottom: 1px solid #ddd;">
                                         <div style="padding-left: 20px;">
+                                                <button class="btn btn-sm btn-outline-primary"
+                                                        @onclick="() => GetDirections(find.findLocation.latitude, find.findLocation.longitude)">
+                                                    📍 Get Directions
+                                                </button>
                                             <div>
-                                                <p><strong>Image Gallery:</strong></p>
-                                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                                    @foreach (var image in find.findImages)
-                                                    {
-                                                        <img src="@image.imageData" style="max-width: 100px;" />
-                                                    }
-                                                </div>
+                                                    <div style="margin: 10px 0;">
+
+                                                        <img src="@find.findImages.First().imageData"
+                                                             alt="Find Image"
+                                                             style="width:400px; height:400px; object-fit:cover; border-radius:6px; cursor:pointer;" />
+                                                    </div>
+                                                    
+                                                    <FindImageGallery Images="@find.findImages" />
+                                                    <p><strong>Image Gallery:</strong></p>
                                             </div>
 
                                             <p>
@@ -95,8 +102,8 @@
                                                 <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
                                             }
 
-                                            <p><strong>Species Type: </strong><span>@find.speciesType</span></p>
-                                            <p><strong>Species Category: </strong><span>@find.useCategory</span></p>
+                                            <p><strong></strong><span>@find.speciesType</span></p>
+                                            <p><strong>Category: </strong><span>@find.useCategory</span></p>
 
                                             @if (!string.IsNullOrWhiteSpace(find.features))
                                             {
@@ -108,15 +115,15 @@
                                                 <p><strong>Dangerous Lookalikes: </strong><span>@find.lookAlikes</span></p>
                                             }
 
-                                            @if (!string.IsNullOrWhiteSpace(find.harvestMethod))
+                                            @* @if (!string.IsNullOrWhiteSpace(find.harvestMethod))
                                             {
                                                 <p><strong>Harvest Method: </strong><span>@find.harvestMethod</span></p>
                                             }
 
                                             @if (!string.IsNullOrWhiteSpace(find.tastesLike))
                                             {
-                                                <p><strong>Tastes like: </strong><span>@find.tastesLike</span></p>
-                                            }
+                                                <p><strong>Tastes like: </strong><span>@find.tastesLike</span></p> *
+                                             } *@
 
                                             @if (!string.IsNullOrWhiteSpace(find.description))
                                             {
@@ -312,4 +319,8 @@
     }
 
     #endregion
+    private async Task GetDirections(double lat, double lng)
+    {
+        await DirectionsHelper.OpenAsync(JSRuntime, lat, lng);
+    }
 }
