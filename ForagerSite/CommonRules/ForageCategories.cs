@@ -27,7 +27,8 @@
                         "Flowers",
                         "Shoots & Stems",
                         "Roots, Tubers & Rhizomes",
-                        "Dye Plants"
+                        "Culinary Herbs",
+                        "Medicinal Plants",
                     },
 
                     ["Fungi"] = new[]
@@ -43,13 +44,13 @@
                         "Vines & Ground Fruits"
                     },
 
-                    ["NutsAndSeeds"] = new[]
+                    ["Nuts and Seeds"] = new[]
                     {
                         "Tree Nuts",
                         "Seeds & Grains"
                     },
 
-                    ["HerbsAndMedicinals"] = new[]
+                    ["Herbs and Medicinals"] = new[]
                     {
                         "Culinary Herbs",
                         "Medicinal Plants"
@@ -74,14 +75,12 @@
                         "Inner Bark & Cambium"
                     },
 
-                    ["UtilityAndCraft"] = new[]
+                    ["Utility and Craft"] = new[]
                     {
                         "Utility & Craft Materials"
                     }
                 };
 
-            //public static IReadOnlyList<string> GetSubcategories(List<string> category)
-            //    => Subcategories.TryGetValue(category, out var subs) ? subs : Array.Empty<string>();
         }
     }
 
