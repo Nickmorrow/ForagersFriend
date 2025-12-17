@@ -184,22 +184,22 @@ window.updateMarkers = function (userFindsDCs, currentUserId, mapFilter, userNam
                         var findId = find.findId;
 
                         let imageHtml = '';
-                        if (find.findImages && find.findImages.length > 0) {
-                            imageHtml = find.findImages.map(image => {
-                                if (image && image.imageData && typeof image.imageData === 'string') {
-                                    const fullUrl = image.imageData;
-                                    return `<img src="${fullUrl}" alt="Image" style="max-width: 100%; height: auto; margin-bottom: 5px;">`;
-                                } else {
-                                    console.error('Invalid image data:', image);
-                                    return '';
-                                }
-                            }).join('');
-                        }
+                        //if (find.findImages && find.findImages.length > 0) {
+                        //    imageHtml = find.findImages.map(image => {
+                        //        if (image && image.imageData && typeof image.imageData === 'string') {
+                        //            const fullUrl = image.imageData;
+                        //            return `<img src="${fullUrl}" alt="Image" style="max-width: 100%; height: auto; margin-bottom: 5px;">`;
+                        //        } else {
+                        //            console.error('Invalid image data:', image);
+                        //            return '';
+                        //        }
+                        //    }).join('');
+                        //}
                         if (find.findImages && find.findImages.length > 0) {
                             const image = find.findImages[0]; // Access the first image
                             if (image && image.imageData && typeof image.imageData === 'string') {
                                 const fullUrl = image.imageData;
-                                imageHtml = `<img src="${fullUrl}" alt="Image" style="max-width: 100%; height: auto; margin-bottom: 5px;">`;
+                                imageHtml = `<img src="${fullUrl}" alt="Image" style="width: 100px; height: 100px; margin-bottom: 5px; ">`;
                             } else {
                                 console.error('Invalid image data:', image);
                                 imageHtml = ''; // Fallback in case of invalid data
