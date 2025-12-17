@@ -9,12 +9,11 @@
                 "Plants",
                 "Fungi",
                 "Fruits",
-                "NutsAndSeeds",
-                "HerbsAndMedicinals",
+                "Nuts and Seeds",
                 "Aquatic",
-                "AnimalDerived",
+                "Animal Derived",
                 "Trees",
-                "UtilityAndCraft"
+                "Utility and Craft"
             };
 
 
@@ -50,19 +49,13 @@
                         "Seeds & Grains"
                     },
 
-                    ["Herbs and Medicinals"] = new[]
-                    {
-                        "Culinary Herbs",
-                        "Medicinal Plants"
-                    },
-
                     ["Aquatic"] = new[]
                     {
                         "Aquatic Plants",
                         "Shellfish & Crustaceans"
                     },
 
-                    ["AnimalDerived"] = new[]
+                    ["Animal Derived"] = new[]
                     {
                         "Honey & Resins",
                         "Insects"
