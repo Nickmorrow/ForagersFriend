@@ -39,7 +39,7 @@
 
 @* Template for map.js popup *@
 <div id="find-popup-template" style="display: none;">
-    <p><strong>Name:</strong> {findName}</p>
+    <p><strong></strong> {findName}</p>
     <p><strong>Discovered by:</strong> {username}</p>
     <div id="photo-gallery">
         {Images}
@@ -189,8 +189,8 @@
             var shouldLoadAllUsers =
                 focusUserId.HasValue && focusUserId.Value != userVm.user.UsrId;
 
-            if (shouldLoadAllUsers)
-            {
+            //if (shouldLoadAllUsers)
+            //{
                 mapService.mapFilter = "AllUsers";
 
                 if (!mapService.AllViewModels.Any())
@@ -199,16 +199,16 @@
                 mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
 
                 FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
-            }
-            else
-            {
-                mapService.mapFilter = "UserOnly";
+            //}
+            // else
+            // {
+            //     mapService.mapFilter = "UserOnly";
 
-                mapService.CurrentViewModels =
-                    await userFindService.GetUserFindsDCsUser(userVm.user.UsrId);
+            //     mapService.CurrentViewModels =
+            //         await userFindService.GetUserFindsDCsUser(userVm.user.UsrId);
 
-                mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
-            }
+            //     mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
+            // }
 
             var json = JsonConvert.SerializeObject(
                 mapService.CurrentViewModels ?? new(),
@@ -255,6 +255,18 @@
         if (userVm != null)
         {
             mapService.mapFilter = "UserOnly";
+
+            if (!mapService.MyViewModels.Any())
+            {
+                try
+                {
+                    mapService.MyViewModels = await userFindService.GetUserFindsDCsUser(userVm.user.UsrId); 
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error fetching ViewModels: {ex.Message}");
+                }
+            }
             mapService.CurrentViewModels = VmUtilities.Copy(mapService.MyViewModels);
 
             var settings = new JsonSerializerSettings
