@@ -26,7 +26,7 @@
                         "Leaves & Greens",
                         "Flowers",
                         "Shoots & Stems",
-                        "Roots, Tubers & Rhizomes",
+                        "Roots Tubers & Rhizomes",
                         "Culinary Herbs",
                         "Medicinal Plants",
                     },
