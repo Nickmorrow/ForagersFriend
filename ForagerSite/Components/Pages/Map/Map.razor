@@ -17,6 +17,7 @@
 @inject IMapService mapService
 @inject IFriendService friendService
 @inject NavigationManager Nav
+@inject LocationIndexService geoIndex
 
 <div>
     <MapSearch OnSearch="HandleSearch" />
@@ -184,8 +185,6 @@
             var shouldLoadAllUsers =
                 focusUserId.HasValue && focusUserId.Value != userVm.user.UsrId;
 
-            //if (shouldLoadAllUsers)
-            //{
                 mapService.mapFilter = "AllUsers";
 
                 if (!mapService.AllViewModels.Any())
@@ -194,16 +193,6 @@
                 mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
 
                 FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
-            //}
-            // else
-            // {
-            //     mapService.mapFilter = "UserOnly";
-
-            //     mapService.CurrentViewModels =
-            //         await userFindService.GetUserFindsDCsUser(userVm.user.UsrId);
-
-            //     mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
-            // }
 
             var json = JsonConvert.SerializeObject(
                 mapService.CurrentViewModels ?? new(),
@@ -323,93 +312,77 @@
             Formatting = Formatting.Indented
         };
 
-        // Start from baseline based on selected scope (All/My/Friends)
+        // 1) Start from baseline based on selected scope (All/My/Friends)
         var scope = string.IsNullOrWhiteSpace(criteria.Scope) ? "AllUsers" : criteria.Scope;
         await EnsureScopeLoaded(scope, userVm);
 
-        // Filter by user name
-        if (!string.IsNullOrEmpty(criteria.UserSearchTerm))
+        // 2) Filter by user name
+        if (!string.IsNullOrWhiteSpace(criteria.UserSearchTerm))
         {
             mapService.CurrentViewModels = mapService.CurrentViewModels
                 .Where(vm => vm.userName.Contains(criteria.UserSearchTerm, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
 
-        if (criteria.West.HasValue && criteria.South.HasValue && criteria.East.HasValue && criteria.North.HasValue)
+        // 3) Location filter (FAST bbox derived from polygon)
+        GeoPolyRecord? loc = null;
+        if (!string.IsNullOrWhiteSpace(criteria.LocationKind) &&
+            !string.IsNullOrWhiteSpace(criteria.LocationId))
         {
-            double west = criteria.West.Value;
-            double south = criteria.South.Value;
-            double east = criteria.East.Value;
-            double north = criteria.North.Value;
+            loc = geoIndex.GetByKindAndId(criteria.LocationKind, criteria.LocationId);
 
-            foreach (var vm in mapService.CurrentViewModels)
+            if (loc != null)
             {
-                vm.finds = vm.finds
-                    .Where(f =>
-                        f.findLocation != null &&
-                        f.findLocation.longitude >= west && f.findLocation.longitude <= east &&
-                        f.findLocation.latitude >= south && f.findLocation.latitude <= north)
-                    .ToList();
+                var west = loc.West; var south = loc.South; var east = loc.East; var north = loc.North;
+
+                foreach (var vm in mapService.CurrentViewModels)
+                {
+                    vm.finds = vm.finds
+                        .Where(f => f.findLocation != null
+                            && f.findLocation.longitude >= west && f.findLocation.longitude <= east
+                            && f.findLocation.latitude >= south && f.findLocation.latitude <= north)
+                        .ToList();
+                }
             }
-
-            await JS.InvokeVoidAsync("drawSearchBounds", west, south, east, north);
-        }
-        else
-        {
-            // Optional: clear the previous border if user clears location
-            await JS.InvokeVoidAsync("clearSearchBounds");
         }
 
-        // Filter by species / category / keyword (keyword optional)
-        if (!string.IsNullOrEmpty(criteria.SelectedSpeciesType)
-            || !string.IsNullOrEmpty(criteria.SelectedUseCategory)
-            || !string.IsNullOrEmpty(criteria.KeywordSearchTerm))
+        // 4) Category / Subcategory / Keyword filters (RESTORED ✅)
+        if (!string.IsNullOrWhiteSpace(criteria.SelectedSpeciesType) ||
+            !string.IsNullOrWhiteSpace(criteria.SelectedUseCategory) ||
+            !string.IsNullOrWhiteSpace(criteria.KeywordSearchTerm))
         {
             foreach (var vm in mapService.CurrentViewModels)
             {
                 vm.finds = vm.finds
                     .Where(f =>
-                        (string.IsNullOrEmpty(criteria.SelectedSpeciesType) ||
-                            f.speciesType.Equals(criteria.SelectedSpeciesType, StringComparison.OrdinalIgnoreCase))
+                        (string.IsNullOrWhiteSpace(criteria.SelectedSpeciesType) ||
+                            (f.speciesType ?? "").Equals(criteria.SelectedSpeciesType, StringComparison.OrdinalIgnoreCase))
                         && HasSubcategory(f.useCategory, criteria.SelectedUseCategory)
-                        && (string.IsNullOrEmpty(criteria.KeywordSearchTerm) ||
-                            f.findName.Contains(criteria.KeywordSearchTerm, StringComparison.OrdinalIgnoreCase))
+                        && (string.IsNullOrWhiteSpace(criteria.KeywordSearchTerm) ||
+                            (f.findName ?? "").StartsWith(criteria.KeywordSearchTerm, StringComparison.OrdinalIgnoreCase))
                     )
                     .ToList();
-
             }
         }
 
+        // 5) Push markers to JS
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
         var username = userVm.user.UserSecurity?.UssUsername ?? "(unknown)";
         await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, username);
 
-        // If a location bbox is selected, zoom + center so it fills the map
-        if (criteria.South.HasValue && criteria.West.HasValue &&
-            criteria.North.HasValue && criteria.East.HasValue)
+        // 6) Draw polygon boundary (and clear old bbox rectangle if it exists)
+        if (loc != null)
         {
-            await JS.InvokeVoidAsync("drawSearchBounds",
-                criteria.South.Value, criteria.West.Value,
-                criteria.North.Value, criteria.East.Value);
-
-            await JS.InvokeVoidAsync("fitMapToBbox",
-                criteria.South.Value, criteria.West.Value,
-                criteria.North.Value, criteria.East.Value);
-
-            await JS.InvokeVoidAsync("lockMapToBbox",
-                criteria.South.Value, criteria.West.Value,
-                criteria.North.Value, criteria.East.Value);
-
+            await JS.InvokeVoidAsync("clearSearchBounds"); // safe even if you’re not using bbox anymore
+            await JS.InvokeVoidAsync("drawGeoBoundaryFromJson", loc.Feature.GetRawText());
         }
         else
         {
-            // no location filter => remove outline
+            await JS.InvokeVoidAsync("clearGeoBoundary");
             await JS.InvokeVoidAsync("clearSearchBounds");
-            await JS.InvokeVoidAsync("unlockMapBounds");
-
         }
-
     }
+
     #endregion
 
     public void Dispose()

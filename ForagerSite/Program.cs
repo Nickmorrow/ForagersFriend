@@ -52,8 +52,9 @@ namespace ForagerSite
             using (var scope = app.Services.CreateScope())
             {
                 var geo = scope.ServiceProvider.GetRequiredService<LocationIndexService>();
-                await geo.InitializeAsync();
+                Task.Run(() => geo.InitializeAsync()).GetAwaiter().GetResult();
             }
+
 
 
             // Configure the HTTP request pipeline.

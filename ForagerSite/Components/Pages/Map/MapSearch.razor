@@ -19,7 +19,7 @@
             <label for="location-search">Location</label>
             <InputText id="location-search"
                        @bind-Value="locationTerm"
-                       placeholder="State, county, city, zip…"
+                       placeholder="State, county, city…"
                        class="form-control"
                        @oninput="LocationInputChanged" />
 
@@ -161,8 +161,8 @@
     private bool isFriendsFinds => scope == ScopeSelection.FriendUsers;
 
     private string locationTerm = "";
-    private List<ForagerSite.DataContainer.GeoBboxRecord> locationSuggestions = new();
-    private ForagerSite.DataContainer.GeoBboxRecord? selectedLocation = null;
+    private List<ForagerSite.DataContainer.GeoPolyRecord> locationSuggestions = new();
+    private ForagerSite.DataContainer.GeoPolyRecord? selectedLocation = null;
 
     private async Task LocationInputChanged(ChangeEventArgs e)
     {
@@ -175,7 +175,7 @@
         locationSuggestions = geoIndex.Search(locationTerm, limit: 8);
     }
 
-    private void SelectLocation(ForagerSite.DataContainer.GeoBboxRecord s)
+    private void SelectLocation(ForagerSite.DataContainer.GeoPolyRecord s)
     {
         selectedLocation = s;
         locationTerm = s.Display;
@@ -223,11 +223,11 @@
             UserSearchTerm = userSearchTerm,
             KeywordSearchTerm = keywordSearchTerm,
 
+            LocationKind = selectedLocation?.Kind ?? "",
+            LocationId = selectedLocation?.Id ?? "",
             LocationDisplay = selectedLocation?.Display ?? "",
-            West = selectedLocation?.west,
-            South = selectedLocation?.south,
-            East = selectedLocation?.east,
-            North = selectedLocation?.north
+
+
         };
 
         await OnSearch.InvokeAsync(criteria);
@@ -264,12 +264,12 @@
         public string UserSearchTerm { get; set; } = string.Empty;
         public string KeywordSearchTerm { get; set; } = string.Empty;
 
+        public string LocationKind { get; set; } = "";
+        public string LocationId { get; set; } = "";
         public string LocationDisplay { get; set; } = "";
 
-        public double? West { get; set; }
-        public double? South { get; set; }
-        public double? East { get; set; }
-        public double? North { get; set; }
+
+
 
     }
 }

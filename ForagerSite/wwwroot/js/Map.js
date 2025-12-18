@@ -287,30 +287,12 @@ window.scrollToCreateForm = function () {
 };
 
 // keep a reference so we can remove/replace it
-window.fitMapToBbox = function (south, west, north, east) {
-    if (!window.map) return;
 
-    const bounds = L.latLngBounds([south, west], [north, east]);
-    window.map.fitBounds(bounds, { padding: [20, 20] });
-};
+
 
 window.searchBoundsLayer = window.searchBoundsLayer || null;
 
-window.drawSearchBounds = function (south, west, north, east) {
-    if (!window.map) return;
 
-    if (window.searchBoundsLayer) {
-        try { window.map.removeLayer(window.searchBoundsLayer); } catch { }
-        window.searchBoundsLayer = null;
-    }
-
-    const bounds = L.latLngBounds([south, west], [north, east]);
-
-    window.searchBoundsLayer = L.rectangle(bounds, {
-        weight: 2,
-        fill: false
-    }).addTo(window.map);
-};
 
 window.clearSearchBounds = function () {
     if (!window.map) return;
@@ -321,17 +303,43 @@ window.clearSearchBounds = function () {
     }
 };
 
-window.lockMapToBbox = function (south, west, north, east) {
+
+let geoBoundaryLayer = null;
+
+window.drawGeoBoundaryFromJson = function (featureJson) {
     if (!window.map) return;
-    const bounds = L.latLngBounds([south, west], [north, east]);
-    window.map.setMaxBounds(bounds);
-    window.map.options.maxBoundsViscosity = 1.0;
+
+    // kill bbox rectangle if it's still around
+    if (window.clearSearchBounds) window.clearSearchBounds();
+
+    if (geoBoundaryLayer) {
+        geoBoundaryLayer.remove();
+        geoBoundaryLayer = null;
+    }
+
+    const feature = JSON.parse(featureJson);
+
+    geoBoundaryLayer = L.geoJSON(feature, {
+        style: { weight: 2, fillOpacity: 0.12 }
+    }).addTo(window.map);
+
+    window.map.fitBounds(geoBoundaryLayer.getBounds(), { padding: [20, 20] });
 };
 
-window.unlockMapBounds = function () {
-    if (!window.map) return;
-    window.map.setMaxBounds(null);
+
+window.clearGeoBoundary = function () {
+    if (geoBoundaryLayer) {
+        geoBoundaryLayer.remove();
+        geoBoundaryLayer = null;
+    }
 };
+
+geoBoundaryLayer = L.geoJSON(feature, {
+    style: {
+        weight: 2,
+        fill: false
+    }
+}).addTo(window.map);
 
 
 
