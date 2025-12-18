@@ -1,33 +1,25 @@
 ﻿@using ForagerSite.DataContainer
 
-@if (Images == null || Images.Count == 0)
-{
-    if (ShowEmptyState)
-    {
-        <p><em>No images uploaded.</em></p>
-    }
-}
-else
-{
-    <div>
-        @if (ShowInlineThumbnails)
-        {
-            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-                @for (int i = 0; i < Images.Count; i++)
-                {
-                    <img src="@Images[i].imageData"
-                         alt="Find Image"
-                         style="width:100px; height:100px; object-fit:cover; border-radius:6px; cursor:pointer;"
-                         @onclick="() => Open(i)" />
-                }
-            </div>
-        }
 
-        <button class="btn btn-sm btn-outline-primary" @onclick="() => Open(0)">
-            🖼️ View images (@Images.Count)
-        </button>
-    </div>
-}
+<div>
+    @if (ShowInlineThumbnails)
+    {
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+            @for (int i = 0; i < Images.Count; i++)
+            {
+                <img src="@Images[i].imageData"
+                        alt="Find Image"
+                        style="width:100px; height:100px; object-fit:cover; border-radius:6px; cursor:pointer;"
+                        @onclick="() => Open(i)" />
+            }
+        </div>
+    }
+
+    <button class="btn btn-sm btn-outline-primary" @onclick="() => Open(0)">
+        🖼️ View images (@Images.Count)
+    </button>
+</div>
+
 
 @if (_isOpen)
 {

@@ -87,9 +87,10 @@
                                                              alt="Find Image"
                                                              style="width:400px; height:400px; object-fit:cover; border-radius:6px; cursor:pointer;" />
                                                     </div>
-                                                    
-                                                    <FindImageGallery Images="@find.findImages" />
+
                                                     <p><strong>Image Gallery:</strong></p>
+                                                    <FindImageGallery Images="@find.findImages" />
+                                                    
                                             </div>
 
                                             <p>
@@ -102,8 +103,8 @@
                                                 <p><strong>Species Name: </strong><span>@find.speciesName</span></p>
                                             }
 
-                                            <p><strong></strong><span>@find.speciesType</span></p>
-                                            <p><strong>Category: </strong><span>@find.useCategory</span></p>
+                                                <p><strong>Category:</strong><span>@find.speciesType</span></p>
+                                            <p><strong>SubCategory: </strong><span>@find.useCategory</span></p>
 
                                             @if (!string.IsNullOrWhiteSpace(find.features))
                                             {
