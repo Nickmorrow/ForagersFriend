@@ -286,5 +286,55 @@ window.scrollToCreateForm = function () {
     });
 };
 
+// keep a reference so we can remove/replace it
+window.fitMapToBbox = function (south, west, north, east) {
+    if (!window.map) return;
+
+    const bounds = L.latLngBounds([south, west], [north, east]);
+    window.map.fitBounds(bounds, { padding: [20, 20] });
+};
+
+window.searchBoundsLayer = window.searchBoundsLayer || null;
+
+window.drawSearchBounds = function (south, west, north, east) {
+    if (!window.map) return;
+
+    if (window.searchBoundsLayer) {
+        try { window.map.removeLayer(window.searchBoundsLayer); } catch { }
+        window.searchBoundsLayer = null;
+    }
+
+    const bounds = L.latLngBounds([south, west], [north, east]);
+
+    window.searchBoundsLayer = L.rectangle(bounds, {
+        weight: 2,
+        fill: false
+    }).addTo(window.map);
+};
+
+window.clearSearchBounds = function () {
+    if (!window.map) return;
+
+    if (window.searchBoundsLayer) {
+        try { window.map.removeLayer(window.searchBoundsLayer); } catch { }
+        window.searchBoundsLayer = null;
+    }
+};
+
+window.lockMapToBbox = function (south, west, north, east) {
+    if (!window.map) return;
+    const bounds = L.latLngBounds([south, west], [north, east]);
+    window.map.setMaxBounds(bounds);
+    window.map.options.maxBoundsViscosity = 1.0;
+};
+
+window.unlockMapBounds = function () {
+    if (!window.map) return;
+    window.map.setMaxBounds(null);
+};
+
+
+
+
 
 

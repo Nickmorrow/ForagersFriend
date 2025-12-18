@@ -1,5 +1,6 @@
 ﻿﻿@using ForagerSite.Services.Interfaces
 @using ForagerSite.CommonRules.ForagerSite.CommonRules
+@inject ForagerSite.Services.LocationIndexService geoIndex
 @inject IUserService userService
 
 <div id="search-container" class="mb-3" style="display:flex; flex-direction:column; gap:12px;">
@@ -14,12 +15,40 @@
                        class="form-control" />
         </div>
 
+        <div style="flex:1; position:relative;">
+            <label for="location-search">Location</label>
+            <InputText id="location-search"
+                       @bind-Value="locationTerm"
+                       placeholder="State, county, city, zip…"
+                       class="form-control"
+                       @oninput="LocationInputChanged" />
+
+            @if (locationSuggestions.Any())
+            {
+                <ul class="dropdown-menu show"
+                    style="display:block; position:absolute; z-index:50; width:100%;">
+                    @foreach (var s in locationSuggestions)
+                    {
+                        <li class="dropdown-item" @onclick="() => SelectLocation(s)">
+                            @s.Display
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
         <button id="search-button"
                 class="btn btn-primary"
                 @onclick="SearchClicked">
             Search
         </button>
+
     </div>
+
+    
+
+    
+
 
     @* Filters section (replaces Advanced Search) *@
     <div>
@@ -131,6 +160,28 @@
     private bool isMyFinds => scope == ScopeSelection.UserOnly;
     private bool isFriendsFinds => scope == ScopeSelection.FriendUsers;
 
+    private string locationTerm = "";
+    private List<ForagerSite.DataContainer.GeoBboxRecord> locationSuggestions = new();
+    private ForagerSite.DataContainer.GeoBboxRecord? selectedLocation = null;
+
+    private async Task LocationInputChanged(ChangeEventArgs e)
+    {
+        locationTerm = e.Value?.ToString() ?? "";
+        selectedLocation = null;
+
+        // tiny debounce to stop spam while typing
+        await Task.Delay(150);
+
+        locationSuggestions = geoIndex.Search(locationTerm, limit: 8);
+    }
+
+    private void SelectLocation(ForagerSite.DataContainer.GeoBboxRecord s)
+    {
+        selectedLocation = s;
+        locationTerm = s.Display;
+        locationSuggestions.Clear();
+    }
+
     private void SetScope(ScopeSelection selected)
     {
         // Mutually exclusive checkboxes: clicking any option selects it,
@@ -170,7 +221,13 @@
             SelectedSpeciesType = selectedSpeciesType,
             SelectedUseCategory = selectedUseCategory,
             UserSearchTerm = userSearchTerm,
-            KeywordSearchTerm = keywordSearchTerm
+            KeywordSearchTerm = keywordSearchTerm,
+
+            LocationDisplay = selectedLocation?.Display ?? "",
+            West = selectedLocation?.west,
+            South = selectedLocation?.south,
+            East = selectedLocation?.east,
+            North = selectedLocation?.north
         };
 
         await OnSearch.InvokeAsync(criteria);
@@ -206,5 +263,13 @@
         public string SelectedUseCategory { get; set; } = string.Empty;
         public string UserSearchTerm { get; set; } = string.Empty;
         public string KeywordSearchTerm { get; set; } = string.Empty;
+
+        public string LocationDisplay { get; set; } = "";
+
+        public double? West { get; set; }
+        public double? South { get; set; }
+        public double? East { get; set; }
+        public double? North { get; set; }
+
     }
 }

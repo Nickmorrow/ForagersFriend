@@ -13,7 +13,7 @@ namespace ForagerSite
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
             var connectionString = builder.Configuration.GetConnectionString("Default")
@@ -30,6 +30,8 @@ namespace ForagerSite
                 {
                     options.DetailedErrors = true;
                 });
+            builder.Services.AddSingleton<LocationIndexService>();
+
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IUserFindService, UserFindService>();           
             builder.Services.AddScoped<IMapService, MapService>();
@@ -37,14 +39,22 @@ namespace ForagerSite
             builder.Services.AddScoped<IUserSessionService, UserSessionService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<IInboxService, InboxService>();
-
             builder.Services.AddScoped<ProtectedSessionStorage>();
+            
+
 
 
             //builder.Services.AddTransient<EmailService>();
             //builder.Services.AddTransient<PasswordResetService>();
 
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var geo = scope.ServiceProvider.GetRequiredService<LocationIndexService>();
+                await geo.InitializeAsync();
+            }
+
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())

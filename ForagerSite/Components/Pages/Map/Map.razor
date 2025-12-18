@@ -19,10 +19,7 @@
 @inject NavigationManager Nav
 
 <div>
-    <h4>Search</h4>
     <MapSearch OnSearch="HandleSearch" />
-
-
 
     <div id="map-container" style="display: flex; height: 800px;">
         <div id="map" style="flex: 2; height: 100%;"></div>
@@ -338,6 +335,31 @@
                 .ToList();
         }
 
+        if (criteria.West.HasValue && criteria.South.HasValue && criteria.East.HasValue && criteria.North.HasValue)
+        {
+            double west = criteria.West.Value;
+            double south = criteria.South.Value;
+            double east = criteria.East.Value;
+            double north = criteria.North.Value;
+
+            foreach (var vm in mapService.CurrentViewModels)
+            {
+                vm.finds = vm.finds
+                    .Where(f =>
+                        f.findLocation != null &&
+                        f.findLocation.longitude >= west && f.findLocation.longitude <= east &&
+                        f.findLocation.latitude >= south && f.findLocation.latitude <= north)
+                    .ToList();
+            }
+
+            await JS.InvokeVoidAsync("drawSearchBounds", west, south, east, north);
+        }
+        else
+        {
+            // Optional: clear the previous border if user clears location
+            await JS.InvokeVoidAsync("clearSearchBounds");
+        }
+
         // Filter by species / category / keyword (keyword optional)
         if (!string.IsNullOrEmpty(criteria.SelectedSpeciesType)
             || !string.IsNullOrEmpty(criteria.SelectedUseCategory)
@@ -361,6 +383,32 @@
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
         var username = userVm.user.UserSecurity?.UssUsername ?? "(unknown)";
         await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, username);
+
+        // If a location bbox is selected, zoom + center so it fills the map
+        if (criteria.South.HasValue && criteria.West.HasValue &&
+            criteria.North.HasValue && criteria.East.HasValue)
+        {
+            await JS.InvokeVoidAsync("drawSearchBounds",
+                criteria.South.Value, criteria.West.Value,
+                criteria.North.Value, criteria.East.Value);
+
+            await JS.InvokeVoidAsync("fitMapToBbox",
+                criteria.South.Value, criteria.West.Value,
+                criteria.North.Value, criteria.East.Value);
+
+            await JS.InvokeVoidAsync("lockMapToBbox",
+                criteria.South.Value, criteria.West.Value,
+                criteria.North.Value, criteria.East.Value);
+
+        }
+        else
+        {
+            // no location filter => remove outline
+            await JS.InvokeVoidAsync("clearSearchBounds");
+            await JS.InvokeVoidAsync("unlockMapBounds");
+
+        }
+
     }
     #endregion
 
