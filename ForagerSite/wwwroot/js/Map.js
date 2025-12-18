@@ -334,12 +334,7 @@ window.clearGeoBoundary = function () {
     }
 };
 
-geoBoundaryLayer = L.geoJSON(feature, {
-    style: {
-        weight: 2,
-        fill: false
-    }
-}).addTo(window.map);
+
 
 
 
