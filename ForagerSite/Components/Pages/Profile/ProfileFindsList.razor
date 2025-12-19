@@ -81,15 +81,22 @@
                                                     📍 Get Directions
                                                 </button>
                                             <div>
+                                                @if (find.findImages != null && find.findImages.Any())
+                                                {
                                                     <div style="margin: 10px 0;">
 
                                                         <img src="@find.findImages.First().imageData"
                                                              alt="Find Image"
                                                              style="width:400px; height:400px; object-fit:cover; border-radius:6px; cursor:pointer;" />
                                                     </div>
-
                                                     <p><strong>Image Gallery:</strong></p>
                                                     <FindImageGallery Images="@find.findImages" />
+                                                }
+                                                else
+                                                {
+                                                    <p>No image available</p>
+                                                }
+                                                    
                                                     
                                             </div>
 
