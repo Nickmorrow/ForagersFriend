@@ -39,8 +39,7 @@
                             @onclick="() => ToggleRowExpansion(find)"
                             class="@GetRowClass(find)">
 
-                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.findName</td>
-
+                            
                             @if (find.findImages != null && find.findImages.Any())
                             {
                                 <td>
@@ -53,6 +52,7 @@
                                 <td>No image available</td>
                             }
 
+                            <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.findName</td>
                             <td style="padding: 10px; border-bottom: 1px solid #ddd;">@find.speciesType</td>
                             
                         </tr>
@@ -83,13 +83,13 @@
                                             <div>
                                                 @if (find.findImages != null && find.findImages.Any())
                                                 {
-                                                    <div style="margin: 10px 0;">
+                                                    @* <div style="margin: 10px 0;">
 
                                                         <img src="@find.findImages.First().imageData"
                                                              alt="Find Image"
                                                              style="width:400px; height:400px; object-fit:cover; border-radius:6px; cursor:pointer;" />
                                                     </div>
-                                                    <p><strong>Image Gallery:</strong></p>
+                                                    <p><strong>Image Gallery:</strong></p> *@
                                                     <FindImageGallery Images="@find.findImages" />
                                                 }
                                                 else

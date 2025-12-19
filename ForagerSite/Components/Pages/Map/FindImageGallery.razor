@@ -1,162 +1,123 @@
 ﻿@using ForagerSite.DataContainer
+@using Microsoft.AspNetCore.Components.Web
 
+<div tabindex="0"
+     @onkeydown="HandleKeyDown"
+     style="
+        width:500px;
+        height:500px;
+        position:relative;
+        overflow:hidden;
+        border-radius:10px;
+        border:1px solid rgba(0,0,0,0.15);
+        background:#fff;">
 
-<div>
-    @if (ShowInlineThumbnails)
+    @if (Images == null || Images.Count == 0)
     {
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-            @for (int i = 0; i < Images.Count; i++)
-            {
-                <img src="@Images[i].imageData"
-                        alt="Find Image"
-                        style="width:100px; height:100px; object-fit:cover; border-radius:6px; cursor:pointer;"
-                        @onclick="() => Open(i)" />
-            }
+        @if (ShowEmptyState)
+        {
+            <div class="text-muted"
+                 style="display:flex; align-items:center; justify-content:center; height:100%;">
+                No images
+            </div>
+        }
+    }
+    else
+    {
+        <!-- Image -->
+        <img src="@Images[_activeIndex].imageData"
+             alt="Find image"
+             style="
+                    width:100%;
+                    height:100%;
+                    object-fit:cover;
+                    user-select:none;" />
+
+        <!-- Left arrow -->
+        <button type="button"
+                title="Previous"
+                @onclick="Prev"
+                style="
+                        position:absolute;
+                        left:8px;
+                        top:50%;
+                        transform:translateY(-50%);
+                        background:rgba(255,255,255,0.8);
+                        border:none;
+                        border-radius:999px;
+                        width:36px;
+                        height:36px;
+                        cursor:pointer;">
+            ◀
+        </button>
+
+        <!-- Right arrow -->
+        <button type="button"
+                title="Next"
+                @onclick="Next"
+                style="
+                        position:absolute;
+                        right:8px;
+                        top:50%;
+                        transform:translateY(-50%);
+                        background:rgba(255,255,255,0.8);
+                        border:none;
+                        border-radius:999px;
+                        width:36px;
+                        height:36px;
+                        cursor:pointer;">
+            ▶
+        </button>
+
+        <!-- Counter -->
+        <div style="
+                position:absolute;
+                bottom:6px;
+                right:6px;
+                background:rgba(0,0,0,0.6);
+                color:#fff;
+                font-size:12px;
+                padding:4px 8px;
+                border-radius:999px;">
+            @(_activeIndex + 1) / @Images.Count
         </div>
     }
-
-    <button class="btn btn-sm btn-outline-primary" @onclick="() => Open(0)">
-        🖼️ View images (@Images.Count)
-    </button>
 </div>
-
-
-@if (_isOpen)
-{
-    <div tabindex="0"
-         @onkeydown="HandleKeyDown"
-         style="
-            position:fixed; inset:0;
-            background:rgba(0,0,0,0.75);
-            z-index:2000;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            padding:20px;">
-
-        <div style="
-            width:min(1200px, 96vw);
-            height:min(780px, 92vh);
-            background:#111;
-            border-radius:12px;
-            overflow:hidden;
-            display:flex;
-            flex-direction:column;">
-
-            <!-- Header -->
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#1a1a1a;">
-                <div style="color:#fff; font-weight:600;">
-                    Image @(_activeIndex + 1) of @Images!.Count
-                </div>
-
-                <div style="display:flex; gap:8px;">
-                    <button class="btn btn-sm btn-light" @onclick="Prev">◀</button>
-                    <button class="btn btn-sm btn-light" @onclick="Next">▶</button>
-                    <button class="btn btn-sm btn-light" @onclick="Close">✕</button>
-                </div>
-            </div>
-
-            <!-- Main image scroller -->
-            <div @ref="_scroller"
-                 style="
-                    flex:1;
-                    display:flex;
-                    overflow-x:auto;
-                    scroll-snap-type:x mandatory;
-                    align-items:center;
-                    padding:16px;">
-                @for (int i = 0; i < Images!.Count; i++)
-                {
-                    <div style="
-                        flex:0 0 100%;
-                        height:100%;
-                        scroll-snap-align:center;
-                        display:flex;
-                        justify-content:center;
-                        align-items:center;">
-                        <img src="@Images[i].imageData"
-                             alt="Find image"
-                             style="max-width:100%; max-height:100%; object-fit:contain;" />
-                    </div>
-                }
-            </div>
-
-            <!-- Thumbnail rail -->
-            <div style="background:#1a1a1a; padding:10px; overflow-x:auto;">
-                <div style="display:flex; gap:10px;">
-                    @for (int i = 0; i < Images!.Count; i++)
-                    {
-                        var active = i == _activeIndex;
-                        <img src="@Images[i].imageData"
-         alt="thumb"
-         style="
-            width:72px;
-            height:72px;
-            object-fit:cover;
-            border-radius:8px;
-            cursor:pointer;
-            border:@(active ? "2px solid white" : "2px solid transparent");"
-         @onclick="() => JumpTo(i)" />
-
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-}
 
 @code {
     [Parameter] public List<ImageDC>? Images { get; set; }
-
-    [Parameter] public bool ShowInlineThumbnails { get; set; } = false;
     [Parameter] public bool ShowEmptyState { get; set; } = true;
 
-    private bool _isOpen;
-    private int _activeIndex;
-    private ElementReference _scroller;
+    private int _activeIndex = 0;
 
-    [Inject] private IJSRuntime JS { get; set; } = default!;
+    protected override void OnParametersSet()
+    {
+        if (Images == null || Images.Count == 0)
+        {
+            _activeIndex = 0;
+            return;
+        }
 
-    private async Task Open(int index)
+        _activeIndex = Math.Clamp(_activeIndex, 0, Images.Count - 1);
+    }
+
+    private void Prev()
+    {
+        if (Images == null || Images.Count == 0) return;
+        _activeIndex = (_activeIndex - 1 + Images.Count) % Images.Count;
+    }
+
+    private void Next()
+    {
+        if (Images == null || Images.Count == 0) return;
+        _activeIndex = (_activeIndex + 1) % Images.Count;
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
     {
         if (Images == null || Images.Count == 0) return;
 
-        _activeIndex = Math.Clamp(index, 0, Images.Count - 1);
-        _isOpen = true;
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-        await ScrollToIndex(_activeIndex);
-    }
-
-    private void Close() => _isOpen = false;
-
-    private async Task Prev()
-    {
-        _activeIndex = (_activeIndex - 1 + Images!.Count) % Images.Count;
-        await ScrollToIndex(_activeIndex);
-    }
-
-    private async Task Next()
-    {
-        _activeIndex = (_activeIndex + 1) % Images!.Count;
-        await ScrollToIndex(_activeIndex);
-    }
-
-    private async Task JumpTo(int index)
-    {
-        _activeIndex = index;
-        await ScrollToIndex(index);
-    }
-
-    private async Task HandleKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Escape") Close();
-        else if (e.Key == "ArrowLeft") await Prev();
-        else if (e.Key == "ArrowRight") await Next();
-    }
-
-    private async Task ScrollToIndex(int index)
-    {
-        await JS.InvokeVoidAsync("findGallery.scrollToChild", _scroller, index);
+        if (e.Key == "ArrowLeft") Prev();
+        else if (e.Key == "ArrowRight") Next();
     }
 }
