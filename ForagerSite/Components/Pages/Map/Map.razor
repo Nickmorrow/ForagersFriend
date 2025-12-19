@@ -300,6 +300,43 @@
             .Any(s => s.Equals(sel, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static bool PassesCreateDateFilter(FindDC f, MapSearch.MapSearchCriteria c)
+    {
+        // TODO: replace "createdDate" with your actual create-date field
+        DateTime? created = f.findDate;
+
+        if (string.IsNullOrWhiteSpace(c.DateMode) || c.DateMode == "Any")
+            return true;
+
+        if (created == null)
+            return false;
+
+        var d = created.Value.Date;
+
+        if (c.DateMode == "Exact")
+        {
+            if (c.DateExact == null) return true; // nothing picked -> treat as Any
+            return d == c.DateExact.Value.Date;
+        }
+
+        if (c.DateMode == "Range")
+        {
+            // inclusive range
+            if (c.DateFrom != null && d < c.DateFrom.Value.Date) return false;
+            if (c.DateTo != null && d > c.DateTo.Value.Date) return false;
+            return true;
+        }
+
+        if (c.DateMode == "Months")
+        {
+            if (c.Months == null || c.Months.Count == 0) return true;
+            return c.Months.Contains(created.Value.Month);
+        }
+
+        return true;
+    }
+
+
     private async Task HandleSearch(MapSearch.MapSearchCriteria criteria)
     {
         var userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
@@ -326,8 +363,7 @@
 
         // 3) Location filter (FAST bbox derived from polygon)
         GeoPolyRecord? loc = null;
-        if (!string.IsNullOrWhiteSpace(criteria.LocationKind) &&
-            !string.IsNullOrWhiteSpace(criteria.LocationId))
+        if (!string.IsNullOrWhiteSpace(criteria.LocationKind) && !string.IsNullOrWhiteSpace(criteria.LocationId))
         {
             loc = geoIndex.GetByKindAndId(criteria.LocationKind, criteria.LocationId);
 
@@ -346,7 +382,7 @@
             }
         }
 
-        // 4) Category / Subcategory / Keyword filters (RESTORED ✅)
+        // 4) Category / Subcategory / Keyword filters
         if (!string.IsNullOrWhiteSpace(criteria.SelectedSpeciesType) ||
             !string.IsNullOrWhiteSpace(criteria.SelectedUseCategory) ||
             !string.IsNullOrWhiteSpace(criteria.KeywordSearchTerm))
@@ -365,15 +401,26 @@
             }
         }
 
+        // ✅ 4b) Date Added / Create Date filter (PUT IT RIGHT HERE)
+        if (!string.IsNullOrWhiteSpace(criteria.DateMode) && criteria.DateMode != "Any")
+        {
+            foreach (var vm in mapService.CurrentViewModels)
+            {
+                vm.finds = vm.finds
+                    .Where(f => PassesCreateDateFilter(f, criteria)) // helper method
+                    .ToList();
+            }
+        }
+
         // 5) Push markers to JS
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
         var username = userVm.user.UserSecurity?.UssUsername ?? "(unknown)";
         await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, username);
 
-        // 6) Draw polygon boundary (and clear old bbox rectangle if it exists)
+        // 6) Draw polygon boundary
         if (loc != null)
         {
-            await JS.InvokeVoidAsync("clearSearchBounds"); // safe even if you’re not using bbox anymore
+            await JS.InvokeVoidAsync("clearSearchBounds");
             await JS.InvokeVoidAsync("drawGeoBoundaryFromJson", loc.Feature.GetRawText());
         }
         else
@@ -382,6 +429,7 @@
             await JS.InvokeVoidAsync("clearSearchBounds");
         }
     }
+
 
     #endregion
 

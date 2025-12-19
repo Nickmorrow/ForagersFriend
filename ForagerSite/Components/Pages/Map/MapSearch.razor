@@ -110,6 +110,7 @@
 
 
                 <div style="min-width:240px; position:relative;">
+
                     <label for="user-search">Search by user</label>
                     <InputText id="user-search"
                                @bind-Value="userSearchTerm"
@@ -128,6 +129,84 @@
                     }
                 </div>
 
+                <div style="min-width:300px;">
+                    <label class="d-block">Date Added</label>
+
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label style="display:flex; gap:8px; align-items:center;">
+                            <input type="radio" name="dateMode" checked="@(dateMode == DateMode.Any)"
+                                   @onchange="@(() => SetDateMode(DateMode.Any))" />
+                            Any
+                        </label>
+
+                        <label style="display:flex; gap:8px; align-items:center;">
+                            <input type="radio" name="dateMode" checked="@(dateMode == DateMode.Exact)"
+                                   @onchange="@(() => SetDateMode(DateMode.Exact))" />
+                            Exact Date
+                            <InputDate DateTime? class="form-control"
+                                       style="max-width:180px;"
+                                       @bind-Value="exactDate"
+                                       disabled="@(dateMode != DateMode.Exact)" />
+                        </label>
+
+                        <label style="display:flex; gap:8px; align-items:center;">
+                            <input type="radio" name="dateMode" checked="@(dateMode == DateMode.Range)"
+                                   @onchange="@(() => SetDateMode(DateMode.Range))" />
+                            Range
+                        </label>
+
+                        @if (dateMode == DateMode.Range)
+                        {
+                            <div style="display:flex; gap:8px; padding-left:26px;">
+                                <InputDate DateTime? class="form-control"
+                                           style="max-width:160px;"
+                                           @bind-Value="rangeStart" />
+                                <InputDate DateTime? class="form-control"
+                                           style="max-width:160px;"
+                                           @bind-Value="rangeEnd" />
+                            </div>
+                        }
+
+                        <label style="display:flex; gap:8px; align-items:center;">
+                            <input type="radio" name="dateMode" checked="@(dateMode == DateMode.Months)"
+                                   @onchange="@(() => SetDateMode(DateMode.Months))" />
+                            Months
+                        </label>
+
+                        @if (dateMode == DateMode.Months)
+                        {
+                            <div style="padding-left:26px; position:relative; max-width:260px;">
+                                <button type="button" class="btn btn-outline-secondary w-100"
+                                        @onclick="ToggleMonthsDropdown">
+                                    @MonthsButtonText
+                                </button>
+
+                                @if (isMonthsDropdownOpen)
+                                {
+                                    <div class="dropdown-menu show"
+                                         style="display:block; max-height:220px; overflow:auto; width:100%; padding:10px;">
+                                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                                            <button type="button" class="btn btn-sm btn-light" @onclick="SelectAllMonths">All</button>
+                                            <button type="button" class="btn btn-sm btn-light" @onclick="SelectNoMonths">None</button>
+                                            <button type="button" class="btn btn-sm btn-light ms-auto" @onclick="ToggleMonthsDropdown">✕</button>
+                                        </div>
+
+                                        @foreach (var m in monthOptions)
+                                        {
+                                            <label style="display:flex; gap:8px; align-items:center; margin:4px 0;">
+                                                <InputCheckbox @bind-Value="m.Selected" />
+                                                @m.Name
+                                            </label>
+                                        }
+
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+
             </div>
         }
     </div>
@@ -136,12 +215,109 @@
 @code {
     [Parameter] public EventCallback<MapSearchCriteria> OnSearch { get; set; }
 
+    private DateMode dateMode = DateMode.Any;
+
+    private DateTime? exactDate = null;
+    private DateTime? rangeStart = null;
+    private DateTime? rangeEnd = null;
+
+    private bool isMonthsDropdownOpen = false;
+
+    private sealed class MonthOption
+    {
+        public int Month { get; set; }          // 1..12
+        public string Name { get; set; } = "";
+        public bool Selected { get; set; }
+    }
+
+    private List<MonthOption> monthOptions = new();
+
     private enum ScopeSelection
     {
         AllUsers,
         UserOnly,
         FriendUsers
     }
+
+    private enum DateMode
+    {
+        Any,
+        Exact,
+        Range,
+        Months
+    }
+
+    protected override void OnInitialized()
+    {
+        monthOptions = new List<MonthOption>
+    {
+        new() { Month = 1,  Name = "January" },
+        new() { Month = 2,  Name = "February" },
+        new() { Month = 3,  Name = "March" },
+        new() { Month = 4,  Name = "April" },
+        new() { Month = 5,  Name = "May" },
+        new() { Month = 6,  Name = "June" },
+        new() { Month = 7,  Name = "July" },
+        new() { Month = 8,  Name = "August" },
+        new() { Month = 9,  Name = "September" },
+        new() { Month = 10, Name = "October" },
+        new() { Month = 11, Name = "November" },
+        new() { Month = 12, Name = "December" },
+    };
+    }
+
+    private void SetDateMode(DateMode mode)
+    {
+        dateMode = mode;
+
+        if (mode != DateMode.Exact) exactDate = null;
+        if (mode != DateMode.Range) { rangeStart = null; rangeEnd = null; }
+
+        if (mode != DateMode.Months)
+        {
+            foreach (var m in monthOptions) m.Selected = false;
+            isMonthsDropdownOpen = false;
+        }
+    }
+
+
+    private void ToggleMonthsDropdown()
+    {
+        isMonthsDropdownOpen = !isMonthsDropdownOpen;
+    }
+
+    private void SelectAllMonths()
+    {
+        foreach (var m in monthOptions) m.Selected = true;
+    }
+
+
+    private void SelectNoMonths()
+    {
+        foreach (var m in monthOptions) m.Selected = false;
+    }
+
+
+    private string MonthsButtonText
+    {
+        get
+        {
+            var picked = monthOptions.Where(m => m.Selected).Select(m => m.Name).ToList();
+
+            if (picked.Count == 0) return "Select months…";
+            if (picked.Count == 12) return "All months";
+            if (picked.Count <= 2) return string.Join(", ", picked);
+
+            return $"{picked.Count} months selected";
+        }
+    }
+
+
+    private List<int> GetSelectedMonths()
+    {
+        return monthOptions.Where(m => m.Selected).Select(m => m.Month).ToList();
+    }
+
 
     private ScopeSelection scope = ScopeSelection.AllUsers;
 
@@ -224,6 +400,11 @@
             LocationId = selectedLocation?.Id ?? "",
             LocationDisplay = selectedLocation?.Display ?? "",
 
+            DateMode = dateMode.ToString(),
+            DateExact = exactDate,
+            DateFrom = rangeStart,
+            DateTo = rangeEnd,
+            Months = GetSelectedMonths(),
 
         };
 
@@ -264,6 +445,12 @@
         public string LocationKind { get; set; } = "";
         public string LocationId { get; set; } = "";
         public string LocationDisplay { get; set; } = "";
+
+        public string DateMode { get; set; } = "Any";          // Any, Exact, Range, Months
+        public DateTime? DateExact { get; set; } = null;       // Exact
+        public DateTime? DateFrom { get; set; } = null;        // Range
+        public DateTime? DateTo { get; set; } = null;          // Range
+        public List<int> Months { get; set; } = new();         // Months mode (1..12)
 
 
 
