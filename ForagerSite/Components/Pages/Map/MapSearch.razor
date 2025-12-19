@@ -45,14 +45,20 @@
 
     </div>
 
-    @* TODO: Date range filter *@
     @* TODO: Tags filter *@
-    @* Filters section (replaces Advanced Search) *@
     <div>
-        <label style="display:flex; align-items:center; gap:8px;">
-            <InputCheckbox @bind-Value="areFiltersVisible" />
-            Filters
-        </label>
+        <button type="button"
+            class="filters-btn"
+            @onclick="ToggleFilters">
+            <span class="filters-icon" aria-hidden="true">☰</span>
+            <span>Filters</span>
+
+            @if (ActiveFilterCount > 0)
+            {
+                <span class="filters-badge">@ActiveFilterCount</span>
+            }
+        </button>
+
 
         @if (areFiltersVisible)
         {
@@ -250,21 +256,58 @@
     protected override void OnInitialized()
     {
         monthOptions = new List<MonthOption>
-    {
-        new() { Month = 1,  Name = "January" },
-        new() { Month = 2,  Name = "February" },
-        new() { Month = 3,  Name = "March" },
-        new() { Month = 4,  Name = "April" },
-        new() { Month = 5,  Name = "May" },
-        new() { Month = 6,  Name = "June" },
-        new() { Month = 7,  Name = "July" },
-        new() { Month = 8,  Name = "August" },
-        new() { Month = 9,  Name = "September" },
-        new() { Month = 10, Name = "October" },
-        new() { Month = 11, Name = "November" },
-        new() { Month = 12, Name = "December" },
-    };
+        {
+            new() { Month = 1,  Name = "January" },
+            new() { Month = 2,  Name = "February" },
+            new() { Month = 3,  Name = "March" },
+            new() { Month = 4,  Name = "April" },
+            new() { Month = 5,  Name = "May" },
+            new() { Month = 6,  Name = "June" },
+            new() { Month = 7,  Name = "July" },
+            new() { Month = 8,  Name = "August" },
+            new() { Month = 9,  Name = "September" },
+            new() { Month = 10, Name = "October" },
+            new() { Month = 11, Name = "November" },
+            new() { Month = 12, Name = "December" },
+        };
     }
+
+    private void ToggleFilters()
+    {
+        areFiltersVisible = !areFiltersVisible;
+    }
+
+    private int ActiveFilterCount
+    {
+        get
+        {
+            int count = 0;
+
+            // Scope: count only if NOT default (AllUsers)
+            if (scope != ScopeSelection.AllUsers) count++;
+
+            // Category/subcategory
+            if (!string.IsNullOrWhiteSpace(selectedSpeciesType)) count++;
+            if (!string.IsNullOrWhiteSpace(selectedUseCategory)) count++;
+
+            // User search
+            if (!string.IsNullOrWhiteSpace(userSearchTerm)) count++;
+
+            // Location
+            if (selectedLocation != null) count++;
+
+            // Date filter: count if anything beyond "Any"
+            if (dateMode != DateMode.Any)
+            {
+                // if they picked a mode but didn’t fill anything out, you can choose to count or not.
+                // This version counts it as active when mode != Any.
+                count++;
+            }
+
+            return count;
+        }
+    }
+
 
     private void SetDateMode(DateMode mode)
     {
