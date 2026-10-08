@@ -8,6 +8,7 @@
 @using Microsoft.AspNetCore.WebUtilities
 @using Newtonsoft.Json
 @using Utilities
+
 @rendermode InteractiveServer
 @inject IJSRuntime JS
 @inject IConfiguration config
@@ -28,6 +29,7 @@
         <MapFindsPanel 
                       IsLoading="isLoading"
                       hasLoaded="hasLoaded"
+                      Finds="mapService.CurrentViewModels"
                        />
 
     </div>
@@ -349,11 +351,11 @@
             Formatting = Formatting.Indented
         };
 
-        // 1) Start from baseline based on selected scope (All/My/Friends)
+        // 1 Start from baseline based on selected scope (All/My/Friends)
         var scope = string.IsNullOrWhiteSpace(criteria.Scope) ? "AllUsers" : criteria.Scope;
         await EnsureScopeLoaded(scope, userVm);
 
-        // 2) Filter by user name
+        // 2 Filter by user name
         if (!string.IsNullOrWhiteSpace(criteria.UserSearchTerm))
         {
             mapService.CurrentViewModels = mapService.CurrentViewModels
@@ -361,7 +363,7 @@
                 .ToList();
         }
 
-        // 3) Location filter (FAST bbox derived from polygon)
+        // 3 Location filter (FAST bbox derived from polygon)
         GeoPolyRecord? loc = null;
         if (!string.IsNullOrWhiteSpace(criteria.LocationKind) && !string.IsNullOrWhiteSpace(criteria.LocationId))
         {
@@ -382,7 +384,7 @@
             }
         }
 
-        // 4) Category / Subcategory / Keyword filters
+        // 4 Category / Subcategory / Keyword filters
         if (!string.IsNullOrWhiteSpace(criteria.SelectedSpeciesType) ||
             !string.IsNullOrWhiteSpace(criteria.SelectedUseCategory) ||
             !string.IsNullOrWhiteSpace(criteria.KeywordSearchTerm))
@@ -401,7 +403,7 @@
             }
         }
 
-        // ✅ 4b) Date Added / Create Date filter (PUT IT RIGHT HERE)
+        //  4b Date Added / Create Date filter 
         if (!string.IsNullOrWhiteSpace(criteria.DateMode) && criteria.DateMode != "Any")
         {
             foreach (var vm in mapService.CurrentViewModels)
@@ -412,12 +414,12 @@
             }
         }
 
-        // 5) Push markers to JS
+        // 5 Push markers to JS
         var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
         var username = userVm.user.UserSecurity?.UssUsername ?? "(unknown)";
         await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, username);
 
-        // 6) Draw polygon boundary
+        // 6 Draw polygon boundary
         if (loc != null)
         {
             await JS.InvokeVoidAsync("clearSearchBounds");

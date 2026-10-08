@@ -273,6 +273,12 @@ window.scrollToFindRow = function (findId) {
     setTimeout(() => el.classList.remove('find-highlight'), 1500);
 };
 
+window.invalidateForagerMapSize = function () {
+    if (window.map) {
+        requestAnimationFrame(() => window.map.invalidateSize());
+    }
+};
+
 window.scrollToCreateForm = function () {
     const el = document.getElementById('create-form-row');
     if (!el) {

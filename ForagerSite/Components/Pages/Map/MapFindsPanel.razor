@@ -4,173 +4,238 @@
 @using Newtonsoft.Json
 @using Utilities
 @implements IDisposable
-
 @inject IUserSessionService session
 @inject IMapService mapService
 @inject IJSRuntime JSRuntime
 @inject IUserService userService
 @inject NavigationManager navigationManager
 
-@if (isPanelOpen)
-{
-    <div style="flex: 1; overflow-y: auto; border: 1px solid #ccc; background-color: #f9f9f9; position: relative;">
-        <button class="btn btn-sm btn-light"
-                style="position:absolute; right:10px; top:10px;"
-                @onclick="ClosePanel">
-            ✕
-        </button>
-
-        @if (isLoading && !hasLoaded)
-        {
-            <div class="loading-indicator">
-                <p>Loading...</p>
-            </div>
-        }
-        else if (showCreateForm)
-        {
-            <div style="padding: 15px;">
-                <h5>Create Find</h5>
-
-                <FindCreateForm OnClose="CloseCreateForm"
-                                OnCreated="CloseCreateForm"
-                                OnFindCreated="HandleFindCreated" />
-            </div>
-        }
-        else if (selectedFind != null && selectedVm != null)
-        {
-            <div style="padding: 15px;">
-
-                @if (showEditForm && currentEditModel != null && currentEditModel.FindId == selectedFind.findId)
-                {
-                    <FindEditForm @key="currentEditModel.FindId"
-                                  Model="currentEditModel"
-                                  OnClose="CloseEditForm"
-                                  OnUpdated="CloseEditForm"
-                                  OnFindUpdated="HandleFindUpdated" />
-                }
-                else
-                {
-                    <h5 style="margin-top:0;">@selectedFind.findName</h5>
-                    
-                    <div style="display:flex; align-items:center; gap:12px; margin:10px 0;">
-                        <img src="@selectedVm.profilePic"
-                             alt="Profile Picture"
-                             style="width:50px; height:50px; border-radius:50%; object-fit:cover;" />
-
-                        <div>
-                            <div style="font-weight:600;">Discovered by</div>
-                            <a href="/profile/@selectedVm.userId"
-                               @onclick:stopPropagation="true"
-                               @onclick:preventDefault="true"
-                               @onclick="() => GoToProfile(selectedVm.userId)"
-                               style="cursor:pointer; text-decoration:underline;">
-                                @selectedVm.userName
-                            </a>
-
-
-                        </div>
+<div class="finds-panel @(isSidebarExpanded ? "expanded" : "collapsed")">
+    @if (isSidebarExpanded)
+    {
+        <div class="finds-panel-header">
+            @* <strong>Finds</strong> *@
+            <button class="btn btn-sm btn-light"
+                    aria-label="Collapse finds sidebar"
+                    title="Collapse finds sidebar"
+                    @onclick="ToggleSidebar">‹</button>
+        </div>
+        <div class="finds-panel-body">
+            @if (isLoading && !hasLoaded)
+            {
+                <div class="loading-indicator">
+                    <p>Loading...</p>
+                </div>
+            }
+            else if (hasLoaded)
+            {
+                <div id="finds-grid" class="finds-grid">
+                    <div class="finds-grid-heading">
+                        <h5>Finds</h5>
+                        <span>@VisibleFinds.Count() shown</span>
                     </div>
-                    <p><strong></strong> @selectedFind.findDate.ToString("MMMM dd, yyyy")</p>
-                    <button class="btn btn-sm btn-outline-primary"
-                            @onclick="() => GetDirections(selectedFind.findLocation.latitude, selectedFind.findLocation.longitude)">
-                        📍 Get Directions
-                    </button>
-                    @if (selectedFind.findImages != null && selectedFind.findImages.Any())
+
+                    @if (!VisibleFinds.Any() && !showCreateForm)
                     {
-                        @* <div style="margin: 10px 0;">
-                            
-                            <img src="@selectedFind.findImages.First().imageData"
-                                    alt="Find Image"
-                                    style="width:400px; height:400px; object-fit:cover; border-radius:6px; cursor:pointer;" />
-                        </div>
-                        <p><strong>Image Gallery:</strong></p> *@
-                        <FindImageGallery Images="selectedFind.findImages" />
+                        <p class="finds-empty-state">No finds match the current filters.</p>
                     }
                     else
                     {
-                        <p><em>No images uploaded.</em></p>
+                        <table class="finds-table">
+                            <tbody>
+                                @if (showCreateForm)
+                                {
+                                    <tr id="create-form-row">
+                                        <td colspan="4" class="find-create-cell">
+                                            <h5>Create Find</h5>
+                                            <FindCreateForm OnClose="CloseCreateForm"
+                                                            OnCreated="CloseCreateForm"
+                                                            OnFindCreated="HandleFindCreated" />
+                                        </td>
+                                    </tr>
+                                }
+
+                                @foreach (var item in VisibleFinds)
+                                {
+                                    var find = item.Find;
+                                    var vm = item.ViewModel;
+                                    var isExpanded = expandedFindId == find.findId;
+
+                                    <tr id="find-row-@find.findId"
+                                        class="find-summary-row @(isExpanded ? "expanded" : null)"
+                                        role="button"
+                                        tabindex="0"
+                                        aria-expanded="@isExpanded"
+                                        @onclick="() => ToggleFind(vm, find)"
+                                        @onkeydown="e => HandleFindRowKeyDown(e, vm, find)">
+                                        <td class="find-name-cell">
+                                            <strong>@find.findName</strong>
+                                            @if (!string.IsNullOrWhiteSpace(find.speciesName))
+                                            {
+                                                <small>@find.speciesName</small>
+                                            }
+                                        </td>
+                                        <td class="find-image-cell">
+                                            @if (!isExpanded && find.findImages != null && find.findImages.Any())
+                                            {
+                                                <img src="@find.findImages.First().imageData" alt="@find.findName" />
+                                            }
+                                            else if (!isExpanded)
+                                            {
+                                                <span>No image available</span>
+                                            }
+                                        </td>
+                                        <td class="find-category-cell">@if (!isExpanded)
+                                            {
+                                                @find.speciesType
+                                            }
+                                        </td>
+                                        @* <td class="find-grid-discoverer">
+                                            <div class="find-discoverer-summary">
+                                                <img src="@vm.profilePic" alt="Profile Picture" />
+                                                <span>Discovered by<br />@vm.userName</span>
+                                            </div>
+                                        </td> *@
+                                    </tr>
+
+                                    @if (isExpanded)
+                                    {
+                                        <tr class="find-details-row">
+                                            <td colspan="4">
+                                                <div class="find-details">
+                                        @if (showEditForm && currentEditModel != null && currentEditModel.FindId == find.findId)
+                                        {
+                                            <FindEditForm @key="currentEditModel.FindId"
+                                                          Model="currentEditModel"
+                                                          OnClose="CloseEditForm"
+                                                          OnUpdated="CloseEditForm"
+                                                          OnFindUpdated="HandleFindUpdated" />
+                                        }
+                                        else
+                                        {
+                                            <div class="find-discoverer">
+                                                <img src="@vm.profilePic"
+                                                     alt="Profile Picture"
+                                                     style="width:50px; height:50px; border-radius:50%; object-fit:cover;" />
+                                                <div>
+                                                    <div style="font-weight:600;">Discovered by</div>
+                                                    <a href="/profile/@vm.userId"
+                                                       @onclick:stopPropagation="true"
+                                                       @onclick:preventDefault="true"
+                                                       @onclick="() => GoToProfile(vm.userId)"
+                                                       style="cursor:pointer; text-decoration:underline;">
+                                                        @vm.userName
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <p>@find.findDate.ToString("MMMM dd, yyyy")</p>
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    @onclick="() => GetDirections(find.findLocation.latitude, find.findLocation.longitude)">
+                                                📍 Get Directions
+                                            </button>
+                                            <button class="btn btn-sm btn-link"
+                                                    @onclick="() => ViewOnMap(find)">
+                                                View on map
+                                            </button>
+                                            @if (find.findImages != null && find.findImages.Any())
+                                            {
+                                                <FindImageGallery Images="find.findImages" />
+                                            }
+                                            else
+                                            {
+                                                <p><em>No images uploaded.</em></p>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(find.speciesName))
+                                            {
+                                                <p><strong>Species Name:</strong> @find.speciesName</p>
+                                            }
+                                            <p><strong>Category:</strong> @find.speciesType</p>
+                                            <p><strong>SubCategory: </strong> @find.useCategory</p>
+
+                                            @if (!string.IsNullOrWhiteSpace(find.features))
+                                            {
+                                                <p><strong>Distinguishing Features:</strong> @find.features</p>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(find.lookAlikes))
+                                            {
+                                                <p><strong>Dangerous Lookalikes:</strong> @find.lookAlikes</p>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(find.harvestMethod))
+                                            {
+                                                <p><strong>Harvest Method:</strong> @find.harvestMethod</p>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(find.tastesLike))
+                                            {
+                                                <p><strong>Tastes like:</strong> @find.tastesLike</p>
+                                            }
+
+                                            @if (!string.IsNullOrWhiteSpace(find.description))
+                                            {
+                                                <p><strong>Notes:</strong> @find.description</p>
+                                            }
+
+                                            @if (find.findUserId == session.SessionUser.UserId)
+                                            {
+                                                <p><strong>Who can see this?</strong> @find.accessibility</p>
+                                            }
+
+                                            <Vote find="find"
+                                                  comment="@null"
+                                                  vmUserId="vm.userId"
+                                                  findOrCommentId="find.findId"
+                                                  voteType="find" />
+
+                                            @if (find.findUserId == session.SessionUser.UserId)
+                                            {
+                                                <div class="find-actions">
+                                                    <button class="btn btn-secondary" @onclick="() => OpenEdit(find)">Edit</button>
+                                                    <button class="btn btn-danger" @onclick="() => HandleFindDeleted(find.findId)">Delete</button>
+                                                </div>
+                                            }
+
+                                            <CommentThread @key="find.findId"
+                                                           Find="find"
+                                                           VmId="vm.userId"
+                                                           CurrentUserId="session.SessionUser.UserId"
+                                                           UserNames="mapService.userNamesKvp" />
+                                        }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
                     }
-                    
-                    
-                    @* <div style="font-weight:600; margin-bottom:6px;">Image Gallery</div> *@
-
-                    @if (!string.IsNullOrWhiteSpace(selectedFind.speciesName))
-                    {
-                        <p><strong>Species:</strong> @selectedFind.speciesName</p>
-                    }
-
-                    <p><strong>Category:</strong> @selectedFind.speciesType</p>
-                    <p><strong>SubCategory: </strong> @selectedFind.useCategory</p>
-
-                    @if (!string.IsNullOrWhiteSpace(selectedFind.features))
-                    {
-                        <p><strong>Distinguishing Features:</strong> @selectedFind.features</p>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(selectedFind.lookAlikes))
-                    {
-                        <p><strong>Dangerous Lookalikes:</strong> @selectedFind.lookAlikes</p>
-                    }
-
-                    @* @if (!string.IsNullOrWhiteSpace(selectedFind.harvestMethod))
-                    {
-                        <p><strong>Harvest Method:</strong> @selectedFind.harvestMethod</p>
-                    } *@
-
-                    @* @if (!string.IsNullOrWhiteSpace(selectedFind.tastesLike))
-                    {
-                        <p><strong>Tastes like:</strong> @selectedFind.tastesLike</p>
-                    } *@
-
-                    @if (!string.IsNullOrWhiteSpace(selectedFind.description))
-                    {
-                        <p><strong>Notes:</strong> @selectedFind.description</p>
-                    }
-
-                    <Vote find="selectedFind"
-                          comment="@null"
-                          vmUserId="selectedVm.userId"
-                          findOrCommentId="selectedFind.findId"
-                          voteType="find" />
-
-                    @if (selectedFind.findUserId == session.SessionUser.UserId)
-                    {
-                        <div style="display:flex; gap:10px; margin: 10px 0;">
-                            <button class="btn btn-secondary" @onclick="OpenEdit">
-                                Edit
-                            </button>
-
-                            <button class="btn btn-danger" @onclick="() => HandleFindDeleted(selectedFind.findId)">
-                                Delete
-                            </button>
-                        </div>
-                    }
-
-                    <CommentThread @key="selectedFind.findId"
-                                   Find="selectedFind"
-                                   VmId="selectedVm.userId"
-                                   CurrentUserId="session.SessionUser.UserId"
-                                   UserNames="mapService.userNamesKvp" />
                 }
-            </div>
-        }
-        else if (hasLoaded)
-        {
-            <div style="padding: 15px;">
-                <p>Select a marker to view a find, or click the map to create one.</p>
-            </div>
-        }
-    </div>
-}
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <button class="sidebar-expand-button"
+                aria-label="Expand finds sidebar"
+                title="Expand finds sidebar"
+                @onclick="ToggleSidebar">›</button>
+    }
+</div>
 
 @code {
     [Parameter] public bool isLoading { get; set; }
     [Parameter] public bool hasLoaded { get; set; }
-
-    private bool isPanelOpen = false;
+    [Parameter] public List<UserFindsDataContainer>? Finds { get; set; }
 
     private bool showCreateForm = false;
     private bool showEditForm = false;
+    private bool isSidebarExpanded = true;
+    private bool pendingMapResize;
+    private Guid? expandedFindId;
+    private Guid? pendingScrollFindId;
 
     private FindEditForm.FindEditTemp? currentEditModel;
 
@@ -216,52 +281,114 @@
         mapService.OnCreateFormRequested -= HandleCreateFormRequested;
     }
 
+    private IEnumerable<(UserFindsDataContainer ViewModel, FindDC Find)> VisibleFinds =>
+        (Finds ?? mapService.CurrentViewModels)
+            .Where(vm => vm.finds != null)
+            .SelectMany(vm => vm.finds.Select(find => (ViewModel: vm, Find: find)));
+
+    protected override void OnParametersSet()
+    {
+        if (expandedFindId.HasValue && !VisibleFinds.Any(item => item.Find.findId == expandedFindId.Value))
+            ClosePanel();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (pendingMapResize)
+        {
+            pendingMapResize = false;
+            await JSRuntime.InvokeVoidAsync("invalidateForagerMapSize");
+        }
+
+        if (pendingScrollFindId is Guid findId)
+        {
+            pendingScrollFindId = null;
+            await JSRuntime.InvokeVoidAsync("scrollToFindRow", findId.ToString());
+        }
+    }
+
+    private void ToggleSidebar()
+    {
+        isSidebarExpanded = !isSidebarExpanded;
+        pendingMapResize = true;
+    }
+
     private void ClosePanel()
     {
-        isPanelOpen = false;
         showCreateForm = false;
         showEditForm = false;
         currentEditModel = null;
         selectedVm = null;
         selectedFind = null;
+        expandedFindId = null;
+    }
+
+    private void ToggleFind(UserFindsDataContainer vm, FindDC find)
+    {
+        if (expandedFindId == find.findId)
+        {
+            ClosePanel();
+            return;
+        }
+
+        selectedVm = vm;
+        selectedFind = find;
+        expandedFindId = find.findId;
+        showEditForm = false;
+        currentEditModel = null;
+    }
+
+    private void HandleFindRowKeyDown(KeyboardEventArgs args, UserFindsDataContainer vm, FindDC find)
+    {
+        if (args.Key is "Enter" or " ")
+            ToggleFind(vm, find);
     }
 
     private void HandleCreateFormRequested()
     {
-        isPanelOpen = true;
         showCreateForm = true;
 
         // clear selection/edit
         selectedVm = null;
         selectedFind = null;
+        expandedFindId = null;
         showEditForm = false;
         currentEditModel = null;
 
         InvokeAsync(StateHasChanged);
     }
 
-    private async void HandleMarkerSelected(Guid findId)
+    private void HandleMarkerSelected(Guid findId)
     {
-        var vm = mapService.CurrentViewModels
-            ?.FirstOrDefault(v => v.finds.Any(f => f.findId == findId));
+        _ = InvokeAsync(() =>
+        {
+            var vm = mapService.CurrentViewModels
+                ?.FirstOrDefault(v => v.finds.Any(f => f.findId == findId));
 
-        var find = vm?.finds.FirstOrDefault(f => f.findId == findId);
-        if (vm == null || find == null)
-            return;
+            var find = vm?.finds.FirstOrDefault(f => f.findId == findId);
+            if (vm == null || find == null)
+                return;
 
-        selectedVm = vm;
-        selectedFind = find;
+            selectedVm = vm;
+            selectedFind = find;
+            expandedFindId = findId;
+            pendingScrollFindId = findId;
+            if (!isSidebarExpanded)
+            {
+                isSidebarExpanded = true;
+                pendingMapResize = true;
+            }
+            showCreateForm = false;
+            showEditForm = false;
+            currentEditModel = null;
 
-        isPanelOpen = true;
-        showCreateForm = false;
-        showEditForm = false;
-        currentEditModel = null;
-
-        await InvokeAsync(StateHasChanged);
+            StateHasChanged();
+        });
     }
 
-    private void OpenEdit()
+    private void OpenEdit(FindDC find)
     {
+        selectedFind = find;
         if (selectedFind == null) return;
 
         currentEditModel = new FindEditForm.FindEditTemp
@@ -296,6 +423,14 @@
         showCreateForm = false;
         mapService.pendingLat = null;
         mapService.pendingLng = null;
+    }
+
+    private async Task ViewOnMap(FindDC find)
+    {
+        await JSRuntime.InvokeVoidAsync(
+            "centerMapOnFind",
+            find.findLocation.latitude,
+            find.findLocation.longitude);
     }
 
     private async Task HandleFindCreated(FindCreateForm.FindTemp temp)
