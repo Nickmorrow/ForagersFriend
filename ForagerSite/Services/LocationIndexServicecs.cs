@@ -225,47 +225,6 @@ public class LocationIndexService
             .ToDictionary(g => g.Key, g => g.First().NAME, StringComparer.OrdinalIgnoreCase);
     }
 
-    //private void AssignStateForCounties()
-    //{
-    //    var states = _all.Where(r => r.Kind == "State").ToList();
-
-    //    foreach (var county in _all.Where(r => r.Kind == "County"))
-    //    {
-    //        var countyVertices = EnumerateGeometryPoints(county.Feature.GetProperty("geometry"));
-    //        if (countyVertices.Count == 0)
-    //        {
-    //            var centerLng = (county.West + county.East) / 2d;
-    //            var centerLat = (county.South + county.North) / 2d;
-    //            var fallback = states
-    //                .FirstOrDefault(s => GeometryContainsPoint(s.Feature.GetProperty("geometry"), centerLng, centerLat));
-
-    //            if (fallback is null)
-    //                continue;
-
-    //            county.STATEFP = fallback.STATEFP;
-    //            county.STATENAME = fallback.NAME;
-    //            continue;
-    //        }
-
-    //        var bestState = states
-    //            .Select(state => new
-    //            {
-    //                State = state,
-    //                MatchCount = countyVertices.Count(p => GeometryContainsPoint(state.Feature.GetProperty("geometry"), p.lng, p.lat))
-    //            })
-    //            .OrderByDescending(x => x.MatchCount)
-    //            .ThenByDescending(x => x.State.NAME.Length)
-    //            .FirstOrDefault();
-
-    //        if (bestState is null || bestState.MatchCount == 0)
-    //            continue;
-
-    //        county.STATEFP = bestState.State.STATEFP;
-    //        county.STATENAME = bestState.State.NAME;
-    //    }
-    //}
-
-
     private void AssignStateForCounties()
     {
         var states = _all.Where(r => r.Kind == "State").ToList();
