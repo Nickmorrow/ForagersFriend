@@ -15,22 +15,165 @@ public class LocationIndexService
 
     public LocationIndexService(IWebHostEnvironment env) => _env = env;
 
+
     public async Task InitializeAsync()
     {
         if (_all.Count > 0) return;
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        Console.WriteLine("Loading geographic files...");
 
         await LoadGeoFileAsync("geo/geoBoundaries-USA-ADM0.geojson");
         await LoadGeoFileAsync("geo/geoBoundaries-USA-ADM1.geojson");
         await LoadGeoFileAsync("geo/geoBoundaries-USA-ADM2.geojson");
 
+        Console.WriteLine(
+            $"GeoJSON loaded in {stopwatch.Elapsed.TotalSeconds:F2}s");
+
         BuildStateLookup();
-        AssignStateForCounties();
+
+        // Use cached county-to-state assignments instead of
+        // recalculating geographic relationships every startup.
+        await LoadOrGenerateCountyStateLookupAsync();
+
+        Console.WriteLine(
+            $"County relationships ready at {stopwatch.Elapsed.TotalSeconds:F2}s");
+
         BuildLookups();
         HydrateAdminNames();
         BuildDisplayStrings();
         AssignIds();
         BuildPrefixIndex();
+
+        stopwatch.Stop();
+
+        Console.WriteLine(
+            $"Total geographic initialization: {stopwatch.Elapsed.TotalSeconds:F2}s");
     }
+
+    private async Task LoadOrGenerateCountyStateLookupAsync()
+    {
+        var path = Path.Combine(
+            _env.WebRootPath,
+            "geo",
+            "county-state-lookup.json");
+
+        var counties = _all
+            .Where(r => r.Kind == "County")
+            .ToList();
+
+        var states = _all
+            .Where(r => r.Kind == "State" &&
+                        !string.IsNullOrWhiteSpace(r.STATEFP))
+            .ToDictionary(
+                r => r.STATEFP!,
+                r => r,
+                StringComparer.OrdinalIgnoreCase);
+
+        bool generate = Environment.GetEnvironmentVariable(
+            "GENERATE_COUNTY_LOOKUP") == "1";
+
+        if (generate)
+        {
+            Console.WriteLine("Generating county-state lookup...");
+
+            // Run the existing geographic assignment algorithm once.
+            AssignStateForCounties();
+
+            // Special case: Rose Island belongs to American Samoa.
+            var roseIsland = counties.FirstOrDefault(c =>
+                c.NAME.Equals("Rose Island", StringComparison.OrdinalIgnoreCase));
+
+            var americanSamoa = states.Values.FirstOrDefault(s =>
+                s.NAME.Equals("American Samoa", StringComparison.OrdinalIgnoreCase));
+
+            if (roseIsland != null && americanSamoa != null)
+            {
+                roseIsland.STATEFP = americanSamoa.STATEFP;
+                roseIsland.STATENAME = americanSamoa.NAME;
+
+                Console.WriteLine("Assigned Rose Island to American Samoa.");
+            }
+
+            var missing = counties
+                .Where(c =>
+                    string.IsNullOrWhiteSpace(c.COUNTYFP) ||
+                    string.IsNullOrWhiteSpace(c.STATEFP) ||
+                    !states.ContainsKey(c.STATEFP!))
+                .ToList();
+
+            if (missing.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot save lookup: {missing.Count} counties " +
+                    "have missing or invalid state assignments.");
+            }
+
+            var lookup = counties.ToDictionary(
+                c => c.COUNTYFP!,
+                c => c.STATEFP!,
+                StringComparer.OrdinalIgnoreCase);
+
+            var json = JsonSerializer.Serialize(
+                lookup,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+            await File.WriteAllTextAsync(path, json);
+
+            Console.WriteLine(
+                $"Saved {lookup.Count} county assignments.");
+
+            return;
+        }
+
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException(
+                "County-state lookup file is missing. " +
+                "Run with GENERATE_COUNTY_LOOKUP=1 to create it.",
+                path);
+        }
+
+        Console.WriteLine("Loading cached county-state lookup...");
+
+        var cachedJson = await File.ReadAllTextAsync(path);
+
+        var cached = JsonSerializer.Deserialize<
+            Dictionary<string, string>>(cachedJson)
+            ?? throw new InvalidOperationException(
+                "County-state lookup is empty.");
+
+        int unmatched = 0;
+
+        foreach (var county in counties)
+        {
+            if (string.IsNullOrWhiteSpace(county.COUNTYFP) ||
+                !cached.TryGetValue(county.COUNTYFP, out var stateCode) ||
+                !states.TryGetValue(stateCode, out var state))
+            {
+                unmatched++;
+                continue;
+            }
+
+            county.STATEFP = state.STATEFP;
+            county.STATENAME = state.NAME;
+        }
+
+        if (unmatched > 0)
+        {
+            throw new InvalidOperationException(
+                $"County-state lookup incomplete: " +
+                $"{unmatched} counties unmatched.");
+        }
+
+        Console.WriteLine(
+            $"Loaded {counties.Count} cached county assignments.");
+    }
+
 
     public List<GeoPolyRecord> Search(string query, int limit = 8)
     {
