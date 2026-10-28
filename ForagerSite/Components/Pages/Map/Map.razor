@@ -8,6 +8,8 @@
 @using Microsoft.AspNetCore.WebUtilities
 @using Newtonsoft.Json
 @using Utilities
+@using NetTopologySuite.Geometries
+@using NetTopologySuite.IO
 
 @rendermode InteractiveServer
 @inject IJSRuntime JS
@@ -57,6 +59,11 @@
     private Guid? focusUserId;
     // private bool _mapInitialized;
 
+    private static bool IsInsideBoundary(Geometry boundary, double latitude, double longitude)
+    {
+        var point = boundary.Factory.CreatePoint(new Coordinate(longitude, latitude));
+        return boundary.Covers(point);
+    }
 
     private void ReadFocusFromQuery()
     {
@@ -363,22 +370,45 @@
                 .ToList();
         }
 
-        // 3 Location filter (FAST bbox derived from polygon)
+        // 3 Location filter 
+
         GeoPolyRecord? loc = null;
-        if (!string.IsNullOrWhiteSpace(criteria.LocationKind) && !string.IsNullOrWhiteSpace(criteria.LocationId))
+
+        if (!string.IsNullOrWhiteSpace(criteria.LocationKind) &&
+            !string.IsNullOrWhiteSpace(criteria.LocationId))
         {
-            loc = geoIndex.GetByKindAndId(criteria.LocationKind, criteria.LocationId);
+            loc = geoIndex.GetByKindAndId(
+                criteria.LocationKind,
+                criteria.LocationId);
 
             if (loc != null)
             {
-                var west = loc.West; var south = loc.South; var east = loc.East; var north = loc.North;
+                var geometryJson = loc.Feature
+                    .GetProperty("geometry")
+                    .GetRawText();
+
+                var reader = new GeoJsonReader();
+                var boundary = reader.Read<Geometry>(geometryJson);
 
                 foreach (var vm in mapService.CurrentViewModels)
                 {
                     vm.finds = vm.finds
-                        .Where(f => f.findLocation != null
-                            && f.findLocation.longitude >= west && f.findLocation.longitude <= east
-                            && f.findLocation.latitude >= south && f.findLocation.latitude <= north)
+                        .Where(f =>
+                        {
+                            if (f.findLocation == null)
+                                return false;
+
+                            var lat = f.findLocation.latitude;
+                            var lng = f.findLocation.longitude;
+
+                            // Fast bounding-box check
+                            if (lng < loc.West || lng > loc.East ||
+                                lat < loc.South || lat > loc.North)
+                                return false;
+
+                            // Check actual polygon boundaries
+                            return IsInsideBoundary(boundary, lat, lng);
+                        })
                         .ToList();
                 }
             }

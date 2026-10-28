@@ -5,9 +5,7 @@ using ForagerSite.Services;
 using ForagerSite.Services;
 using ForagerSite.Services.Interfaces;
 using Microsoft.AspNetCore.Components.Forms;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 
 namespace ForagerSite.Utilities
@@ -338,48 +336,52 @@ namespace ForagerSite.Utilities
         int maxWidth = 1280,
         int quality = 75)
         {
-            using var image = await Image.LoadAsync(input);
-
-            if (image.Width > 8000 || image.Height > 8000)
-                throw new Exception("Image dimensions too large.");
-
-            if (image.Width > maxWidth)
-            {
-                var ratio = (double)maxWidth / image.Width;
-                var newHeight = (int)(image.Height * ratio);
-
-                image.Mutate(x => x.Resize(maxWidth, newHeight));
-            }
-
-            var encoder = new JpegEncoder
-            {
-                Quality = quality
-            };
-
-            await image.SaveAsync(outputPath, encoder);
+            await using var resized = await ResizeToJpegStreamAsync(input, maxWidth, quality);
+            await using var output = File.Create(outputPath);
+            await resized.CopyToAsync(output);
         }
+
         public static async Task<MemoryStream> ResizeToJpegStreamAsync(
         Stream input,
         int maxWidth = 1280,
         int quality = 75)
-            {
-            var output = new MemoryStream();
+        {
+            using var encodedInput = new MemoryStream();
+            await input.CopyToAsync(encodedInput);
+            encodedInput.Position = 0;
 
-            using var image = await Image.LoadAsync(input);
+            using var bitmap = SKBitmap.Decode(encodedInput);
+            if (bitmap is null)
+                throw new InvalidDataException("The uploaded file is not a supported image.");
 
-            if (image.Width > 8000 || image.Height > 8000)
+            if (bitmap.Width > 8000 || bitmap.Height > 8000)
                 throw new Exception("Image dimensions too large.");
 
-            if (image.Width > maxWidth)
+            var width = bitmap.Width;
+            var height = bitmap.Height;
+            if (width > maxWidth)
             {
-                var ratio = (double)maxWidth / image.Width;
-                var newHeight = (int)(image.Height * ratio);
-                image.Mutate(x => x.Resize(maxWidth, newHeight));
+                var ratio = (double)maxWidth / width;
+                width = maxWidth;
+                height = (int)(height * ratio);
             }
 
-            var encoder = new JpegEncoder { Quality = quality };
+            var imageInfo = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
+            using var resizedBitmap = new SKBitmap(imageInfo);
+            using (var canvas = new SKCanvas(resizedBitmap))
+            using (var paint = new SKPaint { FilterQuality = SKFilterQuality.High })
+            {
+                canvas.Clear(SKColors.White);
+                canvas.DrawBitmap(bitmap, new SKRect(0, 0, width, height), paint);
+            }
 
-            await image.SaveAsJpegAsync(output, encoder);
+            using var image = SKImage.FromBitmap(resizedBitmap);
+            using var encodedImage = image.Encode(SKEncodedImageFormat.Jpeg, quality);
+            if (encodedImage is null)
+                throw new InvalidOperationException("Could not encode the image as JPEG.");
+
+            var output = new MemoryStream();
+            encodedImage.SaveTo(output);
             output.Position = 0; // IMPORTANT before upload
             return output;
         }
