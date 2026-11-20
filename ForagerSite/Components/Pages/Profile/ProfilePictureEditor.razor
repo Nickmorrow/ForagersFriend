@@ -1,13 +1,12 @@
 ﻿@using DataAccess.Models
 @using ForagerSite.DataContainer
+@using ForagerSite.Features.Media
 @using ForagerSite.Services
 @using ForagerSite.Services.Interfaces
 @using Utilities
 @namespace ForagerSite.Components.Profile
 @inject IUserService userService
-@inject IUserSessionService session
-@inject IConfiguration config
-@inject IWebHostEnvironment env
+@inject PhotoService photoService
 
 @if (!_loaded)
 {
@@ -136,25 +135,22 @@ else
         if (errors.Any() || uploadedFile == null)
             return;
 
-        var userName = session.SessionUser!.Username;
-
-        
-        var newUrl = await PhotoUploadHelper.UploadProfilePic(
-            errors,
-            userName,
-            uploadedFile,
-            config,
-            env,
-            userService,
-            userVm);
-
-        if (string.IsNullOrEmpty(newUrl))
+        if (!CanEdit)
+        {
+            errors.Add("You cannot edit this profile.");
             return;
+        }
 
-        profileImageUrl = newUrl;
-
-        if (errors.Contains("Error uploading file"))
+        try
+        {
+            var reference = await photoService.UploadProfileImageAsync(UserId, uploadedFile);
+            profileImageUrl = reference.PublicUrl;
+        }
+        catch (Exception exception)
+        {
+            errors.Add($"Error uploading file: {exception.Message}");
             return;
+        }
 
         editProfilePic = false;
         uploadedFile = null;
@@ -166,15 +162,22 @@ else
 
     private async Task DeleteProfilePic()
     {
-        var userName = session.SessionUser!.Username;
+        errors.Clear();
+        if (!CanEdit)
+        {
+            errors.Add("You cannot edit this profile.");
+            return;
+        }
 
-        await PhotoUploadHelper.DeleteProfilePic(
-            errors,
-            userName,
-            config,
-            env,
-            userService,
-            userVm);
+        try
+        {
+            await photoService.DeleteProfileImageAsync(UserId);
+        }
+        catch (Exception exception)
+        {
+            errors.Add($"Error deleting profile picture: {exception.Message}");
+            return;
+        }
 
         editProfilePic = false;
         uploadedFile = null;

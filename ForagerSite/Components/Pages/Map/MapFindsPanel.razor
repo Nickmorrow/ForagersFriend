@@ -460,7 +460,7 @@
             temp.Description,
             mapService.pendingLat!.Value,
             mapService.pendingLng!.Value,
-            temp.ImageUrls,
+            temp.ImageFiles,
             temp.AccessLevel));
 
         CloseCreateForm();
@@ -486,7 +486,7 @@
             temp.Description ?? string.Empty,
             location.latitude,
             location.longitude,
-            temp.UploadedImageUrls,
+            temp.ImageFilesToAdd,
             temp.DeletedImageUrls,
             temp.AccessLevel));
 

@@ -6,9 +6,6 @@
 @using ForagerSite.Utilities
 @using ForagerSite.Components.Utility
 @using ForagerSite.CommonRules
-@inject IUserSessionService session
-@inject IConfiguration config
-@inject IWebHostEnvironment env
 @inject IJSRuntime JS
 
 
@@ -291,27 +288,23 @@
 
     private async Task HandleValidSubmit()
     {
-        uploadErrors.Clear(); 
-
-        var userId = session.SessionUser.UserId;
-        var userName = session.SessionUser.Username;
-        findModel.UserId = userId;
-
-        var uploadedUrls = await PhotoUploadHelper.UploadFindImages(selectedFiles, userName, config, env, uploadErrors);
-
-        if (uploadErrors.Any())
-        {
-            return;
-        }
-
-        findModel.ImageUrls = uploadedUrls;
+        uploadErrors.Clear();
+        findModel.ImageFiles = selectedFiles.ToList();
 
         findModel.AccessLevel = string.IsNullOrEmpty(findModel.AccessLevel) ? "Public" : findModel.AccessLevel;
 
-        await OnFindCreated.InvokeAsync(findModel);
+        try
+        {
+            await OnFindCreated.InvokeAsync(findModel);
 
-        findModel = new();
-        imagePreviews.Clear();
+            findModel = new();
+            imagePreviews.Clear();
+            selectedFiles.Clear();
+        }
+        catch (Exception exception)
+        {
+            uploadErrors.Add($"Error saving find: {exception.Message}");
+        }
     }
 
 
@@ -328,7 +321,6 @@
         public string TastesLike { get; set; } = "";
         public string Description { get; set; } = "";
         public string AccessLevel { get; set; }
-        public Guid UserId { get; set; }
-        public List<string> ImageUrls { get; set; } = new();
+        public List<IBrowserFile> ImageFiles { get; set; } = new();
     }
 }

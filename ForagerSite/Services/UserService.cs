@@ -124,43 +124,5 @@ namespace ForagerSite.Services
 
             return image?.UsiImageData ?? string.Empty;
         }
-        public async Task UploadProfilePicUrl(User user, string fileUrl)
-        {
-            using var context = _dbContextFactory.CreateDbContext();
-            var existingUrls = context.UserImages
-                .Where(ui => ui.UsiUsrId == user.UsrId 
-                    && ui.UsiUsfId == null 
-                    && ui.UsiImageData.Contains("UserProfileImages"))
-                .ToList();
-            if (existingUrls.Any())
-            {
-                foreach (var existingUrl in existingUrls)
-                {
-                    context.UserImages.Remove(existingUrl);
-                }
-            }
-            var imageUrl = new UserImage
-            {
-                UsiUsrId = user.UsrId,
-                UsiImageData = fileUrl
-            };
-            context.UserImages.Add(imageUrl);
-            context.SaveChanges();
-        }
-        public async Task DeleteProfilePicUrl(User user)
-        {
-            using var context = _dbContextFactory.CreateDbContext();
-            var image = context.UserImages.Where(ui => ui.UsiUsrId == user.UsrId && ui.UsiImageData.Contains("UserProfileImages") && ui.UsiUsfId == null).FirstOrDefault();
-
-            if (image != null) context.UserImages.Remove(image);
-
-            context.UserImages.Remove(image);
-            context.SaveChanges();
-        }
-
-
-
-
-
     }
 }
