@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ForagerSite.Services.Interfaces;
+using ForagerSite.Features.Finds;
+using ForagerSite.Features.Map;
 
 namespace ForagerSite
 {
@@ -33,7 +35,10 @@ namespace ForagerSite
             builder.Services.AddSingleton<LocationIndexService>();
 
             builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IUserFindService, UserFindService>();           
+            builder.Services.AddScoped<FindQueries>();
+            builder.Services.AddScoped<FindCommands>();
+            builder.Services.AddScoped<FindInteractions>();
+            builder.Services.AddScoped<MapFindQueries>();
             builder.Services.AddScoped<IMapService, MapService>();
             builder.Services.AddScoped<IFriendService, FriendService>();
             builder.Services.AddScoped<IUserSessionService, UserSessionService>();

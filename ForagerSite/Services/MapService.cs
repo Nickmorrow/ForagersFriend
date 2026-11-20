@@ -1,104 +1,30 @@
-﻿using DataAccess.Models;
-using ForagerSite.Utilities;
-using ForagerSite.Services;
+﻿using ForagerSite.Services.Interfaces;
 using Microsoft.JSInterop;
-using Newtonsoft.Json;
-using DataAccess.Data;
-using Microsoft.EntityFrameworkCore;
-using ForagerSite.DataContainer;
-using ForagerSite.Services.Interfaces;
-
 
 namespace ForagerSite.Services
 {
     public class MapService : IMapService
-    {       
-        public static readonly List<string> MapFilters = new List<string>
-        {
-            "UserOnly", "AllUsers", "FriendUsers"
-        };
-        
-        private readonly IUserSessionService session;
-        private readonly IUserFindService userFindService;
-
-        public event Action OnChange;
-        public event Action<bool> OnLoadingChange;
-        public event Action? OnCreateFormRequested;
-        public event Action<Guid>? OnMarkerSelected;
-
-        public Guid? FriendCacheOwnerUserId { get; private set; }
-        public Guid? MyCacheOwnerUserId { get; private set; }
-        public Guid? AllCacheOwnerUserId { get; private set; }
-        public string mapFilter { get; set; } = MapFilters[0];
+    {
         public double? pendingLat { get; set; }
         public double? pendingLng { get; set; }
-        public List<UserFindsDataContainer> MyViewModels { get; set; } = new();
-        public List<UserFindsDataContainer> FriendViewModels { get; set; } = new();
-        public List<UserFindsDataContainer> AllViewModels { get; set; } = new();
-        public List<UserFindsDataContainer> CurrentViewModels { get; set; } = new();
-        public Dictionary<Guid, string> userNamesKvp { get; set; }
 
-        public MapService(IUserSessionService session, IUserFindService userFindService)
-        {
-            this.session = session;
-            this.userFindService = userFindService;
-        }
-        public void SetFriendCacheOwner(Guid userId) => FriendCacheOwnerUserId = userId;
-        public void SetMyCacheOwner(Guid userId) => MyCacheOwnerUserId = userId;
-        public void SetAllCacheOwner(Guid userId) => AllCacheOwnerUserId = userId;
-        private void NotifyStateChanged() => OnChange?.Invoke();
-        private void NotifyLoadingChanged(bool isLoading) => OnLoadingChange?.Invoke(isLoading);
-        public void ClearFriendCache(Guid userId)
-        {
-            FriendViewModels.Clear();
-            FriendCacheOwnerUserId = userId;
-        }
-        public void ResetAllCaches()
-        {
-            mapFilter = MapFilters[0];
-            pendingLat = null;
-            pendingLng = null;
-
-            MyViewModels.Clear();
-            FriendViewModels.Clear();
-            AllViewModels.Clear();
-            CurrentViewModels.Clear();
-
-            FriendCacheOwnerUserId = null;
-            MyCacheOwnerUserId = null;
-            AllCacheOwnerUserId = null;
-
-            OnChange?.Invoke();
-        }
-        public void UpdateViewModels(Guid userId, UserFindsDataContainer viewModel)
-        {
-            var currentUserId = session.SessionUser.UserId;
-
-            if (MyViewModels.Count > 0 && currentUserId == viewModel.userId)
-                MyViewModels[0] = VmUtilities.Copy(viewModel);
-
-            var friendIndex = FriendViewModels.FindIndex(vm => vm.userId == userId);
-            if (friendIndex != -1)
-                FriendViewModels[friendIndex] = VmUtilities.Copy(viewModel);
-
-            var allIndex = AllViewModels.FindIndex(vm => vm.userId == userId);
-            if (allIndex != -1)
-                AllViewModels[allIndex] = VmUtilities.Copy(viewModel);
-        }
-
-        public UserFindsDataContainer GetViewModel(Guid userId)
-        {
-            return CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
-        }
+        public event Action? OnCreateFormRequested;
+        public event Action<Guid>? OnMarkerSelected;
+        public event Func<double, double, double, double, Task>? ViewportChanged;
 
         [JSInvokable("OnMarkerClicked")]
         public Task OnMarkerClicked(string findId)
         {
             if (Guid.TryParse(findId, out var guid))
-            {
                 OnMarkerSelected?.Invoke(guid);
-            }
             return Task.CompletedTask;
+        }
+
+        [JSInvokable("OnViewportChanged")]
+        public async Task OnViewportChanged(double south, double west, double north, double east)
+        {
+            if (ViewportChanged is not null)
+                await ViewportChanged.Invoke(south, west, north, east);
         }
 
         [JSInvokable("TriggerCreateForm")]
@@ -106,193 +32,8 @@ namespace ForagerSite.Services
         {
             pendingLat = lat;
             pendingLng = lng;
-
             OnCreateFormRequested?.Invoke();
             return Task.CompletedTask;
-        }        
-
-        public async Task CreateFindVm(
-        string name,
-        string speciesName,
-        string speciesType,
-        string useCategory,
-        string features,
-        string lookalikes,
-        string harvestMethod,
-        string tastesLike,
-        string description,
-        double lat,
-        double lng,
-        List<string> uploadedFileUrls,
-        string accessLevel)       
-        {
-            NotifyLoadingChanged(true);
-
-            var userId = session.SessionUser.UserId;
-            var userName = session.SessionUser.Username;
-
-            var newUserFindViewModel =
-            await userFindService.CreateFind(
-                name,
-                speciesName,
-                speciesType,
-                useCategory,
-                features,
-                lookalikes,
-                harvestMethod,
-                tastesLike,
-                description,
-                lat,
-                lng,
-                uploadedFileUrls,
-                userId,
-                userName,
-                accessLevel
-            );
-
-            var find = newUserFindViewModel.finds[0];
-            var currentViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
-            currentViewModel.finds.Add(find);
-
-            UpdateViewModels(userId, currentViewModel);
-
-            NotifyStateChanged();
-            NotifyLoadingChanged(false);
-
         }
-        public async Task UpdateFindVm(
-        Guid upFindId,
-        string name,
-        string speciesName,
-        string speciesType,
-        string useCategory,
-        string features,
-        string lookalikes,
-        string harvestMethod,
-        string tastesLike,
-        string description,
-        List<string>? uploadedFileUrls,
-        List<string>? deletedFileUrls,
-        string accessLevel)
-        {            
-            var userId = session.SessionUser.UserId;
-            var userName = session.SessionUser.Username;
-
-            NotifyLoadingChanged(true);
-
-            FindLocationDC location = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId).finds.FirstOrDefault(f => f.findId == upFindId).findLocation;
-
-            var newUserFindViewModel =
-            await userFindService.UpdateFind(
-                upFindId,
-                name,
-                speciesName,
-                speciesType,
-                useCategory,
-                features,
-                lookalikes,
-                harvestMethod,
-                tastesLike,
-                description,
-                location.latitude,
-                location.longitude,
-                uploadedFileUrls,
-                deletedFileUrls,
-                userId,
-                userName,
-                accessLevel
-            );
-
-            var find = newUserFindViewModel.finds[0];
-            var currentViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
-
-            var originalIndex = currentViewModel.finds.FindIndex(f => f.findId == upFindId);
-
-            int index = currentViewModel.finds.FindIndex(f => f.findId == find.findId);               
-            currentViewModel.finds[index] = find; 
-                
-            UpdateViewModels(userId, currentViewModel);
-
-            NotifyStateChanged();
-            NotifyLoadingChanged(false);
-        }
-
-        public async Task DeleteFindVm(Guid delFindId)
-        {
-            NotifyLoadingChanged(true);
-
-            var userId = session.SessionUser.UserId;
-            var userName = session.SessionUser.Username;
-            var deletedFindVm = new UserFindsDataContainer();
-
-            await userFindService.DeleteFind(delFindId, userId, userName);
-
-            var currentViewModel = CurrentViewModels.FirstOrDefault(vm => vm.userId == userId);
-            var find = currentViewModel.finds.FirstOrDefault(f => f.findId == delFindId);
-            currentViewModel.finds.Remove(find);
-
-            UpdateViewModels(userId, currentViewModel);
-
-            NotifyStateChanged();
-            NotifyLoadingChanged(false);
-        }
-
-        public async Task VoteVm(Guid vmId, Guid findOrCommentId, int voteValue, string voteType)
-        {
-            var userId = session.SessionUser.UserId;
-            var currentVm = CurrentViewModels.FirstOrDefault(vm => vm.userId == vmId);
-            var userVoteDto = await userFindService.Vote(findOrCommentId, userId, voteType, voteValue);
-            var find = new FindDC();
-
-            UserVoteDC? existingVote = null;
-
-            if (voteType == "find")
-            {
-                find = currentVm.finds.FirstOrDefault(f => f.findId == findOrCommentId);
-                existingVote = find.findVotes.FirstOrDefault(v => v.voteUserId == userId);
-
-                if (existingVote != null && existingVote.voteValue == voteValue)
-                {
-                    find.findVotes.Remove(existingVote);
-                }
-                else if (existingVote != null && existingVote.voteValue != voteValue)
-                {
-                    find.findVotes.Remove(existingVote);
-                    find.findVotes.Add(userVoteDto);
-                }
-                else if (existingVote == null)
-                {
-                    find.findVotes.Add(userVoteDto);
-                }
-                                             
-            }
-            else if (voteType == "comment")
-            {
-                // Find the find that owns this comment
-                find = currentVm.finds.FirstOrDefault(f => f.findsCommentXrefs.Any(x => x.comxComId == findOrCommentId));
-                var comment = find.findsCommentXrefs.FirstOrDefault(x => x.comxComId == findOrCommentId).findsComment;
-
-                existingVote = find.findsCommentXrefs
-                    .Where(xref => xref.findsComment.comId == findOrCommentId)
-                    .SelectMany(xref => xref.findsComment.commentVotes)
-                    .FirstOrDefault(v => v.voteUserId == userId);
-
-                if (existingVote != null && existingVote.voteValue == voteValue)
-                {
-                    comment.commentVotes.Remove(existingVote);
-                }
-                else if (existingVote != null && existingVote.voteValue != voteValue)
-                {
-                    comment.commentVotes.Remove(existingVote);
-                    comment.commentVotes.Add(userVoteDto);
-                }
-                else if (existingVote == null)
-                {
-                    comment.commentVotes.Add(userVoteDto);
-                }
-            }   
-            UpdateViewModels(vmId, currentVm);
-        }
-
     }
 }

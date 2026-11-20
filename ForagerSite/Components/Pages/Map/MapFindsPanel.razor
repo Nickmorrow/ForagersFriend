@@ -1,13 +1,16 @@
 ﻿@using ForagerSite.DataContainer
 @using ForagerSite.Services.Interfaces
 @using ForagerSite.Components.Find
+@using ForagerSite.Features.Map
+@using ForagerSite.Features.Finds
 @using Newtonsoft.Json
 @using Utilities
 @implements IDisposable
 @inject IUserSessionService session
 @inject IMapService mapService
+@inject FindQueries findQueries
+@inject FindCommands findCommands
 @inject IJSRuntime JSRuntime
-@inject IUserService userService
 @inject NavigationManager navigationManager
 
 <div class="finds-panel @(isSidebarExpanded ? "expanded" : "collapsed")">
@@ -32,10 +35,14 @@
                 <div id="finds-grid" class="finds-grid">
                     <div class="finds-grid-heading">
                         <h5>Finds</h5>
-                        <span>@VisibleFinds.Count() shown</span>
+                        <span>@VisiblePins.Count() shown</span>
+                        @if (HasMorePins)
+                        {
+                            <span>Showing the first 500 pins in this view.</span>
+                        }
                     </div>
 
-                    @if (!VisibleFinds.Any() && !showCreateForm)
+                    @if (!VisiblePins.Any() && !showCreateForm)
                     {
                         <p class="finds-empty-state">No finds match the current filters.</p>
                     }
@@ -55,30 +62,28 @@
                                     </tr>
                                 }
 
-                                @foreach (var item in VisibleFinds)
+                                @foreach (var pin in VisiblePins)
                                 {
-                                    var find = item.Find;
-                                    var vm = item.ViewModel;
-                                    var isExpanded = expandedFindId == find.findId;
+                                    var isExpanded = expandedFindId == pin.FindId;
 
-                                    <tr id="find-row-@find.findId"
+                                    <tr id="find-row-@pin.FindId"
                                         class="find-summary-row @(isExpanded ? "expanded" : null)"
                                         role="button"
                                         tabindex="0"
                                         aria-expanded="@isExpanded"
-                                        @onclick="() => ToggleFind(vm, find)"
-                                        @onkeydown="e => HandleFindRowKeyDown(e, vm, find)">
+                                        @onclick="() => ToggleFind(pin)"
+                                        @onkeydown="e => HandleFindRowKeyDown(e, pin)">
                                         <td class="find-name-cell">
-                                            <strong>@find.findName</strong>
-                                            @if (!string.IsNullOrWhiteSpace(find.speciesName))
+                                            <strong>@pin.Name</strong>
+                                            @if (!string.IsNullOrWhiteSpace(pin.SpeciesName))
                                             {
-                                                <small>@find.speciesName</small>
+                                                <small>@pin.SpeciesName</small>
                                             }
                                         </td>
                                         <td class="find-image-cell">
-                                            @if (!isExpanded && find.findImages != null && find.findImages.Any())
+                                            @if (!isExpanded && !string.IsNullOrWhiteSpace(pin.PreviewImageUrl))
                                             {
-                                                <img src="@find.findImages.First().imageData" alt="@find.findName" />
+                                                <img src="@pin.PreviewImageUrl" alt="@pin.Name" />
                                             }
                                             else if (!isExpanded)
                                             {
@@ -87,7 +92,7 @@
                                         </td>
                                         <td class="find-category-cell">@if (!isExpanded)
                                             {
-                                                @find.speciesType
+                                                @pin.SpeciesType
                                             }
                                         </td>
                                         @* <td class="find-grid-discoverer">
@@ -103,6 +108,14 @@
                                         <tr class="find-details-row">
                                             <td colspan="4">
                                                 <div class="find-details">
+                                        @if (selectedVm is null || selectedFind is null)
+                                        {
+                                            <p>Loading find details...</p>
+                                        }
+                                        else
+                                        {
+                                            var vm = selectedVm;
+                                            var find = selectedFind;
                                         @if (showEditForm && currentEditModel != null && currentEditModel.FindId == find.findId)
                                         {
                                             <FindEditForm @key="currentEditModel.FindId"
@@ -185,9 +198,9 @@
 
                                             <Vote find="find"
                                                   comment="@null"
-                                                  vmUserId="vm.userId"
                                                   findOrCommentId="find.findId"
-                                                  voteType="find" />
+                                                  voteType="find"
+                                                  OnChanged="RefreshSelectedFindAsync" />
 
                                             @if (find.findUserId == session.SessionUser.UserId)
                                             {
@@ -199,9 +212,10 @@
 
                                             <CommentThread @key="find.findId"
                                                            Find="find"
-                                                           VmId="vm.userId"
                                                            CurrentUserId="session.SessionUser.UserId"
-                                                           UserNames="mapService.userNamesKvp" />
+                                                           UserNames="selectedUserNames"
+                                                           OnChanged="RefreshSelectedFindAsync" />
+                                        }
                                         }
                                             </div>
                                         </td>
@@ -228,7 +242,9 @@
 @code {
     [Parameter] public bool isLoading { get; set; }
     [Parameter] public bool hasLoaded { get; set; }
-    [Parameter] public List<UserFindsDataContainer>? Finds { get; set; }
+    [Parameter] public IReadOnlyList<MapPin> Pins { get; set; } = Array.Empty<MapPin>();
+    [Parameter] public bool HasMorePins { get; set; }
+    [Parameter] public EventCallback OnFindsChanged { get; set; }
 
     private bool showCreateForm = false;
     private bool showEditForm = false;
@@ -241,33 +257,13 @@
 
     private UserFindsDataContainer? selectedVm;
     private FindDC? selectedFind;
+    private Dictionary<Guid, string> selectedUserNames = new();
 
     private void GoToProfile(Guid userId)
     {
         navigationManager.NavigateTo($"/profile/{userId}");
     }
 
-
-    private async Task ReInitializeMap()
-    {
-        var userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
-        if (userVm == null) return;
-
-        var json = JsonConvert.SerializeObject(
-            mapService.CurrentViewModels,
-            new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                Formatting = Formatting.Indented
-            });
-
-        await JSRuntime.InvokeVoidAsync(
-            "initializeMap",
-            json,
-            userVm.user.UsrId.ToString(),
-            mapService.mapFilter,
-            userVm.user.UserSecurity.UssUsername);
-    }
 
     protected override void OnInitialized()
     {
@@ -281,14 +277,12 @@
         mapService.OnCreateFormRequested -= HandleCreateFormRequested;
     }
 
-    private IEnumerable<(UserFindsDataContainer ViewModel, FindDC Find)> VisibleFinds =>
-        (Finds ?? mapService.CurrentViewModels)
-            .Where(vm => vm.finds != null)
-            .SelectMany(vm => vm.finds.Select(find => (ViewModel: vm, Find: find)));
+    private IReadOnlyList<MapPin> VisiblePins => Pins;
 
     protected override void OnParametersSet()
     {
-        if (expandedFindId.HasValue && !VisibleFinds.Any(item => item.Find.findId == expandedFindId.Value))
+        if (expandedFindId.HasValue && VisiblePins.Count > 0 &&
+            !VisiblePins.Any(pin => pin.FindId == expandedFindId.Value))
             ClosePanel();
     }
 
@@ -300,7 +294,7 @@
             await JSRuntime.InvokeVoidAsync("invalidateForagerMapSize");
         }
 
-        if (pendingScrollFindId is Guid findId)
+        if (pendingScrollFindId is Guid findId && VisiblePins.Any(pin => pin.FindId == findId))
         {
             pendingScrollFindId = null;
             await JSRuntime.InvokeVoidAsync("scrollToFindRow", findId.ToString());
@@ -320,28 +314,53 @@
         currentEditModel = null;
         selectedVm = null;
         selectedFind = null;
+        selectedUserNames = new Dictionary<Guid, string>();
         expandedFindId = null;
     }
 
-    private void ToggleFind(UserFindsDataContainer vm, FindDC find)
+    private async Task ToggleFind(MapPin pin)
     {
-        if (expandedFindId == find.findId)
+        if (expandedFindId == pin.FindId)
         {
             ClosePanel();
             return;
         }
 
-        selectedVm = vm;
-        selectedFind = find;
-        expandedFindId = find.findId;
+        selectedVm = null;
+        selectedFind = null;
+        expandedFindId = pin.FindId;
         showEditForm = false;
         currentEditModel = null;
+        await LoadFindDetailsAsync(pin.FindId);
     }
 
-    private void HandleFindRowKeyDown(KeyboardEventArgs args, UserFindsDataContainer vm, FindDC find)
+    private async Task HandleFindRowKeyDown(KeyboardEventArgs args, MapPin pin)
     {
         if (args.Key is "Enter" or " ")
-            ToggleFind(vm, find);
+            await ToggleFind(pin);
+    }
+
+    private async Task LoadFindDetailsAsync(Guid findId)
+    {
+        var viewModel = await findQueries.GetFindDetailByIdAsync(findId);
+        if (expandedFindId != findId)
+            return;
+
+        selectedVm = viewModel;
+        selectedFind = viewModel?.finds.FirstOrDefault(find => find.findId == findId);
+        selectedUserNames = selectedFind is null
+            ? new Dictionary<Guid, string>()
+            : await findQueries.GetUserNamesAsync(
+                selectedFind.findsCommentXrefs.Select(xref => xref.comxUserId));
+    }
+
+    private async Task RefreshSelectedFindAsync(Guid findId)
+    {
+        if (expandedFindId != findId)
+            return;
+
+        await LoadFindDetailsAsync(findId);
+        StateHasChanged();
     }
 
     private void HandleCreateFormRequested()
@@ -360,17 +379,10 @@
 
     private void HandleMarkerSelected(Guid findId)
     {
-        _ = InvokeAsync(() =>
+        _ = InvokeAsync(async () =>
         {
-            var vm = mapService.CurrentViewModels
-                ?.FirstOrDefault(v => v.finds.Any(f => f.findId == findId));
-
-            var find = vm?.finds.FirstOrDefault(f => f.findId == findId);
-            if (vm == null || find == null)
-                return;
-
-            selectedVm = vm;
-            selectedFind = find;
+            selectedVm = null;
+            selectedFind = null;
             expandedFindId = findId;
             pendingScrollFindId = findId;
             if (!isSidebarExpanded)
@@ -382,6 +394,7 @@
             showEditForm = false;
             currentEditModel = null;
 
+            await LoadFindDetailsAsync(findId);
             StateHasChanged();
         });
     }
@@ -435,7 +448,7 @@
 
     private async Task HandleFindCreated(FindCreateForm.FindTemp temp)
     {
-        await mapService.CreateFindVm(
+        await findCommands.CreateAsync(new CreateFindRequest(
             temp.FindName,
             temp.SpeciesName,
             temp.SpeciesType,
@@ -448,17 +461,19 @@
             mapService.pendingLat!.Value,
             mapService.pendingLng!.Value,
             temp.ImageUrls,
-            temp.AccessLevel);
+            temp.AccessLevel));
 
         CloseCreateForm();
-        await ReInitializeMap();
+        await OnFindsChanged.InvokeAsync();
         ClosePanel();
-        // keep panel open, could also set selectedFind to the new one if you want
     }
 
     private async Task HandleFindUpdated(FindEditForm.FindEditTemp temp)
     {
-        await mapService.UpdateFindVm(
+        var location = selectedFind?.findLocation
+            ?? throw new InvalidOperationException("The selected find location is not loaded.");
+
+        await findCommands.UpdateAsync(new UpdateFindRequest(
             temp.FindId,
             temp.FindName,
             temp.SpeciesName ?? string.Empty,
@@ -469,23 +484,23 @@
             temp.HarvestMethod ?? string.Empty,
             temp.TastesLike ?? string.Empty,
             temp.Description ?? string.Empty,
+            location.latitude,
+            location.longitude,
             temp.UploadedImageUrls,
             temp.DeletedImageUrls,
-            temp.AccessLevel);
+            temp.AccessLevel));
 
         showEditForm = false;
         currentEditModel = null;
-
-        // refresh selectedFind from updated VMs
-        HandleMarkerSelected(temp.FindId);
-        await ReInitializeMap();
+        await LoadFindDetailsAsync(temp.FindId);
+        await OnFindsChanged.InvokeAsync();
     }
 
     private async Task HandleFindDeleted(Guid findId)
     {
-        await mapService.DeleteFindVm(findId);
+        await findCommands.DeleteAsync(findId);
         ClosePanel();
-        await ReInitializeMap();
+        await OnFindsChanged.InvokeAsync();
     }
 
     private async Task GetDirections(double lat, double lng)

@@ -323,7 +323,7 @@ namespace ForagerSite.Utilities
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"Error uploading '{file.Name}': {ex.Message}");
+                    errors.Add($"Error uploading '{file.Name}': {ex}");
                 }
             }
 
@@ -350,7 +350,7 @@ namespace ForagerSite.Utilities
             await input.CopyToAsync(encodedInput);
             encodedInput.Position = 0;
 
-            using var bitmap = SKBitmap.Decode(encodedInput);
+            using var bitmap = SKBitmap.Decode(encodedInput.ToArray());
             if (bitmap is null)
                 throw new InvalidDataException("The uploaded file is not a supported image.");
 
