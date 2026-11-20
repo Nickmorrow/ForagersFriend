@@ -1,22 +1,22 @@
 ﻿@using DataAccess.Models
 @using ForagerSite.Components.Find
 @using ForagerSite.DataContainer
-@using ForagerSite.Services
+@using ForagerSite.Features.Finds
 @using ForagerSite.Services.Interfaces
 
 @inject IUserSessionService session
-@inject IMapService mapService
+@inject FindInteractions findInteractions
 
 <div style="display:flex; gap:20px; margin-top:10px; align-items:center;">
     <span class="vote-container">
         <i class="bi bi-hand-thumbs-up-fill vote-icon @GetFindUpClass(find, comment)"
-           @onclick='() => HandleUpvote(vmUserId, findOrCommentId, voteType)'></i>
+           @onclick="HandleUpvote"></i>
         <span class="vote-count">@GetFindUpCount(find, comment)</span>
     </span>
 
     <span class="vote-container">
         <i class="bi bi-hand-thumbs-down-fill vote-icon @GetFindDownClass(find, comment)"
-           @onclick='() => HandleDownVote(vmUserId, findOrCommentId, voteType)'></i>
+           @onclick="HandleDownVote"></i>
         <span class="vote-count">@GetFindDownCount(find, comment)</span>
     </span>
 </div>
@@ -24,20 +24,20 @@
 @code {
     [Parameter] public FindDC find { get; set; }
     [Parameter] public FindCommentDC comment { get; set; }
-    [Parameter] public Guid vmUserId { get; set; }
     [Parameter] public Guid findOrCommentId { get; set; }
     [Parameter] public string voteType { get; set; }  // "find" or "comment"
+    [Parameter] public EventCallback<Guid> OnChanged { get; set; }
 
 
-    private async Task HandleUpvote(Guid vmId, Guid findOrCommentId, string voteType)
+    private async Task HandleUpvote()
     {
-        var userId = session.SessionUser.UserId;
-        await mapService.VoteVm(vmId, findOrCommentId, 1, voteType);
+        var findId = await findInteractions.ToggleVoteAsync(findOrCommentId, voteType, 1);
+        await OnChanged.InvokeAsync(findId);
     }
-    private async Task HandleDownVote(Guid vmId, Guid findOrCommentId, string voteType)
+    private async Task HandleDownVote()
     {
-        var userId = session.SessionUser.UserId;
-        await mapService.VoteVm(vmId, findOrCommentId, -1, voteType);
+        var findId = await findInteractions.ToggleVoteAsync(findOrCommentId, voteType, -1);
+        await OnChanged.InvokeAsync(findId);
     }
 
     // ---- Find-level vote counts ----

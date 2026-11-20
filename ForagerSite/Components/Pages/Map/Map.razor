@@ -5,6 +5,8 @@
 @using ForagerSite.DataContainer
 @using ForagerSite.Services
 @using ForagerSite.Services.Interfaces
+@using ForagerSite.Features.Map
+@using ForagerSite.Features.Finds
 @using Microsoft.AspNetCore.WebUtilities
 @using Newtonsoft.Json
 @using Utilities
@@ -12,11 +14,13 @@
 @using NetTopologySuite.IO
 
 @rendermode InteractiveServer
+@implements IDisposable
 @inject IJSRuntime JS
 @inject IConfiguration config
 @inject IUserSessionService session
 @inject IUserService userService
-@inject IUserFindService userFindService
+@inject MapFindQueries mapFindQueries
+@inject FindQueries findQueries
 @inject IMapService mapService
 @inject IFriendService friendService
 @inject NavigationManager Nav
@@ -31,7 +35,9 @@
         <MapFindsPanel 
                       IsLoading="isLoading"
                       hasLoaded="hasLoaded"
-                      Finds="mapService.CurrentViewModels"
+                      Pins="pins"
+                      HasMorePins="hasMorePins"
+                      OnFindsChanged="RefreshViewportPinsAsync"
                        />
 
     </div>
@@ -51,13 +57,33 @@
 
 
 @code {
-    private DotNetObjectReference<IMapService> _mapServiceReference;
+    private DotNetObjectReference<IMapService>? _mapServiceReference;
     #region Initialize map + load data
     private bool isLoading = false;
     private bool hasLoaded = false;
+    private bool hasMorePins;
     private Guid? focusFindId;
     private Guid? focusUserId;
-    // private bool _mapInitialized;
+    private Guid _currentUserId;
+    private string _currentUsername = "(unknown)";
+    private string mapFilter = "AllUsers";
+    private IReadOnlyList<MapPin> pins = Array.Empty<MapPin>();
+    private UserFindsDataContainer? focusedFindDetail;
+    private MapSearch.MapSearchCriteria activeCriteria = new();
+    private GeoPolyRecord? activeLocation;
+    private Geometry? activeBoundary;
+    private CancellationTokenSource? viewportRequestCts;
+    private long viewportRequestVersion;
+
+    private static readonly JsonSerializerSettings MapJsonSettings = new()
+    {
+        ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
+    };
+
+    protected override void OnInitialized()
+    {
+        mapService.ViewportChanged += HandleViewportChanged;
+    }
 
     private static bool IsInsideBoundary(Geometry boundary, double latitude, double longitude)
     {
@@ -82,77 +108,19 @@
         }
 
     }
-    private async Task WaitForMapReady()
-    {
-        // ~2 seconds max, checks every 50ms
-        for (int i = 0; i < 40; i++)
-        {
-            var ready = await JS.InvokeAsync<bool>("isForagerMapReady");
-            if (ready) return;
-            await Task.Delay(50);
-        }
-    }
-
-    private bool TryGetLatLngForFind(Guid findId, List<UserFindsDataContainer> vms, out double lat, out double lng)
-    {
-        lat = 0;
-        lng = 0;
-
-        var find = vms
-            .SelectMany(vm => vm.finds)
-            .FirstOrDefault(f => f.findId == findId);
-
-        if (find?.findLocation == null)
-            return false;
-
-        lat = find.findLocation.latitude;
-        lng = find.findLocation.longitude;
-        return true;
-    }
-
-    private async Task FocusFindIfRequested(UserDataContainer userVm)
+    private async Task FocusFindIfRequested()
     {
         if (!focusFindId.HasValue)
             return;
 
-        // Try current dataset first
-        if (TryGetLatLngForFind(focusFindId.Value, mapService.CurrentViewModels, out var lat, out var lng))
+        var find = focusedFindDetail?.finds.FirstOrDefault(item => item.findId == focusFindId.Value);
+        if (find?.findLocation != null)
         {
-            await JS.InvokeVoidAsync("focusFindAfterDelay", lat, lng, 20);
-            focusFindId = null;
-            return;
-        }
-
-        // Not found => switch to AllUsers, rebuild markers, then focus
-        mapService.mapFilter = "AllUsers";
-
-        if (!mapService.AllViewModels.Any())
-            mapService.AllViewModels = await userFindService.GetUserFindsDCsAll();
-
-        mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
-        FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
-
-        var json = JsonConvert.SerializeObject(
-            mapService.CurrentViewModels,
-            new JsonSerializerSettings
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                Formatting = Formatting.Indented
-            });
-
-        await JS.InvokeVoidAsync(
-            "initializeMap",
-            json,
-            userVm.user.UsrId.ToString(),
-            mapService.mapFilter,
-            userVm.user.UserSecurity.UssUsername);
-
-        if (TryGetLatLngForFind(focusFindId.Value, mapService.CurrentViewModels, out lat, out lng))
-        {
-            await JS.InvokeVoidAsync("focusFindAfterDelay", lat, lng, 20);
+            await mapService.OnMarkerClicked(focusFindId.Value.ToString());
         }
 
         focusFindId = null;
+        focusedFindDetail = null;
     }
 
 
@@ -182,48 +150,30 @@
             isLoading = true;
             StateHasChanged();
 
+            _currentUserId = userVm.user.UsrId;
+            _currentUsername = userVm.user.UserSecurity?.UssUsername ?? "(unknown)";
             _mapServiceReference = DotNetObjectReference.Create(mapService);
 
-            mapService.userNamesKvp = await userFindService.GetCommentUserNames();
+            if (focusFindId.HasValue)
+                focusedFindDetail = await findQueries.GetFindDetailByIdAsync(focusFindId.Value);
 
-            // ✅ Guard: lists should never be null
-            mapService.AllViewModels ??= new();
-            mapService.CurrentViewModels ??= new();
-            mapService.MyViewModels ??= new();
+            var focusedLocation = focusedFindDetail?.finds.FirstOrDefault()?.findLocation;
 
-            var shouldLoadAllUsers =
-                focusUserId.HasValue && focusUserId.Value != userVm.user.UsrId;
-
-                mapService.mapFilter = "AllUsers";
-
-                if (!mapService.AllViewModels.Any())
-                    mapService.AllViewModels = await userFindService.GetUserFindsDCsAll();
-
-                mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
-
-                FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
-
-            var json = JsonConvert.SerializeObject(
-                mapService.CurrentViewModels ?? new(),
-                new JsonSerializerSettings
-                {
-                    ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                    Formatting = Formatting.Indented
-                });
-
-            // ✅ Guard username (don’t assume UserSecurity is loaded)
-            var username = userVm.user.UserSecurity?.UssUsername ?? "(unknown)";
+            mapFilter = "AllUsers";
 
             await JS.InvokeVoidAsync("setDotNetObjectReference", _mapServiceReference);
             await JS.InvokeVoidAsync(
                 "initializeMap",
-                json,
-                userVm.user.UsrId.ToString(),
-                mapService.mapFilter,
-                username
+                "[]",
+                _currentUserId.ToString(),
+                mapFilter,
+                _currentUsername,
+                focusedLocation?.latitude,
+                focusedLocation?.longitude
             );
 
-            await FocusFindIfRequested(userVm);
+            if (focusFindId.HasValue)
+                await FocusFindIfRequested();
         }
         catch (Exception ex)
         {
@@ -241,61 +191,6 @@
 
     #endregion
     #region Search / filters (called by MapSearch)
-    private async Task EnsureScopeLoaded(string scope, UserDataContainer userVm)
-    {
-        // Keep mapService.mapFilter in sync with UI
-        mapService.mapFilter = scope;
-
-        if (scope == "AllUsers")
-        {
-            if (!mapService.AllViewModels.Any())
-                mapService.AllViewModels = await userFindService.GetUserFindsDCsAll();
-
-            mapService.CurrentViewModels = VmUtilities.Copy(mapService.AllViewModels);
-            FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
-            return;
-        }
-
-        if (scope == "UserOnly")
-        {
-            if (!mapService.MyViewModels.Any())
-                mapService.MyViewModels = await userFindService.GetUserFindsDCsUser(userVm.user.UsrId);
-
-            mapService.CurrentViewModels = VmUtilities.Copy(mapService.MyViewModels);
-            return;
-        }
-
-        if (scope == "FriendUsers")
-        {
-            if (mapService.FriendCacheOwnerUserId != userVm.user.UsrId)
-                mapService.ClearFriendCache(userVm.user.UsrId);
-
-            if (!mapService.FriendViewModels.Any())
-            {
-                var friends = await friendService.GetFriends(userVm.user.UsrId);
-                var friendIds = friends.Select(f => f.UserId).ToList();
-                mapService.FriendViewModels = await userFindService.GetUserFindsDCs(friendIds);
-            }
-
-            mapService.CurrentViewModels = VmUtilities.Copy(mapService.FriendViewModels);
-            FilterAccessibility(mapService.CurrentViewModels, userVm.user.UsrId);
-            return;
-        }
-    }
-
-    private void FilterAccessibility(List<UserFindsDataContainer> currentViewModels, Guid userId)
-    {
-        foreach (var vm in currentViewModels)
-        {
-            if (vm.userId != userId)
-            {
-                vm.finds = vm.finds
-                    .Where(f => f.accessibility != "Private")
-                    .ToList(); // TODO: friends-only in future
-            }
-        }
-    }
-
     private static bool HasSubcategory(string? stored, string? selected)
     {
         if (string.IsNullOrWhiteSpace(selected)) return true;      // no filter
@@ -309,12 +204,11 @@
             .Any(s => s.Equals(sel, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static bool PassesCreateDateFilter(FindDC f, MapSearch.MapSearchCriteria c)
+    private static bool PassesCreateDateFilter(MapPin pin, MapSearch.MapSearchCriteria criteria)
     {
-        // TODO: replace "createdDate" with your actual create-date field
-        DateTime? created = f.findDate;
+        DateTime? created = pin.FindDate;
 
-        if (string.IsNullOrWhiteSpace(c.DateMode) || c.DateMode == "Any")
+        if (string.IsNullOrWhiteSpace(criteria.DateMode) || criteria.DateMode == "Any")
             return true;
 
         if (created == null)
@@ -322,144 +216,155 @@
 
         var d = created.Value.Date;
 
-        if (c.DateMode == "Exact")
+        if (criteria.DateMode == "Exact")
         {
-            if (c.DateExact == null) return true; // nothing picked -> treat as Any
-            return d == c.DateExact.Value.Date;
+            if (criteria.DateExact == null) return true;
+            return d == criteria.DateExact.Value.Date;
         }
 
-        if (c.DateMode == "Range")
+        if (criteria.DateMode == "Range")
         {
-            // inclusive range
-            if (c.DateFrom != null && d < c.DateFrom.Value.Date) return false;
-            if (c.DateTo != null && d > c.DateTo.Value.Date) return false;
+            if (criteria.DateFrom != null && d < criteria.DateFrom.Value.Date) return false;
+            if (criteria.DateTo != null && d > criteria.DateTo.Value.Date) return false;
             return true;
         }
 
-        if (c.DateMode == "Months")
+        if (criteria.DateMode == "Months")
         {
-            if (c.Months == null || c.Months.Count == 0) return true;
-            return c.Months.Contains(created.Value.Month);
+            if (criteria.Months == null || criteria.Months.Count == 0) return true;
+            return criteria.Months.Contains(created.Value.Month);
         }
 
         return true;
     }
 
 
-    private async Task HandleSearch(MapSearch.MapSearchCriteria criteria)
+    private Task HandleViewportChanged(double south, double west, double north, double east) =>
+        InvokeAsync(() => LoadViewportPinsAsync(new MapViewport(south, west, north, east)));
+
+    private async Task LoadViewportPinsAsync(MapViewport viewport)
     {
-        var userVm = await userService.GetUserViewModelById(session.SessionUser.UserId);
-        if (userVm?.user == null)
-            return;
+        viewportRequestCts?.Cancel();
+        viewportRequestCts?.Dispose();
+        viewportRequestCts = new CancellationTokenSource();
 
-        var settings = new JsonSerializerSettings
+        var cancellationToken = viewportRequestCts.Token;
+        var requestVersion = ++viewportRequestVersion;
+        isLoading = true;
+        StateHasChanged();
+
+        try
         {
-            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-            Formatting = Formatting.Indented
-        };
+            var page = await mapFindQueries.GetViewportPinsAsync(
+                new MapPinRequest(viewport, GetActiveScope()),
+                cancellationToken);
 
-        // 1 Start from baseline based on selected scope (All/My/Friends)
-        var scope = string.IsNullOrWhiteSpace(criteria.Scope) ? "AllUsers" : criteria.Scope;
-        await EnsureScopeLoaded(scope, userVm);
+            if (cancellationToken.IsCancellationRequested || requestVersion != viewportRequestVersion)
+                return;
 
-        // 2 Filter by user name
-        if (!string.IsNullOrWhiteSpace(criteria.UserSearchTerm))
-        {
-            mapService.CurrentViewModels = mapService.CurrentViewModels
-                .Where(vm => vm.userName.Contains(criteria.UserSearchTerm, StringComparison.OrdinalIgnoreCase))
-                .ToList();
+            hasMorePins = page.HasMore;
+            pins = ApplySearchFilters(page.Pins, activeCriteria).ToList();
+            var json = JsonConvert.SerializeObject(pins, MapJsonSettings);
+
+            await JS.InvokeVoidAsync(
+                "updateMapPins",
+                cancellationToken,
+                json,
+                _currentUserId.ToString(),
+                mapFilter,
+                _currentUsername);
+
+            hasLoaded = true;
         }
-
-        // 3 Location filter 
-
-        GeoPolyRecord? loc = null;
-
-        if (!string.IsNullOrWhiteSpace(criteria.LocationKind) &&
-            !string.IsNullOrWhiteSpace(criteria.LocationId))
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            loc = geoIndex.GetByKindAndId(
-                criteria.LocationKind,
-                criteria.LocationId);
-
-            if (loc != null)
+        }
+        finally
+        {
+            if (requestVersion == viewportRequestVersion)
             {
-                var geometryJson = loc.Feature
-                    .GetProperty("geometry")
-                    .GetRawText();
-
-                var reader = new GeoJsonReader();
-                var boundary = reader.Read<Geometry>(geometryJson);
-
-                foreach (var vm in mapService.CurrentViewModels)
-                {
-                    vm.finds = vm.finds
-                        .Where(f =>
-                        {
-                            if (f.findLocation == null)
-                                return false;
-
-                            var lat = f.findLocation.latitude;
-                            var lng = f.findLocation.longitude;
-
-                            // Fast bounding-box check
-                            if (lng < loc.West || lng > loc.East ||
-                                lat < loc.South || lat > loc.North)
-                                return false;
-
-                            // Check actual polygon boundaries
-                            return IsInsideBoundary(boundary, lat, lng);
-                        })
-                        .ToList();
-                }
+                isLoading = false;
+                StateHasChanged();
             }
         }
+    }
 
-        // 4 Category / Subcategory / Keyword filters
+    private MapFindScope GetActiveScope() => new(
+        activeCriteria.IncludeMyFinds,
+        activeCriteria.IncludeFriendsFinds);
+
+    private Task RefreshViewportPinsAsync() =>
+        JS.InvokeVoidAsync("requestViewportRefresh").AsTask();
+
+    private IEnumerable<MapPin> ApplySearchFilters(
+        IEnumerable<MapPin> source,
+        MapSearch.MapSearchCriteria criteria)
+    {
+        var results = source;
+
+        if (!string.IsNullOrWhiteSpace(criteria.UserSearchTerm))
+        {
+            results = results.Where(pin =>
+                pin.OwnerName.Contains(criteria.UserSearchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (activeLocation is not null && activeBoundary is not null)
+        {
+            results = results.Where(pin =>
+                pin.Longitude >= activeLocation.West && pin.Longitude <= activeLocation.East &&
+                pin.Latitude >= activeLocation.South && pin.Latitude <= activeLocation.North &&
+                IsInsideBoundary(activeBoundary, pin.Latitude, pin.Longitude));
+        }
+
         if (!string.IsNullOrWhiteSpace(criteria.SelectedSpeciesType) ||
             !string.IsNullOrWhiteSpace(criteria.SelectedUseCategory) ||
             !string.IsNullOrWhiteSpace(criteria.KeywordSearchTerm))
         {
-            foreach (var vm in mapService.CurrentViewModels)
-            {
-                vm.finds = vm.finds
-                    .Where(f =>
-                        (string.IsNullOrWhiteSpace(criteria.SelectedSpeciesType) ||
-                            (f.speciesType ?? "").Equals(criteria.SelectedSpeciesType, StringComparison.OrdinalIgnoreCase))
-                        && HasSubcategory(f.useCategory, criteria.SelectedUseCategory)
-                        && (string.IsNullOrWhiteSpace(criteria.KeywordSearchTerm) ||
-                            (f.findName ?? "").StartsWith(criteria.KeywordSearchTerm, StringComparison.OrdinalIgnoreCase))
-                    )
-                    .ToList();
-            }
+            results = results.Where(pin =>
+                (string.IsNullOrWhiteSpace(criteria.SelectedSpeciesType) ||
+                    string.Equals(pin.SpeciesType, criteria.SelectedSpeciesType, StringComparison.OrdinalIgnoreCase)) &&
+                HasSubcategory(pin.UseCategory, criteria.SelectedUseCategory) &&
+                (string.IsNullOrWhiteSpace(criteria.KeywordSearchTerm) ||
+                    (pin.Name ?? string.Empty).StartsWith(criteria.KeywordSearchTerm, StringComparison.OrdinalIgnoreCase)));
         }
 
-        //  4b Date Added / Create Date filter 
         if (!string.IsNullOrWhiteSpace(criteria.DateMode) && criteria.DateMode != "Any")
+            results = results.Where(pin => PassesCreateDateFilter(pin, criteria));
+
+        return results;
+    }
+
+    private async Task HandleSearch(MapSearch.MapSearchCriteria criteria)
+    {
+        activeCriteria = criteria;
+        mapFilter = criteria.IncludeMyFinds && !criteria.IncludeFriendsFinds
+            ? "UserOnly"
+            : criteria.IncludeFriendsFinds && !criteria.IncludeMyFinds
+                ? "FriendUsers"
+                : "AllUsers";
+        activeLocation = null;
+        activeBoundary = null;
+
+        if (!string.IsNullOrWhiteSpace(criteria.LocationKind) &&
+            !string.IsNullOrWhiteSpace(criteria.LocationId))
         {
-            foreach (var vm in mapService.CurrentViewModels)
+            activeLocation = geoIndex.GetByKindAndId(criteria.LocationKind, criteria.LocationId);
+            if (activeLocation is not null)
             {
-                vm.finds = vm.finds
-                    .Where(f => PassesCreateDateFilter(f, criteria)) // helper method
-                    .ToList();
+                var geometryJson = activeLocation.Feature.GetProperty("geometry").GetRawText();
+                activeBoundary = new GeoJsonReader().Read<Geometry>(geometryJson);
+                await JS.InvokeVoidAsync("clearSearchBounds");
+                await JS.InvokeVoidAsync("drawGeoBoundaryFromJson", activeLocation.Feature.GetRawText());
             }
         }
 
-        // 5 Push markers to JS
-        var json = JsonConvert.SerializeObject(mapService.CurrentViewModels, settings);
-        var username = userVm.user.UserSecurity?.UssUsername ?? "(unknown)";
-        await JS.InvokeVoidAsync("initializeMap", json, userVm.user.UsrId.ToString(), mapService.mapFilter, username);
-
-        // 6 Draw polygon boundary
-        if (loc != null)
-        {
-            await JS.InvokeVoidAsync("clearSearchBounds");
-            await JS.InvokeVoidAsync("drawGeoBoundaryFromJson", loc.Feature.GetRawText());
-        }
-        else
+        if (activeLocation is null)
         {
             await JS.InvokeVoidAsync("clearGeoBoundary");
             await JS.InvokeVoidAsync("clearSearchBounds");
         }
+
+        await JS.InvokeVoidAsync("requestViewportRefresh");
     }
 
 
@@ -467,6 +372,9 @@
 
     public void Dispose()
     {
+        mapService.ViewportChanged -= HandleViewportChanged;
+        viewportRequestCts?.Cancel();
+        viewportRequestCts?.Dispose();
         _mapServiceReference?.Dispose();
     }
 }

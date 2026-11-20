@@ -42,6 +42,10 @@ bld/
 ForagerSite/wwwroot/FindImageUploads/**
 ForagerSite/wwwroot/UserProfileImages/**
 
+# Local chat transcript
+SystemUpgradePhase1-Implementation-1and2.md
+MD_Files/SystemUpgrade-Phase1/**
+
 # Visual Studio 2017 auto generated files
 Generated\ Files/
 

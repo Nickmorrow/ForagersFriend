@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ForagerSite.Services.Interfaces;
+using ForagerSite.Features.Finds;
+using ForagerSite.Features.Map;
+using ForagerSite.Features.Media;
 
 namespace ForagerSite
 {
@@ -23,7 +26,6 @@ namespace ForagerSite
                 options.UseSqlServer(connectionString));
 
             builder.Services.AddAuthorizationCore();
-            builder.Services.AddControllers();
             builder.Services.AddRazorComponents().
                 AddInteractiveServerComponents()
                 .AddCircuitOptions(options =>
@@ -33,7 +35,12 @@ namespace ForagerSite
             builder.Services.AddSingleton<LocationIndexService>();
 
             builder.Services.AddScoped<IUserService, UserService>();
-            builder.Services.AddScoped<IUserFindService, UserFindService>();           
+            builder.Services.AddScoped<FindQueries>();
+            builder.Services.AddScoped<FindCommands>();
+            builder.Services.AddScoped<FindInteractions>();
+            builder.Services.AddScoped<MapFindQueries>();
+            builder.Services.AddScoped<IPhotoStorage, LocalPhotoStorage>();
+            builder.Services.AddScoped<PhotoService>();
             builder.Services.AddScoped<IMapService, MapService>();
             builder.Services.AddScoped<IFriendService, FriendService>();
             builder.Services.AddScoped<IUserSessionService, UserSessionService>();
@@ -69,10 +76,7 @@ namespace ForagerSite
             app.UseStaticFiles();
 
             app.UseRouting();
-            app.UseAuthentication();
-            app.UseAuthorization(); // Make sure this is included if you're using authorization            
-            app.MapControllers();
-           
+
             app.UseAntiforgery();
 
             app.MapRazorComponents<App>()

@@ -4,9 +4,32 @@ var markers = {};
 var tempMarker = null;
 var userMarker = null;
 var dotNetObjectReference = null;
+var viewportRefreshTimeout = null;
 
 window.getSelectedValues = (selectElement) => {
     return Array.from(selectElement.selectedOptions).map(o => o.value);
+};
+
+function reportViewport() {
+    if (!window.map || !window.dotNetObjectReference) return;
+
+    const bounds = window.map.getBounds();
+    window.dotNetObjectReference.invokeMethodAsync(
+        'OnViewportChanged',
+        bounds.getSouth(),
+        bounds.getWest(),
+        bounds.getNorth(),
+        bounds.getEast())
+        .catch(err => console.error("Error reporting map viewport:", err));
+}
+
+function scheduleViewportRefresh() {
+    clearTimeout(viewportRefreshTimeout);
+    viewportRefreshTimeout = setTimeout(reportViewport, 200);
+}
+
+window.requestViewportRefresh = function () {
+    scheduleViewportRefresh();
 };
 
 function onMapClick(e) {
@@ -71,8 +94,12 @@ window.focusFindAfterDelay = function (lat, lng, ms) {
     }, ms || 400);
 };
 
-window.initializeMap = function (json, currentUserId, mapFilter, userName) {
-    let userFindsDCs = JSON.parse(json);
+window.initializeMap = function (json, currentUserId, mapFilter, userName, focusLat, focusLng) {
+    let pins = JSON.parse(json);
+    const hasFocus = focusLat !== null && focusLat !== undefined &&
+        focusLng !== null && focusLng !== undefined &&
+        Number.isFinite(Number(focusLat)) && Number.isFinite(Number(focusLng));
+    const focusLocation = hasFocus ? [Number(focusLat), Number(focusLng)] : null;
 
     // Always get the current container
     const mapContainer = document.getElementById('map');
@@ -98,7 +125,11 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
     // If we still have a valid map, just update markers and bail
     if (window.map) {
         console.log('Map already initialized, updating markers.');
-        updateMarkers(userFindsDCs, currentUserId, mapFilter, userName);
+        updateMarkers(pins);
+        if (focusLocation) {
+            window.map.setView(focusLocation, 16, { animate: false });
+            scheduleViewportRefresh();
+        }
         return;
     }
 
@@ -112,10 +143,10 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
         [83.0, -30.0]   // Northeast corner (lat, lng)
     ];
 
-    function initMap(centerLatLng) {
+    function initMap(centerLatLng, zoom = 13, showLocationMarker = true) {
         window.map = L.map('map', {
             center: centerLatLng,
-            zoom: 13,
+            zoom: zoom,
             maxBounds: northAmericaBounds,      // Restrict panning to North America
             maxBoundsViscosity: 1.0             // Stickiness when reaching bounds
         });
@@ -126,14 +157,23 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
             maxZoom: 18
         }).addTo(window.map);
 
-        L.marker(centerLatLng)
-            .addTo(window.map)
-            .bindPopup("<b>Your Location</b>")
-            .openPopup();
+        if (showLocationMarker) {
+            L.marker(centerLatLng)
+                .addTo(window.map)
+                .bindPopup("<b>Your Location</b>")
+                .openPopup();
+        }
 
         window.map.on('click', onMapClick);
+        window.map.on('moveend', scheduleViewportRefresh);
 
-        updateMarkers(userFindsDCs, currentUserId, mapFilter, userName);
+        updateMarkers(pins);
+        scheduleViewportRefresh();
+    }
+
+    if (focusLocation) {
+        initMap(focusLocation, 16, false);
+        return;
     }
 
     // Try geolocation, fall back to default
@@ -157,6 +197,51 @@ window.initializeMap = function (json, currentUserId, mapFilter, userName) {
 
 window.setDotNetObjectReference = function (reference) {
     dotNetObjectReference = reference;
+};
+
+function escapeMapHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[character]);
+}
+
+window.updateMapPins = function (pinsJson, currentUserId, mapFilter, userName) {
+    if (!window.map) return;
+
+    const pins = typeof pinsJson === 'string' ? JSON.parse(pinsJson) : pinsJson;
+    Object.keys(markers).forEach(key => markers[key].marker.remove());
+    markers = {};
+
+    const templateHtml = document.getElementById('find-popup-template')?.innerHTML ?? '';
+
+    pins.forEach(pin => {
+        const lat = Number(pin.latitude);
+        const lng = Number(pin.longitude);
+        if (!pin.findId || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+        const marker = L.marker([lat, lng]).addTo(window.map);
+        const imageHtml = pin.previewImageUrl
+            ? `<img src="${escapeMapHtml(pin.previewImageUrl)}" alt="${escapeMapHtml(pin.name)}" style="width: 100px; height: 100px; margin-bottom: 5px;">`
+            : '';
+        const popupContent = templateHtml
+            .replace('{findName}', escapeMapHtml(pin.name))
+            .replace('{Images}', imageHtml);
+
+        marker.bindPopup(popupContent);
+        markers[pin.findId] = { marker, lat, lng, originalPopupContent: popupContent };
+
+        marker.on('click', function () {
+            if (window.dotNetObjectReference) {
+                window.dotNetObjectReference
+                    .invokeMethodAsync('OnMarkerClicked', pin.findId)
+                    .catch(err => console.error('Error in OnMarkerClicked:', err));
+            }
+        });
+    });
 };
 
 window.updateMarkers = function (userFindsDCs, currentUserId, mapFilter, userName) {

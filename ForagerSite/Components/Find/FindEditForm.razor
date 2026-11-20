@@ -6,9 +6,6 @@
 @using ForagerSite.Utilities
 @using ForagerSite.Components.Utility
 @using DataAccess.Models
-@inject IUserSessionService session
-@inject IConfiguration config
-@inject IWebHostEnvironment env
 
 <EditForm Model="editModel" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
@@ -242,11 +239,10 @@
                 HarvestMethod = Model.HarvestMethod,
                 TastesLike = Model.TastesLike,
                 Description = Model.Description,
-                UserId = Model.UserId,
 
                 ExistingImageUrls = new List<string>(Model.ExistingImageUrls ?? new()),
                 DeletedImageUrls = new List<string>(),
-                UploadedImageUrls = new List<string>()
+                ImageFilesToAdd = new List<IBrowserFile>()
             };
 
             HydrateSelectedFromModel(); // ✅ ADD THIS
@@ -362,18 +358,17 @@
     {
         uploadErrors.Clear();
 
-        var userName = session.SessionUser.Username;
-
-        var newUrls = await PhotoUploadHelper.UploadFindImages(
-            newFiles, userName, config, env, uploadErrors);
-
-        if (uploadErrors.Any())
-            return;
-
         editModel.AccessLevel = string.IsNullOrEmpty(editModel.AccessLevel) ? "Public" : editModel.AccessLevel;
-        editModel.UploadedImageUrls = newUrls;
+        editModel.ImageFilesToAdd = newFiles.ToList();
 
-        await OnFindUpdated.InvokeAsync(editModel);
+        try
+        {
+            await OnFindUpdated.InvokeAsync(editModel);
+        }
+        catch (Exception exception)
+        {
+            uploadErrors.Add($"Error saving find: {exception.Message}");
+        }
     }
 
     public class FindEditTemp
@@ -391,11 +386,9 @@
         public string? Description { get; set; }
         public string AccessLevel { get; set; } 
 
-        public Guid UserId { get; set; }
-
         public List<string> ExistingImageUrls { get; set; } = new();
         public List<string> DeletedImageUrls { get; set; } = new();
-        public List<string> UploadedImageUrls { get; set; } = new();
+        public List<IBrowserFile> ImageFilesToAdd { get; set; } = new();
     }
 }
 

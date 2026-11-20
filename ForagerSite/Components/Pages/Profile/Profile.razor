@@ -5,14 +5,13 @@
 @using DataAccess.Models
 @using ForagerSite.Components.Profile
 @using ForagerSite.DataContainer
+@using ForagerSite.Features.Finds
 @using ForagerSite.Services
 @using ForagerSite.Services.Interfaces
-@using Utilities
 @rendermode InteractiveServer
 @inject IUserService userService
 @inject IUserSessionService session
-@inject IUserFindService userFindService
-@inject IMapService mapService
+@inject FindQueries findQueries
 @inject IFriendService friendService
 @inject NavigationManager navigationManager
 
@@ -89,9 +88,10 @@ else
                 }
             }
         </div>
-        <ProfileFindsList ViewModels="mapService.CurrentViewModels"
+        <ProfileFindsList ViewModels="profileFinds"
                           IsLoading="isLoading"
-                          hasLoaded="hasLoaded" />
+                          hasLoaded="hasLoaded"
+                          OnFindsChanged="ReloadProfileFinds" />
 
         <FriendsList ViewingUserId="viewingUserId" />
 
@@ -108,7 +108,7 @@ else
 
     private bool IsMyProfile => viewingUserId == session.SessionUser.UserId;
     private UserDataContainer userVm { get; set; } = new();
-    private UserFindsDataContainer ufdc { get; set; } = new();
+    private IReadOnlyList<ProfileFindSummary> profileFinds = Array.Empty<ProfileFindSummary>();
     private bool Pf_loaded;
     private bool isLoading = false;
     private bool hasLoaded = false;
@@ -167,24 +167,12 @@ else
         {
             userVm = await userService.GetUserViewModelById(userIdToLoad);
 
-            mapService.userNamesKvp = await userFindService.GetCommentUserNames();
-            mapService.CurrentViewModels = await userFindService.GetUserFindsDCsUser(userIdToLoad);
+            profileFinds = await findQueries.GetProfileFindSummariesAsync(userIdToLoad);
 
             // recompute IsMyProfile now that viewingUserId is known
             if (session.SessionUser is not null)
                 friendStatus = await friendService.GetStatus(session.SessionUser.UserId, userIdToLoad);
 
-            if (!IsMyProfile && mapService.CurrentViewModels != null)
-            {
-                foreach (var vm in mapService.CurrentViewModels)
-                {
-                    vm.finds = vm.finds
-                        .Where(f => f.accessibility != "Private")
-                        .ToList();
-                }
-            }
-
-            mapService.MyViewModels = VmUtilities.Copy(mapService.CurrentViewModels);
         }
         finally
         {
@@ -195,6 +183,10 @@ else
         }
     }
 
+    private async Task ReloadProfileFinds()
+    {
+        profileFinds = await findQueries.GetProfileFindSummariesAsync(viewingUserId);
+    }
     protected override void OnParametersSet()
     {
         viewingUserId = UserId ?? Guid.Empty;

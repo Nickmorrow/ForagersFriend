@@ -16,8 +16,6 @@ namespace ForagerSite.Services.Interfaces
         Task<List<string>> GetAllUserNames();
         Task UpdateUser(User user);
         Task<string> GetUserProfilePic(User user);
-        Task UploadProfilePicUrl(User user, string fileUrl);
-        Task DeleteProfilePicUrl(User user);
         Task<UserDataContainer> GetUserViewModelById(Guid userId);
     }
 }

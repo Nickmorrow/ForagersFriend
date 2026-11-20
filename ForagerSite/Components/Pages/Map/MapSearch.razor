@@ -68,17 +68,12 @@
                     <label class="d-block">Scope</label>
 
                     <label style="display:flex; gap:8px; align-items:center;">
-                        <input type="checkbox" checked="@isAllFinds" @onchange="() => SetScope(ScopeSelection.AllUsers)" />
-                        All Finds
-                    </label>
-
-                    <label style="display:flex; gap:8px; align-items:center;">
-                        <input type="checkbox" checked="@isMyFinds" @onchange="() => SetScope(ScopeSelection.UserOnly)" />
+                        <input type="checkbox" @bind="includeMyFinds" />
                         My Finds
                     </label>
 
                     <label style="display:flex; gap:8px; align-items:center;">
-                        <input type="checkbox" checked="@isFriendsFinds" @onchange="() => SetScope(ScopeSelection.FriendUsers)" />
+                        <input type="checkbox" @bind="includeFriendsFinds" />
                         Friends' Finds
                     </label>
                 </div>
@@ -238,13 +233,6 @@
 
     private List<MonthOption> monthOptions = new();
 
-    private enum ScopeSelection
-    {
-        AllUsers,
-        UserOnly,
-        FriendUsers
-    }
-
     private enum DateMode
     {
         Any,
@@ -283,8 +271,8 @@
         {
             int count = 0;
 
-            // Scope: count only if NOT default (AllUsers)
-            if (scope != ScopeSelection.AllUsers) count++;
+            if (includeMyFinds) count++;
+            if (includeFriendsFinds) count++;
 
             // Category/subcategory
             if (!string.IsNullOrWhiteSpace(selectedSpeciesType)) count++;
@@ -362,7 +350,8 @@
     }
 
 
-    private ScopeSelection scope = ScopeSelection.AllUsers;
+    private bool includeMyFinds;
+    private bool includeFriendsFinds;
 
     // UI state
     private bool areFiltersVisible = false;
@@ -371,10 +360,6 @@
     private string selectedUseCategory = string.Empty;
     private string userSearchTerm = string.Empty;
     private List<string> filteredUserResults = new();
-
-    private bool isAllFinds => scope == ScopeSelection.AllUsers;
-    private bool isMyFinds => scope == ScopeSelection.UserOnly;
-    private bool isFriendsFinds => scope == ScopeSelection.FriendUsers;
 
     private string locationTerm = "";
     private List<ForagerSite.DataContainer.GeoPolyRecord> locationSuggestions = new();
@@ -396,14 +381,6 @@
         selectedLocation = s;
         locationTerm = s.Display;
         locationSuggestions.Clear();
-    }
-
-    private void SetScope(ScopeSelection selected)
-    {
-        // Mutually exclusive checkboxes: clicking any option selects it,
-        // and one option is always selected.
-        scope = selected;
-        StateHasChanged();
     }
 
     private async Task UserSearchInputChanged(ChangeEventArgs e)
@@ -433,7 +410,8 @@
     {
         var criteria = new MapSearchCriteria
         {
-            Scope = scope.ToString(),
+            IncludeMyFinds = includeMyFinds,
+            IncludeFriendsFinds = includeFriendsFinds,
             SelectedSpeciesType = selectedSpeciesType,
             SelectedUseCategory = selectedUseCategory,
             UserSearchTerm = userSearchTerm,
@@ -479,7 +457,8 @@
 
     public class MapSearchCriteria
     {
-        public string Scope { get; set; } = ScopeSelection.AllUsers.ToString();
+        public bool IncludeMyFinds { get; set; }
+        public bool IncludeFriendsFinds { get; set; }
         public string SelectedSpeciesType { get; set; } = string.Empty;
         public string SelectedUseCategory { get; set; } = string.Empty;
         public string UserSearchTerm { get; set; } = string.Empty;

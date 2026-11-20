@@ -1,12 +1,11 @@
 ﻿@using DataAccess.Models
 @using ForagerSite.DataContainer
-@using ForagerSite.Services
+@using ForagerSite.Features.Finds
 @using ForagerSite.Services.Interfaces
 @using Microsoft.AspNetCore.Components
 @namespace ForagerSite.Components.Find
 
-@inject IUserFindService userFindService
-@inject IMapService mapService
+@inject FindInteractions findInteractions
 @inject IUserSessionService session
 @inject NavigationManager Nav
 
@@ -73,9 +72,9 @@
                                         <Vote 
                                               find=null
                                               comment="xref.findsComment"
-                                              vmUserId="Find.findUserId"
                                               findOrCommentId="xref.findsComment.comId"
-                                              voteType="comment" />
+                                              voteType="comment"
+                                              OnChanged="OnChanged" />
                                         @if (CanDeleteComment(xref.comxUserId))
                                         {
                                             <div>
@@ -142,9 +141,9 @@
                                                                         <Vote 
                                                                               find=null
                                                                               comment="reply.findsComment"
-                                                                              vmUserId="Find.findUserId"
                                                                               findOrCommentId="reply.findsComment.comId"
-                                                                              voteType="comment" />
+                                                                              voteType="comment"
+                                                                              OnChanged="OnChanged" />
                                                                         @if (CanDeleteComment(reply.comxUserId))
                                                                         {
                                                                             <div>
@@ -186,9 +185,9 @@
 
 @code {
     [Parameter] public FindDC Find { get; set; }
-    [Parameter] public Guid VmId { get; set; }
     [Parameter] public Guid CurrentUserId { get; set; }
     [Parameter] public Dictionary<Guid, string> UserNames { get; set; }
+    [Parameter] public EventCallback<Guid> OnChanged { get; set; }
 
     private string userComment = string.Empty;
     private string userCommentReply = string.Empty;
@@ -246,28 +245,9 @@
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        var userId = session.SessionUser.UserId;
-
-        FindsCommentXrefDC xref;
-
-        xref = await userFindService.AddComment(text, Find.findId, userId);
-
-        var newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == VmId);
-        if (newViewModel == null)
-            return;
-
-        var find = newViewModel.finds.FirstOrDefault(f => f.findId == Find.findId);
-        if (find == null)
-            return;
-
-        find.findsCommentXrefs.Add(xref);
-        find.findsCommentXrefs = find.findsCommentXrefs
-            .OrderBy(c => c.findsComment.commentDate)
-            .ToList();
-
-        mapService.UpdateViewModels(VmId, newViewModel);
-
+        var findId = await findInteractions.AddCommentAsync(text, Find.findId);
         userComment = string.Empty;
+        await OnChanged.InvokeAsync(findId);
     }
     
     
@@ -277,59 +257,15 @@
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        var userId = session.SessionUser.UserId;
-
-        FindsCommentXrefDC xref;
-        xref = await userFindService.AddComment(text, Find.findId, userId, parentCommentId);
-
-        var newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == VmId);
-        if (newViewModel == null)
-            return;
-
-        var find = newViewModel.finds.FirstOrDefault(f => f.findId == Find.findId);
-        if (find == null)
-            return;
-
-        find.findsCommentXrefs.Add(xref);
-        find.findsCommentXrefs = find.findsCommentXrefs
-            .OrderBy(c => c.findsComment.commentDate)
-            .ToList();
-
-        mapService.UpdateViewModels(VmId, newViewModel);
-
+        var findId = await findInteractions.AddCommentAsync(text, Find.findId, parentCommentId);
         userCommentReply = string.Empty;
+        await OnChanged.InvokeAsync(findId);
     }
 
     private async Task DeleteComment(Guid xrefId)
     {
-        await userFindService.DeleteComment(xrefId);
-
-        var newViewModel = mapService.CurrentViewModels.FirstOrDefault(vm => vm.userId == VmId);
-        if (newViewModel == null)
-            return;
-
-        var find = newViewModel.finds.FirstOrDefault(f => f.findId == Find.findId);
-        if (find == null)
-            return;
-
-        var deletedCommentXref = find.findsCommentXrefs
-            .FirstOrDefault(x => x.comXId == xrefId);
-
-        if (deletedCommentXref != null)
-        {
-            var repliesToDelete = find.findsCommentXrefs
-                .Where(x => x.findsComment.parentCommentId == deletedCommentXref.findsComment.comId)
-                .ToList();
-
-            foreach (var reply in repliesToDelete)
-            {
-                find.findsCommentXrefs.Remove(reply);
-            }
-
-            find.findsCommentXrefs.Remove(deletedCommentXref);
-        }
-
-        mapService.UpdateViewModels(VmId, newViewModel);
+        var findId = await findInteractions.DeleteCommentAsync(xrefId);
+        await OnChanged.InvokeAsync(findId);
     }
     #endregion
     private void GoToProfile(Guid userId)
