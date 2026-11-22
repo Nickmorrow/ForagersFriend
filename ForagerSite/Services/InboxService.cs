@@ -195,7 +195,7 @@ public class InboxService : IInboxService
 
         var messages =
             await (from m in ctx.UserMessages.AsNoTracking()
-                   join u in ctx.Users.AsNoTracking() on m.UsmSenderId equals u.UsrId
+                   join u in ctx.Profiles.AsNoTracking() on m.UsmSenderId equals u.UsrId
                    where m.UsmThreadId == threadId
                    orderby m.UsmSendDate
                    select new MessageItemDc
@@ -248,16 +248,16 @@ public class InboxService : IInboxService
         // Search by username OR display name.
         // IMPORTANT: UserId must be Users.UsrId
         var results =
-            await (from us in ctx.UserSecurities.AsNoTracking()
-                   join u in ctx.Users.AsNoTracking() on us.UssUsrId equals u.UsrId
-                   where u.UsrId != currentUserId
-                   where us.UssUsername.Contains(term) || u.UsrName.Contains(term)
-                   orderby u.UsrName
+            await (from account in ctx.Users.AsNoTracking()
+                   join profile in ctx.Profiles.AsNoTracking() on account.Id equals profile.UsrId
+                   where profile.UsrId != currentUserId && account.UserName != null
+                   where account.UserName.Contains(term) || profile.UsrName!.Contains(term)
+                   orderby profile.UsrName
                    select new UserPickItemDc
                    {
-                       UserId = u.UsrId,          // ✅ this is what fixes your FK error
-                       DisplayName = u.UsrName,   // or whatever your display field is
-                       Username = us.UssUsername
+                       UserId = profile.UsrId,
+                       DisplayName = profile.UsrName,
+                       Username = account.UserName!
                    })
                   .Take(take)
                   .ToListAsync();

@@ -1,6 +1,7 @@
 using ForagerSite.Services;
 using ForagerSite.Components;
 using DataAccess.Data;
+using DataAccess.Models;
 using ForagerSite.Services;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -24,6 +25,10 @@ namespace ForagerSite
 
             builder.Services.AddDbContextFactory<ForagerDbContext>((DbContextOptionsBuilder options) =>
                 options.UseSqlServer(connectionString));
+
+            builder.Services.AddIdentityCore<ForagerAccount>(options =>
+                options.User.RequireUniqueEmail = true)
+                .AddEntityFrameworkStores<ForagerDbContext>();
 
             builder.Services.AddAuthorizationCore();
             builder.Services.AddRazorComponents().

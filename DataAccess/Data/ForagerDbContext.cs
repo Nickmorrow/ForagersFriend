@@ -1,11 +1,12 @@
 ﻿using DataAccess.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace DataAccess.Data
 {
-    public class ForagerDbContext : DbContext
+    public class ForagerDbContext : IdentityUserContext<ForagerAccount, Guid>
     {
-        public DbSet<User> Users { get; set; }
+        public DbSet<User> Profiles { get; set; }
         public DbSet<UserSecurity> UserSecurities { get; set; }
         public DbSet<UserMessage> UserMessages { get; set; } = default!;
         public DbSet<UserThreadState> UserThreadStates { get; set; } = default!;
@@ -35,6 +36,18 @@ namespace DataAccess.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<User>().ToTable("Users");
+            modelBuilder.Entity<ForagerAccount>(account =>
+            {
+                account.HasOne(identityAccount => identityAccount.Profile)
+                    .WithOne(profile => profile.Account)
+                    .HasForeignKey<User>(profile => profile.UsrId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                account.HasIndex(identityAccount => identityAccount.NormalizedEmail)
+                    .IsUnique()
+                    .HasFilter("[NormalizedEmail] IS NOT NULL")
+                    .HasDatabaseName("EmailIndex");
+            });
             modelBuilder.Entity<UserSecurity>().ToTable("UserSecurity");
             modelBuilder.Entity<UserMessage>().ToTable("UserMessages");
             modelBuilder.Entity<UserMessageThread>().ToTable("UserMessageThreads");

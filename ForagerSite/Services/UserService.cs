@@ -1,13 +1,9 @@
 ﻿using DataAccess.Data;
 using DataAccess.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.JSInterop;
-using System;
-using static System.Net.Mime.MediaTypeNames;
 using ForagerSite.DataContainer;
 using ForagerSite.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 
 namespace ForagerSite.Services
@@ -15,89 +11,103 @@ namespace ForagerSite.Services
     public class UserService : IUserService
     {
         private IDbContextFactory<ForagerDbContext> _dbContextFactory;
+        private readonly ILookupNormalizer _lookupNormalizer;
 
-        public UserService(IDbContextFactory<ForagerDbContext> dbContextFactory)
+        public UserService(
+            IDbContextFactory<ForagerDbContext> dbContextFactory,
+            ILookupNormalizer lookupNormalizer)
         {
             _dbContextFactory = dbContextFactory;
+            _lookupNormalizer = lookupNormalizer;
         }  
-        public async Task<UserDataContainer> GetUserViewModelById(Guid userId)
+        public async Task<UserProfileDto> GetUserViewModelById(Guid userId)
         {
-            using var context = _dbContextFactory.CreateDbContext();
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
 
-            var userSecurity = await context.UserSecurities
-                .Include(us => us.User)
-                .FirstOrDefaultAsync(us => us.UssUsrId == userId);
-
-            if (userSecurity is null)
-                return new UserDataContainer();
-
-            return new UserDataContainer
-            {
-                user = userSecurity.User,
-                userSecurity = userSecurity
-            };
+            return await context.Profiles
+                .AsNoTracking()
+                .Where(profile => profile.UsrId == userId)
+                .Select(profile => new UserProfileDto
+                {
+                    UsrId = profile.UsrId,
+                    Username = profile.Account.UserName ?? string.Empty,
+                    UsrName = profile.UsrName,
+                    UsrBio = profile.UsrBio,
+                    UsrFindsNum = profile.UsrFindsNum,
+                    UsrExpScore = profile.UsrExpScore,
+                    UsrJoinedDate = profile.UsrJoinedDate,
+                    UsrCountry = profile.UsrCountry,
+                    UsrStateorProvince = profile.UsrStateorProvince,
+                    UsrZipCode = profile.UsrZipCode
+                })
+                .FirstOrDefaultAsync() ?? new UserProfileDto();
         }
 
         public async Task<bool> UsernameExists(string username)
         {
-            using (var context = _dbContextFactory.CreateDbContext())
-            {
-                return await context.UserSecurities.AnyAsync(us => us.UssUsername == username);
-            }
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            var normalizedUsername = _lookupNormalizer.NormalizeName(username.Trim());
+            return await context.Users.AnyAsync(account => account.NormalizedUserName == normalizedUsername);
         }      
-        public async Task<bool> EmailExists(string email, User user = null)
+        public async Task<bool> EmailExists(string email)
         {
-            using (var context = _dbContextFactory.CreateDbContext())
-            {
-                var query = context.Users.AsQueryable();
-
-                if (user != null)
-                {
-                    query = query.Where(u => u.UsrId != user.UsrId);
-                }
-
-                return await query.AnyAsync(u => u.UsrEmail == email);
-            }
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            var normalizedEmail = _lookupNormalizer.NormalizeEmail(email.Trim());
+            return await context.Users.AnyAsync(account => account.NormalizedEmail == normalizedEmail);
         }           
-        public void UpdateUserSecurity(UserSecurity userSecurity)
+        public void UpdateLastLogin(Guid userId)
         {
             using (var context = _dbContextFactory.CreateDbContext())
             {
-                context.UserSecurities.Update(userSecurity);
+                var userSecurity = context.UserSecurities.FirstOrDefault(us => us.UssUsrId == userId);
+                if (userSecurity is null)
+                    return;
+
+                userSecurity.UssLastLoginDate = DateTime.UtcNow;
                 context.SaveChanges();
             }
         }
-        public void AddUser(User user, UserSecurity userSecurity)
+        public void AddUser(RegistrationInputModel input)
         {
             using (var context = _dbContextFactory.CreateDbContext())
             {
-                context.Add<User>(user);
-                context.Add<UserSecurity>(userSecurity);
+                var user = new User
+                {
+                    UsrId = Guid.NewGuid(),
+                    UsrName = input.Name.Trim(),
+                    UsrEmail = input.Email.Trim(),
+                    UsrCountry = input.Country,
+                    UsrStateorProvince = input.StateOrProvince,
+                    UsrJoinedDate = DateTime.UtcNow
+                };
+                var userSecurity = new UserSecurity
+                {
+                    UssId = Guid.NewGuid(),
+                    UssUsrId = user.UsrId,
+                    UssUsername = input.Username.Trim(),
+                    UssPassword = input.Password,
+                    User = user
+                };
+
+                context.Profiles.Add(user);
+                context.UserSecurities.Add(userSecurity);
                 context.SaveChanges();
             }
-        }
-        public async Task<User> GetUser(Guid userId)
-        {
-            using var context = _dbContextFactory.CreateDbContext();
-            return await context.Users.FirstOrDefaultAsync(u => u.UsrId == userId);               
-        }
-        public async Task<List<User>> GetAllUsers()
-        {
-            using var context = _dbContextFactory.CreateDbContext();
-            return await context.Users.ToListAsync();
         }
         public async Task<List<string>> GetAllUserNames()
         {
-            using var context = _dbContextFactory.CreateDbContext();          
-            var userSecurities = await context.UserSecurities.ToListAsync();
-            var userNames = userSecurities.Select(us => us.UssUsername).ToList();
-            return userNames;
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            return await context.Users
+                .AsNoTracking()
+                .Where(account => account.UserName != null)
+                .Select(account => account.UserName!)
+                .ToListAsync();
         }
 
-        public async Task UpdateUser(User user)
+        public async Task UpdateUser(UserProfileDto user)
         {
-            using var context = _dbContextFactory.CreateDbContext(); 
-            var existingUser = await context.Users.FindAsync(user.UsrId);
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            var existingUser = await context.Profiles.FindAsync(user.UsrId);
 
             if (existingUser != null)
             {
@@ -106,9 +116,8 @@ namespace ForagerSite.Services
                 existingUser.UsrCountry = user.UsrCountry; 
                 existingUser.UsrStateorProvince = user.UsrStateorProvince; 
                 existingUser.UsrZipCode = user.UsrZipCode; 
-                existingUser.UsrEmail = user.UsrEmail;
 
-                context.Users.Update(existingUser); 
+                context.Profiles.Update(existingUser); 
                 await context.SaveChangesAsync();
             }
             else 
@@ -116,11 +125,13 @@ namespace ForagerSite.Services
                 throw new Exception("User not found"); 
             }
         }
-        public async Task<string> GetUserProfilePic(User user)
+        public async Task<string> GetUserProfilePic(Guid userId)
         {
-            string url;
-            using var context = _dbContextFactory.CreateDbContext();
-            var image = (context.UserImages.Where(ui => ui.UsiUsrId == user.UsrId && ui.UsiImageData.Contains("UserProfileImages") &&  ui.UsiUsfId == null).FirstOrDefault());
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+            var image = await context.UserImages
+                .AsNoTracking()
+                .Where(ui => ui.UsiUsrId == userId && ui.UsiImageData.Contains("UserProfileImages") && ui.UsiUsfId == null)
+                .FirstOrDefaultAsync();
 
             return image?.UsiImageData ?? string.Empty;
         }

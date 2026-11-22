@@ -1,6 +1,5 @@
 ﻿using DataAccess.Data;
 using ForagerSite.DataContainer;
-using ForagerSite.Services;
 using ForagerSite.Services.Interfaces;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +21,7 @@ public class UserSessionService : IUserSessionService
         _dbContextFactory = dbContextFactory;
     }       
 
-    public UserDataContainer AuthenticateUser(string username, string password)
+    public SessionUserState? AuthenticateUser(string username, string password)
     {
         using (var context = _dbContextFactory.CreateDbContext())
         {
@@ -32,10 +31,12 @@ public class UserSessionService : IUserSessionService
 
             if (userSecurity != null)
             {
-                return new UserDataContainer
+                return new SessionUserState
                 {
-                    user = userSecurity.User,
-                    userSecurity = userSecurity
+                    IsAuthenticated = true,
+                    UserId = userSecurity.User.UsrId,
+                    Username = userSecurity.UssUsername,
+                    DisplayName = userSecurity.User.UsrName ?? string.Empty
                 };
             }
             return null;
@@ -86,11 +87,11 @@ public class UserSessionService : IUserSessionService
     }
 
 
-    public async Task SetUserState(bool isAuthenticated, UserDataContainer? vm)
+    public async Task SetUserState(bool isAuthenticated, SessionUserState? state)
     {
         IsAuthenticated = isAuthenticated;
 
-        if (!isAuthenticated || vm?.user == null || vm.userSecurity == null)
+        if (!isAuthenticated || state is null || state.UserId == Guid.Empty)
         {
             SessionUser = null;
             await _session.DeleteAsync("SessionUser");
@@ -101,9 +102,9 @@ public class UserSessionService : IUserSessionService
         SessionUser = new SessionUserState
         {
             IsAuthenticated = true,
-            UserId = vm.user.UsrId,
-            Username = vm.userSecurity.UssUsername,
-            DisplayName = vm.user.UsrName ?? ""
+            UserId = state.UserId,
+            Username = state.Username,
+            DisplayName = state.DisplayName
         };
 
         await _session.SetAsync("SessionUser", JsonConvert.SerializeObject(SessionUser));

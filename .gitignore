@@ -371,3 +371,4 @@ MigrationBackup/
 FodyWeavers.xsd
 
 /ForagerSite/ForagerSite.csproj
+/MD_Files/SecurityUpgrade-Phase1

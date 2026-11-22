@@ -265,13 +265,13 @@ namespace ForagerSite.Services
                 return new();
 
             // Fetch usernames
-            var users = await ctx.Users
+            var users = await ctx.Profiles
                 .AsNoTracking()
                 .Where(u => friendIds.Contains(u.UsrId))
                 .Select(u => new
                 {
                     u.UsrId,
-                    UserName = u.UserSecurity.UssUsername
+                    UserName = u.Account.UserName
                 })
                 .ToListAsync();
 

@@ -307,7 +307,7 @@ public sealed class FindCommands
             .Where(find => find.UsfUsrId == userId)
             .Select(find => find.UsfAccuracyScore ?? 0)
             .ToListAsync(cancellationToken);
-        var user = await context.Users.FirstOrDefaultAsync(user => user.UsrId == userId, cancellationToken);
+        var user = await context.Profiles.FirstOrDefaultAsync(user => user.UsrId == userId, cancellationToken);
         if (user is not null)
             user.UsrExpScore = scores.Sum() * scores.Count;
     }

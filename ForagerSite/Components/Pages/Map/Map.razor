@@ -141,7 +141,7 @@
             }
 
             var userVm = await userService.GetUserViewModelById(sessionUserId.Value);
-            if (userVm?.user == null)
+            if (userVm.UsrId == Guid.Empty)
             {
                 Console.WriteLine("Map: userVm or userVm.user was null.");
                 return;
@@ -150,8 +150,8 @@
             isLoading = true;
             StateHasChanged();
 
-            _currentUserId = userVm.user.UsrId;
-            _currentUsername = userVm.user.UserSecurity?.UssUsername ?? "(unknown)";
+            _currentUserId = userVm.UsrId;
+            _currentUsername = userVm.Username;
             _mapServiceReference = DotNetObjectReference.Create(mapService);
 
             if (focusFindId.HasValue)
