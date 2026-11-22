@@ -12,13 +12,16 @@ namespace ForagerSite.Services
     {
         private IDbContextFactory<ForagerDbContext> _dbContextFactory;
         private readonly ILookupNormalizer _lookupNormalizer;
+        private readonly ICurrentUserService _currentUser;
 
         public UserService(
             IDbContextFactory<ForagerDbContext> dbContextFactory,
-            ILookupNormalizer lookupNormalizer)
+            ILookupNormalizer lookupNormalizer,
+            ICurrentUserService currentUser)
         {
             _dbContextFactory = dbContextFactory;
             _lookupNormalizer = lookupNormalizer;
+            _currentUser = currentUser;
         }  
         public async Task<UserProfileDto> GetUserViewModelById(Guid userId)
         {
@@ -55,45 +58,6 @@ namespace ForagerSite.Services
             var normalizedEmail = _lookupNormalizer.NormalizeEmail(email.Trim());
             return await context.Users.AnyAsync(account => account.NormalizedEmail == normalizedEmail);
         }           
-        public void UpdateLastLogin(Guid userId)
-        {
-            using (var context = _dbContextFactory.CreateDbContext())
-            {
-                var userSecurity = context.UserSecurities.FirstOrDefault(us => us.UssUsrId == userId);
-                if (userSecurity is null)
-                    return;
-
-                userSecurity.UssLastLoginDate = DateTime.UtcNow;
-                context.SaveChanges();
-            }
-        }
-        public void AddUser(RegistrationInputModel input)
-        {
-            using (var context = _dbContextFactory.CreateDbContext())
-            {
-                var user = new User
-                {
-                    UsrId = Guid.NewGuid(),
-                    UsrName = input.Name.Trim(),
-                    UsrEmail = input.Email.Trim(),
-                    UsrCountry = input.Country,
-                    UsrStateorProvince = input.StateOrProvince,
-                    UsrJoinedDate = DateTime.UtcNow
-                };
-                var userSecurity = new UserSecurity
-                {
-                    UssId = Guid.NewGuid(),
-                    UssUsrId = user.UsrId,
-                    UssUsername = input.Username.Trim(),
-                    UssPassword = input.Password,
-                    User = user
-                };
-
-                context.Profiles.Add(user);
-                context.UserSecurities.Add(userSecurity);
-                context.SaveChanges();
-            }
-        }
         public async Task<List<string>> GetAllUserNames()
         {
             await using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -106,8 +70,12 @@ namespace ForagerSite.Services
 
         public async Task UpdateUser(UserProfileDto user)
         {
+            var currentUserId = await _currentUser.GetRequiredUserIdAsync();
+            if (user.UsrId != currentUserId)
+                throw new UnauthorizedAccessException("You can only update your own profile.");
+
             await using var context = await _dbContextFactory.CreateDbContextAsync();
-            var existingUser = await context.Profiles.FindAsync(user.UsrId);
+            var existingUser = await context.Profiles.FindAsync(currentUserId);
 
             if (existingUser != null)
             {

@@ -20,18 +20,18 @@ public sealed class PhotoService
     };
 
     private readonly IPhotoStorage _storage;
-    private readonly IUserSessionService _session;
+    private readonly ICurrentUserService _currentUser;
     private readonly IDbContextFactory<ForagerDbContext> _dbContextFactory;
     private readonly ILogger<PhotoService> _logger;
 
     public PhotoService(
         IPhotoStorage storage,
-        IUserSessionService session,
+        ICurrentUserService currentUser,
         IDbContextFactory<ForagerDbContext> dbContextFactory,
         ILogger<PhotoService> logger)
     {
         _storage = storage;
-        _session = session;
+        _currentUser = currentUser;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
     }
@@ -53,7 +53,7 @@ public sealed class PhotoService
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(file);
-        var ownerId = GetSignedInUserId(targetUserId);
+        var ownerId = await GetSignedInUserIdAsync(targetUserId);
         var uploaded = await UploadAsync(new[] { file }, PhotoKind.Profile, maxWidth: 256, quality: 70, cancellationToken);
         var reference = uploaded[0];
 
@@ -86,7 +86,7 @@ public sealed class PhotoService
 
     public async Task DeleteProfileImageAsync(Guid targetUserId, CancellationToken cancellationToken = default)
     {
-        var ownerId = GetSignedInUserId(targetUserId);
+        var ownerId = await GetSignedInUserIdAsync(targetUserId);
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         var images = await context.UserImages
@@ -111,7 +111,7 @@ public sealed class PhotoService
         int quality,
         CancellationToken cancellationToken)
     {
-        var ownerId = GetSignedInUserId();
+        var ownerId = await GetSignedInUserIdAsync();
         var references = new List<PhotoStorageReference>(files.Count);
 
         try
@@ -204,18 +204,11 @@ public sealed class PhotoService
         return output;
     }
 
-    private Guid GetSignedInUserId()
-    {
-        var sessionUser = _session.SessionUser;
-        if (!_session.IsAuthenticated || sessionUser is null || sessionUser.UserId == Guid.Empty)
-            throw new UnauthorizedAccessException("A signed-in user is required to upload photos.");
+    private Task<Guid> GetSignedInUserIdAsync() => _currentUser.GetRequiredUserIdAsync();
 
-        return sessionUser.UserId;
-    }
-
-    private Guid GetSignedInUserId(Guid targetUserId)
+    private async Task<Guid> GetSignedInUserIdAsync(Guid targetUserId)
     {
-        var signedInUserId = GetSignedInUserId();
+        var signedInUserId = await GetSignedInUserIdAsync();
         if (targetUserId != signedInUserId)
             throw new UnauthorizedAccessException("You can only change your own profile photo.");
 

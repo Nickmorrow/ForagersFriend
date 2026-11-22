@@ -1,8 +1,8 @@
 ﻿@using ForagerSite.Services.Interfaces
 @using DataAccess.Models
+@using Microsoft.AspNetCore.Components.Forms
 @rendermode InteractiveServer
 @inject IUserSessionService session
-@inject NavigationManager Navigation
 @inject INotificationService notificationService
 @inject IUserService userService
 @inject IFriendService friendService
@@ -58,9 +58,12 @@
 
 
             <div class="nav-item px-3">
-                <a href="#" class="nav-link" @onclick="HandleLogout">
-                    <span class="bi bi-box-arrow-right"></span> Log Out
-                </a>
+                <form method="post" action="/account/logout">
+                    <AntiforgeryToken />
+                    <button type="submit" class="nav-link btn btn-link text-start w-100">
+                        <span class="bi bi-box-arrow-right"></span> Log Out
+                    </button>
+                </form>
             </div>
         }
 
@@ -89,9 +92,4 @@
 
     public void Dispose() => session.OnChange -= OnUserStateChanged;
 
-    private async Task HandleLogout()
-    {
-        await session.Logout();
-        Navigation.NavigateTo("/login", forceLoad: true);
-    }
 }

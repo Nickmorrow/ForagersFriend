@@ -1,23 +1,16 @@
 ﻿@using ForagerSite.Services.Interfaces
+@using Microsoft.AspNetCore.Components.Forms
 @rendermode InteractiveServer
 @inject IUserSessionService session
-@inject NavigationManager Navigation
 
 @if (session.IsAuthenticated)
 {
     <div class="nav-item px-3">
-        <button class="nav-link btn btn-link" @onclick="HandleLogout">
-            <span class="bi bi-box-arrow-right"></span>Log Out
-        </button>
+        <form method="post" action="/account/logout">
+            <AntiforgeryToken />
+            <button type="submit" class="nav-link btn btn-link">
+                <span class="bi bi-box-arrow-right"></span>Log Out
+            </button>
+        </form>
     </div>
-}
-
-@code {
-
-    private void HandleLogout()
-    {
-        session.Logout();
-        Navigation.NavigateTo("/");
-    }
-
 }

@@ -1,12 +1,6 @@
 ﻿@page "/Login"
-@using ForagerSite.DataContainer;
-@using ForagerSite.Services;
-@using ForagerSite.Services.Interfaces
-@using Microsoft.AspNetCore.Components.Routing
-@inject IUserService userService
+@using Microsoft.AspNetCore.Components.Forms
 @rendermode InteractiveServer
-@inject NavigationManager navigationManager
-@inject IUserSessionService session
 
 <PageTitle>Login</PageTitle>
 
@@ -14,24 +8,22 @@
 
 <div>
     <div>
-        <EditForm Model="@loginInput" OnValidSubmit="HandleValidSubmit" FormName="userLogin">
-            <DataAnnotationsValidator />
-            <ValidationSummary />
+        <form method="post" action="/account/login">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="@ReturnUrl" />
 
             <label for="UserNameInput">Username</label>
-            <InputText id="UserNameInput" @bind-Value="@loginInput.Username"></InputText>
-            <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => loginInput.Username)" />
+            <input id="UserNameInput" name="Username" maxlength="256" required />
 
             <label for="PasswordInput">Password</label>
-            <InputText id="PasswordInput" @bind-Value="@loginInput.Password" type="password"></InputText>
-            <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => loginInput.Password)" />
+            <input id="PasswordInput" name="Password" type="password" maxlength="256" required />
 
-            <button type="submit" class="btn-primary">Login</button>    
-        </EditForm>
+            <button type="submit" class="btn-primary">Login</button>
+        </form>
     </div>
-    @if (_errorMessage != null)
+    @if (StatusMessage is not null)
     {
-        <p style="color: red;">@_errorMessage</p>
+        <p style="color: red;">@StatusMessage</p>
     }
 
     <div>
@@ -41,27 +33,19 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
 
-    private string _errorMessage;
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? Status { get; set; }
 
-    private LoginInputModel loginInput = new();
-
-    private async Task HandleValidSubmit(EditContext editContext)
+    private string? StatusMessage => Status switch
     {
-        var authenticatedUser = session.AuthenticateUser(loginInput.Username, loginInput.Password);
-
-        if (authenticatedUser is not null)
-        {
-            userService.UpdateLastLogin(authenticatedUser.UserId);
-            await session.SetUserState(true, authenticatedUser);
-            navigationManager.NavigateTo("/");
-
-        }
-        else
-        {
-            _errorMessage = "Username or password is incorrect";
-            await InvokeAsync(StateHasChanged);
-        }
-    }
+        "locked" => "Sign-in failed. Please try again later.",
+        "confirmed" => "Your email is confirmed. You can now sign in.",
+        "confirmation-invalid" => "This confirmation link is invalid or expired.",
+        "invalid" => "Username or password is incorrect, or the email is not confirmed.",
+        _ => null
+    };
 
 }

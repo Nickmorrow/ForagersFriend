@@ -1,115 +1,62 @@
-﻿using DataAccess.Data;
-using ForagerSite.DataContainer;
+﻿using ForagerSite.DataContainer;
 using ForagerSite.Services.Interfaces;
-using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
-using Newtonsoft.Json;
+using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Claims;
 
-public class UserSessionService : IUserSessionService
+public sealed class UserSessionService : IUserSessionService, IDisposable
 {
-    private readonly ProtectedSessionStorage _session;
-    private IDbContextFactory<ForagerDbContext> _dbContextFactory;
+    private readonly AuthenticationStateProvider _authenticationStateProvider;
     public bool IsAuthenticated { get; private set; }
     public SessionUserState? SessionUser { get; private set; }
 
     public event Action? OnChange;
 
-    public UserSessionService(ProtectedSessionStorage session, IDbContextFactory<ForagerDbContext> dbContextFactory)
+    public UserSessionService(AuthenticationStateProvider authenticationStateProvider)
     {
-        _session = session;
-        _dbContextFactory = dbContextFactory;
-    }       
-
-    public SessionUserState? AuthenticateUser(string username, string password)
-    {
-        using (var context = _dbContextFactory.CreateDbContext())
-        {
-            var userSecurity = context.UserSecurities
-                .Include(us => us.User)
-                .FirstOrDefault(us => us.UssUsername == username && us.UssPassword == password);
-
-            if (userSecurity != null)
-            {
-                return new SessionUserState
-                {
-                    IsAuthenticated = true,
-                    UserId = userSecurity.User.UsrId,
-                    Username = userSecurity.UssUsername,
-                    DisplayName = userSecurity.User.UsrName ?? string.Empty
-                };
-            }
-            return null;
-        }
+        _authenticationStateProvider = authenticationStateProvider;
+        _authenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
     }
-    //public async Task Load()
-    //{
-    //    var json = await _session.GetAsync<string>("SessionUser");
-    //    if (json.Success && !string.IsNullOrWhiteSpace(json.Value))
-    //    {
-    //        SessionUser = JsonConvert.DeserializeObject<SessionUserState>(json.Value);
-    //        IsAuthenticated = SessionUser?.IsAuthenticated == true;
-    //    }
-    //    else
-    //    {
-    //        SessionUser = null;
-    //        IsAuthenticated = false;
-    //    }
 
-    //    OnChange?.Invoke();
-    //}
-    public async Task Load()
+    public Task Load() => UpdateStateAsync(_authenticationStateProvider.GetAuthenticationStateAsync());
+
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> authenticationStateTask)
     {
-        try
+        _ = UpdateStateAsync(authenticationStateTask);
+    }
+
+    private async Task UpdateStateAsync(Task<AuthenticationState> authenticationStateTask)
+    {
+        var principal = (await authenticationStateTask).User;
+        var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+        var username = principal.Identity?.Name;
+
+        if (principal.Identity?.IsAuthenticated != true ||
+            !Guid.TryParse(userId, out var parsedUserId) ||
+            parsedUserId == Guid.Empty)
         {
-            var json = await _session.GetAsync<string>("SessionUser");
-            if (json.Success && !string.IsNullOrWhiteSpace(json.Value))
-            {
-                SessionUser = JsonConvert.DeserializeObject<SessionUserState>(json.Value);
-                IsAuthenticated = SessionUser?.IsAuthenticated == true;
-            }
-            else
-            {
-                SessionUser = null;
-                IsAuthenticated = false;
-            }
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("statically rendered"))
-        {
-            // We are prerendering; JS interop is not available yet.
-            // Do NOT call DeleteAsync here.
             SessionUser = null;
             IsAuthenticated = false;
-            return;
         }
-
+        else
+        {
+            var displayName = principal.FindFirstValue(ClaimTypes.GivenName)
+                ?? principal.FindFirstValue(ClaimTypes.Name)
+                ?? username
+                ?? string.Empty;
+            SessionUser = new SessionUserState
+            {
+                IsAuthenticated = true,
+                UserId = parsedUserId,
+                Username = username ?? string.Empty,
+                DisplayName = displayName
+            };
+            IsAuthenticated = true;
+        }
         OnChange?.Invoke();
     }
 
-
-    public async Task SetUserState(bool isAuthenticated, SessionUserState? state)
+    public void Dispose()
     {
-        IsAuthenticated = isAuthenticated;
-
-        if (!isAuthenticated || state is null || state.UserId == Guid.Empty)
-        {
-            SessionUser = null;
-            await _session.DeleteAsync("SessionUser");
-            OnChange?.Invoke();
-            return;
-        }
-
-        SessionUser = new SessionUserState
-        {
-            IsAuthenticated = true,
-            UserId = state.UserId,
-            Username = state.Username,
-            DisplayName = state.DisplayName
-        };
-
-        await _session.SetAsync("SessionUser", JsonConvert.SerializeObject(SessionUser));
-        OnChange?.Invoke();
+        _authenticationStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
     }
-
-    public Task Logout() => SetUserState(false, null);
 }
