@@ -5,8 +5,7 @@ public enum AccountEmailJobType
     PasswordReset,
     UserNameRecovery,
     ConfirmationResend,
-    PasswordChangedNotice,
-    EmailChangeConfirmation
+    PasswordChangedNotice
 }
 
 public sealed class AccountEmailJob

@@ -21,14 +21,6 @@
     <button type="submit">Recover username</button>
 </form>
 
-<form method="post" action="/account/recover">
-    <AntiforgeryToken />
-    <label for="confirmation-email">Email address</label>
-    <input id="confirmation-email" name="Email" type="email" maxlength="256" required />
-    <input type="hidden" name="RequestType" value="confirmation" />
-    <button type="submit">Resend confirmation email</button>
-</form>
-
 @if (Status == "acknowledged")
 {
     <p role="status">If an eligible account matches that email address, instructions will be sent.</p>

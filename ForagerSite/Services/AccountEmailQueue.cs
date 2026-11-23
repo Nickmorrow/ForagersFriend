@@ -16,7 +16,6 @@ public sealed class AccountEmailQueue : IAccountEmailQueue
         AccountEmailJobType type,
         string? email = null,
         Guid? accountId = null,
-        string? newEmail = null,
         CancellationToken cancellationToken = default)
     {
         _db.AccountEmailJobs.Add(new AccountEmailJob
@@ -24,7 +23,6 @@ public sealed class AccountEmailQueue : IAccountEmailQueue
             Type = type,
             Email = email?.Trim(),
             AccountId = accountId,
-            NewEmail = newEmail?.Trim(),
             CreatedUtc = DateTime.UtcNow,
             NextAttemptUtc = DateTime.UtcNow
         });

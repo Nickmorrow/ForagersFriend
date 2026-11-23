@@ -73,25 +73,4 @@ namespace ForagerSite.DataContainer
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 
-    public sealed class EmailChangeInputModel
-    {
-        [Required]
-        [EmailAddress]
-        [StringLength(256)]
-        public string NewEmail { get; set; } = string.Empty;
-    }
-
-    public sealed class ConfirmEmailChangeInputModel
-    {
-        [Required]
-        public string UserId { get; set; } = string.Empty;
-
-        [Required]
-        [EmailAddress]
-        [StringLength(256)]
-        public string Email { get; set; } = string.Empty;
-
-        [Required]
-        public string Token { get; set; } = string.Empty;
-    }
 }

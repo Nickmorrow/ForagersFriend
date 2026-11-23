@@ -43,9 +43,7 @@ namespace ForagerSite
                 options.Password.RequireUppercase = true;
                 options.Password.RequireNonAlphanumeric = true;
                 options.SignIn.RequireConfirmedEmail = requireConfirmedEmail;
-                options.Lockout.AllowedForNewUsers = true;
-                options.Lockout.MaxFailedAccessAttempts = 5;
-                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.Lockout.AllowedForNewUsers = false;
             })
                 .AddEntityFrameworkStores<ForagerDbContext>()
                 .AddSignInManager()
@@ -120,6 +118,15 @@ namespace ForagerSite
                         httpContext.Response.Headers["Retry-After"] = retrySeconds.ToString(CultureInfo.InvariantCulture);
                         httpContext.Response.Redirect($"/Registration?rateLimitUntil={retryUntil}");
                     }
+                    else if (policyName == "account-login")
+                    {
+                        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry)
+                            ? retry
+                            : TimeSpan.FromMinutes(1);
+                        httpContext.Response.Headers["Retry-After"] = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds))
+                            .ToString(CultureInfo.InvariantCulture);
+                        httpContext.Response.Redirect("/Login?status=rate-limited");
+                    }
                     else
                     {
                         httpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -133,15 +140,6 @@ namespace ForagerSite
                     {
                         PermitLimit = 5,
                         Window = TimeSpan.FromMinutes(1),
-                        QueueLimit = 0,
-                        AutoReplenishment = true
-                    }));
-                options.AddPolicy("account-email-change", context => RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 5,
-                        Window = TimeSpan.FromMinutes(10),
                         QueueLimit = 0,
                         AutoReplenishment = true
                     }));

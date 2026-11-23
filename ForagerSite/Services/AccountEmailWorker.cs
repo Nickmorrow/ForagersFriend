@@ -160,28 +160,6 @@ public sealed class AccountEmailWorker : BackgroundService
                 body = "Your ForagersFriend account password was changed. If you did not make this change, contact support immediately.";
                 break;
 
-            case AccountEmailJobType.EmailChangeConfirmation:
-                account = job.AccountId is Guid changeAccountId
-                    ? await userManager.FindByIdAsync(changeAccountId.ToString())
-                    : null;
-                if (account is null || string.IsNullOrWhiteSpace(job.NewEmail))
-                    return;
-                var existingAccount = await userManager.FindByEmailAsync(job.NewEmail);
-                if (string.Equals(account.Email, job.NewEmail, StringComparison.OrdinalIgnoreCase) ||
-                    (existingAccount is not null && existingAccount.Id != account.Id))
-                    return;
-                var changeToken = await userManager.GenerateChangeEmailTokenAsync(account, job.NewEmail);
-                var changeUrl = BuildUrl(origin, "/account/confirm-email-change", new Dictionary<string, string?>
-                {
-                    ["userId"] = account.Id.ToString(),
-                    ["email"] = job.NewEmail,
-                    ["token"] = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(changeToken))
-                });
-                recipient = job.NewEmail;
-                subject = "Confirm your new ForagersFriend email address";
-                body = $"Confirm your new email address by opening this link:\r\n\r\n{changeUrl}";
-                break;
-
             default:
                 return;
         }

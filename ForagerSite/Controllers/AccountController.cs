@@ -5,7 +5,6 @@ using DataAccess.Models;
 using ForagerSite.DataContainer;
 using ForagerSite.Services;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -63,10 +62,10 @@ public sealed class AccountController : Controller
             return Redirect("/Login?status=invalid");
 
         var result = await _signInManager.PasswordSignInAsync(
-            input.Username.Trim(), input.Password, isPersistent: false, lockoutOnFailure: true);
+            input.Username.Trim(), input.Password, isPersistent: false, lockoutOnFailure: false);
 
         if (!result.Succeeded)
-            return Redirect(result.IsLockedOut ? "/Login?status=locked" : "/Login?status=invalid");
+            return Redirect("/Login?status=invalid");
 
         return LocalRedirect(Url.IsLocalUrl(returnUrl) ? returnUrl! : "/");
     }
@@ -109,7 +108,10 @@ public sealed class AccountController : Controller
     }
 
     [HttpGet("reset-password")]
-    public IActionResult ResetPasswordForm([FromQuery] string? userId, [FromQuery] string? token)
+    public IActionResult ResetPasswordForm(
+        [FromQuery] string? userId,
+        [FromQuery] string? token,
+        [FromQuery] string? status)
     {
         Response.Headers["Cache-Control"] = "no-store";
         Response.Headers["Referrer-Policy"] = "no-referrer";
@@ -120,15 +122,26 @@ public sealed class AccountController : Controller
         var htmlToken = HtmlEncoder.Default.Encode(token);
         var htmlUserId = HtmlEncoder.Default.Encode(userId);
         var htmlRequestToken = HtmlEncoder.Default.Encode(antiforgeryTokens.RequestToken ?? string.Empty);
+        var statusMessage = status switch
+        {
+            "password-policy" => "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.",
+            "password-mismatch" => "The password and confirmation do not match.",
+            _ => string.Empty
+        };
         var html = $"""
             <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Reset password</title></head>
-            <body><h1>Reset password</h1><form method="post" action="/account/reset-password">
+            <body><h1>Reset password</h1><p role="status">{statusMessage}</p>
+            <p>Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.</p>
+            <form id="resetPasswordForm" method="post" action="/account/reset-password">
             <input type="hidden" name="__RequestVerificationToken" value="{htmlRequestToken}">
             <input type="hidden" name="UserId" value="{htmlUserId}">
             <input type="hidden" name="Token" value="{htmlToken}">
-            <label for="Password">New password</label><input id="Password" name="Password" type="password" minlength="8" maxlength="256" required>
-            <label for="ConfirmPassword">Confirm new password</label><input id="ConfirmPassword" name="ConfirmPassword" type="password" maxlength="256" required>
-            <button type="submit">Reset password</button></form></body></html>
+            <label for="Password">New password</label><input id="Password" name="Password" type="password" minlength="8" maxlength="256" aria-describedby="password-error" required>
+            <p id="password-error" role="status" aria-live="polite"></p>
+            <label for="ConfirmPassword">Confirm new password</label><input id="ConfirmPassword" name="ConfirmPassword" type="password" maxlength="256" aria-describedby="confirm-password-error" required>
+            <p id="confirm-password-error" role="status" aria-live="polite"></p>
+            <button type="submit">Reset password</button></form>
+            <script type="module" src="/js/reset-password-validation.js"></script></body></html>
             """;
         return Content(html, "text/html; charset=utf-8");
     }
@@ -138,8 +151,16 @@ public sealed class AccountController : Controller
     [EnableRateLimiting("account-recovery")]
     public async Task<IActionResult> ResetPassword([FromForm] ResetPasswordInputModel input)
     {
-        if (!ModelState.IsValid || !Guid.TryParse(input.UserId, out var accountId))
+        if (!Guid.TryParse(input.UserId, out var accountId) || string.IsNullOrWhiteSpace(input.Token))
             return Redirect("/RecoverLoginInfo?status=reset-invalid");
+
+        if (!ModelState.IsValid)
+        {
+            var status = ModelState[nameof(input.ConfirmPassword)]?.Errors.Count > 0
+                ? "password-mismatch"
+                : "password-policy";
+            return RedirectToPasswordReset(input.UserId, input.Token, status);
+        }
 
         var account = await _userManager.FindByIdAsync(accountId.ToString());
         if (account is null || !await _userManager.IsEmailConfirmedAsync(account))
@@ -155,6 +176,10 @@ public sealed class AccountController : Controller
         {
             return Redirect("/RecoverLoginInfo?status=reset-invalid");
         }
+
+        if (!result.Succeeded && result.Errors.Any(error =>
+            error.Code.StartsWith("Password", StringComparison.Ordinal)))
+            return RedirectToPasswordReset(input.UserId, input.Token, "password-policy");
 
         if (!result.Succeeded)
             return Redirect("/RecoverLoginInfo?status=reset-invalid");
@@ -174,116 +199,15 @@ public sealed class AccountController : Controller
         return Redirect("/Login?status=password-reset");
     }
 
-    [HttpPost("email-change")]
-    [Authorize]
-    [ValidateAntiForgeryToken]
-    [EnableRateLimiting("account-email-change")]
-    public async Task<IActionResult> RequestEmailChange([FromForm] EmailChangeInputModel input)
+    private IActionResult RedirectToPasswordReset(string userId, string token, string status)
     {
-        if (!ModelState.IsValid)
-            return Redirect("/Account/Email?status=invalid");
-
-        var account = await _userManager.GetUserAsync(User);
-        if (account is null)
-            return Challenge();
-
-        var newEmail = input.NewEmail.Trim();
-        if (string.Equals(account.Email, newEmail, StringComparison.OrdinalIgnoreCase))
-            return Redirect("/Account/Email?status=same-email");
-
-        var existingAccount = await _userManager.FindByEmailAsync(newEmail);
-        if (existingAccount is not null && existingAccount.Id != account.Id)
-            return Redirect("/Account/Email?status=unavailable");
-
-        try
+        var url = QueryHelpers.AddQueryString("/account/reset-password", new Dictionary<string, string?>
         {
-            await _emailQueue.EnqueueAsync(
-                AccountEmailJobType.EmailChangeConfirmation,
-                accountId: account.Id,
-                newEmail: newEmail,
-                cancellationToken: HttpContext.RequestAborted);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            _logger.LogWarning("Unable to enqueue an email-change confirmation.");
-            return Redirect("/Account/Email?status=unavailable");
-        }
-
-        return Redirect("/Account/Email?status=confirmation-sent");
-    }
-
-    [HttpGet("confirm-email-change")]
-    [Authorize]
-    public async Task<IActionResult> ConfirmEmailChangeForm(
-        [FromQuery] string? userId,
-        [FromQuery] string? email,
-        [FromQuery] string? token)
-    {
-        Response.Headers["Cache-Control"] = "no-store";
-        Response.Headers["Referrer-Policy"] = "no-referrer";
-        var account = await _userManager.GetUserAsync(User);
-        if (account is null || !Guid.TryParse(userId, out var requestedId) || requestedId != account.Id ||
-            string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token))
-            return Content("<p>This email-change link is invalid or expired.</p>", "text/html; charset=utf-8");
-
-        var antiforgeryTokens = _antiforgery.GetAndStoreTokens(HttpContext);
-        var htmlUserId = HtmlEncoder.Default.Encode(userId!);
-        var htmlEmail = HtmlEncoder.Default.Encode(email);
-        var htmlToken = HtmlEncoder.Default.Encode(token);
-        var htmlRequestToken = HtmlEncoder.Default.Encode(antiforgeryTokens.RequestToken ?? string.Empty);
-        var html = $"""
-            <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Confirm email change</title></head>
-            <body><h1>Confirm email change</h1><p>Confirm the new address {htmlEmail}.</p>
-            <form method="post" action="/account/confirm-email-change">
-            <input type="hidden" name="__RequestVerificationToken" value="{htmlRequestToken}">
-            <input type="hidden" name="UserId" value="{htmlUserId}">
-            <input type="hidden" name="Email" value="{htmlEmail}">
-            <input type="hidden" name="Token" value="{htmlToken}">
-            <button type="submit">Confirm new email</button></form></body></html>
-            """;
-        return Content(html, "text/html; charset=utf-8");
-    }
-
-    [HttpPost("confirm-email-change")]
-    [Authorize]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ConfirmEmailChange([FromForm] ConfirmEmailChangeInputModel input)
-    {
-        if (!ModelState.IsValid || !Guid.TryParse(input.UserId, out var accountId))
-            return Redirect("/Account/Email?status=confirmation-invalid");
-
-        var account = await _userManager.GetUserAsync(User);
-        if (account is null)
-            return Challenge();
-        if (account.Id != accountId)
-            return Redirect("/Account/Email?status=confirmation-invalid");
-
-        string token;
-        try
-        {
-            token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(input.Token));
-        }
-        catch (FormatException)
-        {
-            return Redirect("/Account/Email?status=confirmation-invalid");
-        }
-
-        await using var transaction = await _db.Database.BeginTransactionAsync();
-        var result = await _userManager.ChangeEmailAsync(account, input.Email.Trim(), token);
-        if (!result.Succeeded)
-        {
-            await transaction.RollbackAsync();
-            return Redirect("/Account/Email?status=confirmation-invalid");
-        }
-
-        var profile = await _db.Profiles.SingleOrDefaultAsync(item => item.UsrId == account.Id);
-        if (profile is not null)
-            profile.UsrEmail = account.Email!;
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-        await _signInManager.RefreshSignInAsync(account);
-
-        return Redirect("/Account/Email?status=updated");
+            ["userId"] = userId,
+            ["token"] = token,
+            ["status"] = status
+        });
+        return Redirect(url);
     }
 
     [HttpPost("register")]
@@ -316,7 +240,7 @@ public sealed class AccountController : Controller
             UserName = input.Username.Trim(),
             Email = input.Email.Trim(),
             EmailConfirmed = false,
-            LockoutEnabled = true,
+            LockoutEnabled = false,
             Profile = profile
         };
 

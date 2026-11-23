@@ -23,7 +23,7 @@
     </div>
     @if (StatusMessage is not null)
     {
-        <p style="color: red;">@StatusMessage</p>
+        <p role="alert" aria-live="assertive" style="color: red;">@StatusMessage</p>
     }
 
     <div>
@@ -41,11 +41,11 @@
 
     private string? StatusMessage => Status switch
     {
-        "locked" => "Sign-in failed. Please try again later.",
+        "invalid" => "Unable to sign in. Check your username, password, and confirmation status. Sign-in requests are rate-limited; wait briefly if you have tried several times.",
+        "rate-limited" => "Too many sign-in attempts from this connection. Wait briefly before trying again.",
         "confirmed" => "Your email is confirmed. You can now sign in.",
         "password-reset" => "Your password was reset. Sign in with your new password.",
         "confirmation-invalid" => "This confirmation link is invalid or expired.",
-        "invalid" => "Username or password is incorrect, or the email is not confirmed.",
         _ => null
     };
 
