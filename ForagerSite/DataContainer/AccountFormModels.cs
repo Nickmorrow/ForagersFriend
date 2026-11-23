@@ -73,4 +73,32 @@ namespace ForagerSite.DataContainer
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 
+    public sealed class ChangePasswordInputModel
+    {
+        [Required]
+        [StringLength(256)]
+        public string CurrentPassword { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(256, MinimumLength = 8)]
+        public string NewPassword { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(256)]
+        [Compare(nameof(NewPassword))]
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    public sealed class ChangeEmailInputModel
+    {
+        [Required]
+        [EmailAddress]
+        [StringLength(256)]
+        public string NewEmail { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(256)]
+        public string CurrentPassword { get; set; } = string.Empty;
+    }
+
 }

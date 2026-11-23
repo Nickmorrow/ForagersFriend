@@ -8,5 +8,6 @@ public interface IAccountEmailQueue
         AccountEmailJobType type,
         string? email = null,
         Guid? accountId = null,
+        string? newEmail = null,
         CancellationToken cancellationToken = default);
 }

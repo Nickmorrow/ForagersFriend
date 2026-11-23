@@ -4,6 +4,7 @@ using DataAccess.Data;
 using DataAccess.Models;
 using ForagerSite.DataContainer;
 using ForagerSite.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -199,6 +200,82 @@ public sealed class AccountController : Controller
         return Redirect("/Login?status=password-reset");
     }
 
+    [Authorize]
+    [HttpPost("change-password")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-recovery")]
+    public async Task<IActionResult> ChangePassword([FromForm] ChangePasswordInputModel input)
+    {
+        if (!ModelState.IsValid)
+        {
+            var status = ModelState[nameof(input.ConfirmPassword)]?.Errors.Count > 0
+                ? "password-mismatch"
+                : "password-invalid";
+            return Redirect($"/AccountSettings?status={status}");
+        }
+
+        var account = await _userManager.GetUserAsync(User);
+        if (account is null)
+            return Redirect("/Login");
+
+        var result = await _userManager.ChangePasswordAsync(account, input.CurrentPassword, input.NewPassword);
+        if (!result.Succeeded)
+        {
+            var status = result.Errors.Any(error => error.Code.StartsWith("Password", StringComparison.Ordinal))
+                ? "password-policy"
+                : "password-invalid";
+            return Redirect($"/AccountSettings?status={status}");
+        }
+
+        await _signInManager.RefreshSignInAsync(account);
+        try
+        {
+            await _emailQueue.EnqueueAsync(
+                AccountEmailJobType.PasswordChangedNotice,
+                accountId: account.Id,
+                cancellationToken: HttpContext.RequestAborted);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning("Unable to enqueue a password-change notification.");
+        }
+
+        return Redirect("/AccountSettings?status=password-changed");
+    }
+
+    [Authorize]
+    [HttpPost("change-email")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-recovery")]
+    public async Task<IActionResult> RequestEmailChange([FromForm] ChangeEmailInputModel input)
+    {
+        if (!ModelState.IsValid)
+            return Redirect("/AccountSettings?status=email-invalid");
+
+        var account = await _userManager.GetUserAsync(User);
+        if (account is null)
+            return Redirect("/Login");
+
+        if (!await _userManager.CheckPasswordAsync(account, input.CurrentPassword))
+            return Redirect("/AccountSettings?status=email-invalid");
+
+        try
+        {
+            await _emailQueue.EnqueueAsync(
+                AccountEmailJobType.EmailChangeConfirmation,
+                accountId: account.Id,
+                newEmail: input.NewEmail.Trim(),
+                cancellationToken: HttpContext.RequestAborted);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning("Unable to enqueue an email-change confirmation.");
+            return Redirect("/AccountSettings?status=email-unavailable");
+        }
+
+        return Redirect("/AccountSettings?status=email-requested");
+    }
+
     private IActionResult RedirectToPasswordReset(string userId, string token, string status)
     {
         var url = QueryHelpers.AddQueryString("/account/reset-password", new Dictionary<string, string?>
@@ -280,6 +357,89 @@ public sealed class AccountController : Controller
         {
             return Redirect("/Registration?status=confirmation-unavailable");
         }
+    }
+
+    [HttpGet("confirm-email-change")]
+    public IActionResult ConfirmEmailChangeForm([FromQuery] int jobId, [FromQuery] string? token)
+    {
+        Response.Headers["Cache-Control"] = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+        if (jobId <= 0 || string.IsNullOrWhiteSpace(token))
+            return Content("<p>This email confirmation link is invalid or expired.</p>", "text/html; charset=utf-8");
+
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        var encodedToken = HtmlEncoder.Default.Encode(token);
+        var encodedRequestToken = HtmlEncoder.Default.Encode(tokens.RequestToken ?? string.Empty);
+        var html = $"""
+            <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Confirm email change</title></head>
+            <body><h1>Confirm email change</h1><p>Confirm that you want to use this email address for your account.</p>
+            <form method="post" action="/account/confirm-email-change">
+            <input type="hidden" name="__RequestVerificationToken" value="{encodedRequestToken}">
+            <input type="hidden" name="jobId" value="{jobId}">
+            <input type="hidden" name="token" value="{encodedToken}">
+            <button type="submit">Confirm email change</button></form></body></html>
+            """;
+        return Content(html, "text/html; charset=utf-8");
+    }
+
+    [HttpPost("confirm-email-change")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-recovery")]
+    public async Task<IActionResult> ConfirmEmailChange([FromForm] int jobId, [FromForm] string token)
+    {
+        if (jobId <= 0 || string.IsNullOrWhiteSpace(token))
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var job = await _db.AccountEmailJobs.SingleOrDefaultAsync(item =>
+            item.Id == jobId && item.Type == AccountEmailJobType.EmailChangeConfirmation);
+        if (job?.AccountId is not Guid accountId || string.IsNullOrWhiteSpace(job.NewEmail))
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+
+        var account = await _userManager.FindByIdAsync(accountId.ToString());
+        if (account is null)
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+
+        string decodedToken;
+        try
+        {
+            decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
+        }
+        catch (FormatException)
+        {
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+        }
+
+        try
+        {
+            var result = await _userManager.ChangeEmailAsync(account, job.NewEmail, decodedToken);
+            if (!result.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return Redirect("/AccountSettings?status=email-confirmation-invalid");
+            }
+
+            var profile = await _db.Profiles.SingleOrDefaultAsync(item => item.UsrId == accountId);
+            if (profile is null)
+            {
+                await transaction.RollbackAsync();
+                return Redirect("/AccountSettings?status=email-confirmation-invalid");
+            }
+
+            profile.UsrEmail = account.Email!;
+            _db.AccountEmailJobs.Remove(job);
+            await _db.SaveChangesAsync(HttpContext.RequestAborted);
+            await transaction.CommitAsync(HttpContext.RequestAborted);
+        }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync();
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+        }
+
+        return User.Identity?.IsAuthenticated == true
+            ? Redirect("/AccountSettings?status=email-confirmed")
+            : Redirect("/Login?status=email-changed");
     }
 
     [HttpGet("confirm")]
