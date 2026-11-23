@@ -36,6 +36,16 @@
         <button type="submit" class="btn-primary" disabled="@IsRegistrationLimited">Register</button>
     </form>
 
+    <h4>Resend verification email</h4>
+    <form method="post" action="/account/recover">
+        <AntiforgeryToken />
+        <label for="ResendEmailInput">Email</label>
+        <input id="ResendEmailInput" name="Email" type="email" maxlength="256" required />
+        <input type="hidden" name="RequestType" value="confirmation" />
+        <input type="hidden" name="returnUrl" value="/Registration?status=verification-requested" />
+        <button type="submit">Resend verification email</button>
+    </form>
+
     @if (IsRegistrationLimited)
     {
         <p id="registration-rate-limit-message" role="status" aria-live="polite">@RateLimitMessage</p>
@@ -86,7 +96,8 @@
     {
         "development-created" => "Development mode: the account was created without email confirmation.",
         "confirmation-sent" => "If your account details are valid, a confirmation email has been sent.",
-        "confirmation-unavailable" => "Your account was created, but the confirmation email could not be sent. Please contact support.",
+        "confirmation-unavailable" => "Your account was created, but the confirmation email could not be sent. Try resending it below.",
+        "verification-requested" => "If an eligible account matches that email address, a confirmation email will be sent.",
         "invalid" => "Unable to create the account. Review the validation messages and try again.",
         _ => null
     };

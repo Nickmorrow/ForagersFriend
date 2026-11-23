@@ -17,6 +17,19 @@ public sealed class SmtpAccountEmailSender : IAccountEmailSender
         string confirmationUrl,
         CancellationToken cancellationToken)
     {
+        await SendAsync(
+            emailAddress,
+            "Confirm your WildFinds account",
+            $"Confirm your account by opening this link:\r\n\r\n{confirmationUrl}",
+            cancellationToken);
+    }
+
+    public async Task SendAsync(
+        string emailAddress,
+        string subject,
+        string body,
+        CancellationToken cancellationToken)
+    {
         var settings = _configuration.GetSection("AccountEmail:Smtp");
         var host = settings["Host"];
         var fromAddress = settings["FromAddress"];
@@ -28,11 +41,11 @@ public sealed class SmtpAccountEmailSender : IAccountEmailSender
         var password = settings["Password"];
         using var message = new MailMessage(fromAddress, emailAddress)
         {
-            Subject = "Confirm your ForagersFriend account",
-            Body = $"Confirm your account by opening this link:\r\n\r\n{confirmationUrl}",
+            Subject = subject,
+            Body = body,
             IsBodyHtml = false
         };
-        message.From = new MailAddress(fromAddress, settings["DisplayName"] ?? "ForagersFriend");
+        message.From = new MailAddress(fromAddress, settings["DisplayName"] ?? "WildFinds");
 
         using var client = new SmtpClient(host, port)
         {

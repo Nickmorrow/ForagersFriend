@@ -28,6 +28,8 @@ namespace ForagerSite
             var builder = WebApplication.CreateBuilder(args);
             var connectionString = builder.Configuration.GetConnectionString("Default")
                 ?? throw new NullReferenceException("No connection string in config");
+            var requireConfirmedEmail = !builder.Environment.IsDevelopment() ||
+                builder.Configuration.GetValue<bool>("Authentication:RequireConfirmedEmail");
 
             builder.Services.AddDbContextFactory<ForagerDbContext>((DbContextOptionsBuilder options) =>
                 options.UseSqlServer(connectionString));
@@ -40,7 +42,7 @@ namespace ForagerSite
                 options.Password.RequireLowercase = true;
                 options.Password.RequireUppercase = true;
                 options.Password.RequireNonAlphanumeric = true;
-                options.SignIn.RequireConfirmedEmail = !builder.Environment.IsDevelopment();
+                options.SignIn.RequireConfirmedEmail = requireConfirmedEmail;
                 options.Lockout.AllowedForNewUsers = true;
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
@@ -48,6 +50,8 @@ namespace ForagerSite
                 .AddEntityFrameworkStores<ForagerDbContext>()
                 .AddSignInManager()
                 .AddDefaultTokenProviders();
+            builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+                options.TokenLifespan = TimeSpan.FromHours(1));
 
             builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
                 .AddIdentityCookies();
@@ -68,6 +72,9 @@ namespace ForagerSite
             builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
             builder.Services.AddControllersWithViews();
             builder.Services.AddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
+            builder.Services.AddScoped<IAccountEmailQueue, AccountEmailQueue>();
+            builder.Services.AddSingleton<AccountRecoveryRateLimiter>();
+            builder.Services.AddHostedService<AccountEmailWorker>();
             var trustedProxyAddresses = builder.Configuration
                 .GetSection("ForwardedHeaders:KnownProxies")
                 .Get<string[]>() ?? Array.Empty<string>();
@@ -125,6 +132,24 @@ namespace ForagerSite
                     _ => new FixedWindowRateLimiterOptions
                     {
                         PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+                options.AddPolicy("account-email-change", context => RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(10),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+                options.AddPolicy("account-recovery", context => RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0,
                         AutoReplenishment = true

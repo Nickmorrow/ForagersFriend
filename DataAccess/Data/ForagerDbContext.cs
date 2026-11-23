@@ -20,6 +20,7 @@ namespace DataAccess.Data
         public DbSet<FriendRequest> FriendRequests { get; set; } = default!;
         public DbSet<UserRelationship> UserRelationships { get; set; } = default!;
         public DbSet<Notification> Notifications { get; set; } = default!;
+        public DbSet<AccountEmailJob> AccountEmailJobs { get; set; } = default!;
 
 
         public ForagerDbContext(DbContextOptions<ForagerDbContext> options)
@@ -61,6 +62,14 @@ namespace DataAccess.Data
             modelBuilder.Entity<FriendRequest>().ToTable("FriendRequest");
             modelBuilder.Entity<UserRelationship>().ToTable("UserRelationship");
             modelBuilder.Entity<Notification>().ToTable("Notification");
+            modelBuilder.Entity<AccountEmailJob>(entity =>
+            {
+                entity.ToTable("AccountEmailJobs");
+                entity.HasKey(job => job.Id);
+                entity.Property(job => job.Email).HasMaxLength(256);
+                entity.Property(job => job.NewEmail).HasMaxLength(256);
+                entity.HasIndex(job => new { job.NextAttemptUtc, job.LockedUntilUtc });
+            });
 
             modelBuilder.Entity<User>()
                 .HasOne(u => u.UserSecurity)
