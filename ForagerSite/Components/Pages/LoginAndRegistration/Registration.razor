@@ -1,130 +1,152 @@
-﻿@page "/Registration"
-@using DataAccess.Models;
-@using ForagerSite.DataContainer;
-@using ForagerSite.Services;
-@using ForagerSite.Services.Interfaces
-@inject IUserService userService
+@page "/Registration"
+@using Microsoft.AspNetCore.Components.Forms
 @rendermode InteractiveServer
-@inject NavigationManager navigationManager
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <PageTitle>Registration</PageTitle>
 
 <h3>Registration</h3>
 
 <div>
-    <EditForm Model="@userViewModel" OnValidSubmit="_HandleValidSubmit" FormName="userForm">
-        <DataAnnotationsValidator />
-        <ValidationSummary />
+    <form @ref="_registrationForm" method="post" action="/account/register">
+        <AntiforgeryToken />
 
         <label for="NameInput">Name</label>
-        <InputText id="NameInput" @bind-Value="@userViewModel.user.UsrName"></InputText>   
+        <input id="NameInput" name="Name" maxlength="100" required />
 
         <label for="EmailInput">Email</label>
-        <InputText id="EmailInput" @bind-Value="@userViewModel.user.UsrEmail"></InputText>
-        <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => userViewModel.user.UsrEmail)" />
+        <input id="EmailInput" name="Email" type="email" maxlength="256" required />
 
         <label for="CountryInput">Country</label>
-        <InputText id="CountryInput" @bind-Value="@userViewModel.user.UsrCountry"></InputText>
+        <input id="CountryInput" name="Country" maxlength="100" />
 
         <label for="StateInput">State or Province</label>
-        <InputText id="StateInput" @bind-Value="@userViewModel.user.UsrStateorProvince"></InputText>
+        <input id="StateInput" name="StateOrProvince" maxlength="100" />
 
         <label for="UserNameInput">Username</label>
-        <InputText id="UserNameInput" @bind-Value="@userViewModel.userSecurity.UssUsername"></InputText>
-        <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => userViewModel.userSecurity.UssUsername)" />
+        <input id="UserNameInput" name="Username" maxlength="256" required />
 
         <label for="PasswordInput">Password</label>
-        <InputText id="PasswordInput" @bind-Value="@userViewModel.userSecurity.UssPassword" type="@passwordInputType"></InputText>
-        <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => userViewModel.userSecurity.UssPassword)" />
+        <input id="PasswordInput" name="Password" type="password" minlength="8" maxlength="256" required />
 
         <label for="ConfirmPasswordInput">Confirm Password</label>
-        <InputText id="ConfirmPasswordInput" @bind-Value="@confirmPassword" type="@passwordInputType"></InputText>
-        <Microsoft.AspNetCore.Components.Forms.ValidationMessage For="@(() => confirmPassword)" />
+        <input id="ConfirmPasswordInput" name="ConfirmPassword" type="password" maxlength="256" required />
 
-        <input type="checkbox" id="ShowPassword" @bind="showPassword" />
-        <label for="ShowPassword">Show Password</label>
-        
+        <button type="submit" class="btn-primary" disabled="@IsRegistrationLimited">Register</button>
+    </form>
 
-        <button type="submit" class="btn-primary">Add</button>
-    </EditForm>
+    <h4>Resend verification email</h4>
+    <form method="post" action="/account/recover">
+        <AntiforgeryToken />
+        <label for="ResendEmailInput">Email</label>
+        <input id="ResendEmailInput" name="Email" type="email" maxlength="256" required />
+        <input type="hidden" name="RequestType" value="confirmation" />
+        <input type="hidden" name="returnUrl" value="/Registration?status=verification-requested" />
+        <button type="submit">Resend verification email</button>
+    </form>
+
+    @if (IsRegistrationLimited)
+    {
+        <p id="registration-rate-limit-message" role="status" aria-live="polite">@RateLimitMessage</p>
+    }
+    else
+    {
+        <p id="registration-rate-limit-message" role="status" aria-live="polite" hidden></p>
+    }
 
     <NavLink href="/Login">Back</NavLink>
 
-    @if (_errorMessage != null)
+    @if (StatusMessage is not null)
     {
-        <p style="color: red;">@_errorMessage</p>
+        <p style="color: red;">@StatusMessage</p>
+    }
+    @if (ValidationMessages.Count > 0)
+    {
+        <ul style="color: red;">
+            @foreach (var message in ValidationMessages)
+            {
+                <li>@message</li>
+            }
+        </ul>
     }
 </div>
 
 @code {
+    private ElementReference _registrationForm;
+    private IJSObjectReference? _registrationFormModule;
 
-    public UserDataContainer userViewModel = new UserDataContainer();
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? Status { get; set; }
 
-    private string confirmPassword;
-    private bool showPassword;
-    private string passwordInputType => showPassword ? "text" : "password";
+    [SupplyParameterFromQuery(Name = "errors")]
+    public string? Errors { get; set; }
 
-    private string _errorMessage;
+    [SupplyParameterFromQuery(Name = "rateLimitUntil")]
+    public long? RateLimitUntil { get; set; }
 
-    private bool _userNameExists;
+    private bool IsRegistrationLimited =>
+        RateLimitUntil > DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-    private bool _userEmailExists;
+    private string? RateLimitMessage => IsRegistrationLimited
+        ? $"Too many registration attempts. Try again in {Math.Max(1L, RateLimitUntil!.Value - DateTimeOffset.UtcNow.ToUnixTimeSeconds())} seconds."
+        : null;
 
-    private async Task _HandleValidSubmit(EditContext editContext)
+    private string? StatusMessage => Status switch
     {
-        _errorMessage = null;
-        _userNameExists = await userService.UsernameExists(userViewModel.userSecurity.UssUsername);
-        _userEmailExists = await userService.EmailExists(userViewModel.user.UsrEmail);
+        "development-created" => "Development mode: the account was created without email confirmation.",
+        "confirmation-sent" => "If your account details are valid, a confirmation email has been sent.",
+        "confirmation-unavailable" => "Your account was created, but the confirmation email could not be sent. Try resending it below.",
+        "verification-requested" => "If an eligible account matches that email address, a confirmation email will be sent.",
+        "invalid" => "Unable to create the account. Review the validation messages and try again.",
+        _ => null
+    };
 
-        #region Validation Messages
-        if (_userNameExists && _userEmailExists)
+    private IReadOnlyList<string> ValidationMessages => (Errors ?? string.Empty)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(code => code switch
         {
-            _errorMessage = "Username and Email already exist.";
-            return;
-        }
-        if (_userNameExists)
-        {
-            _errorMessage = "Username already exists.";
-            return;
-        }
-        if (_userEmailExists)
-        {                          
-            _errorMessage = "Email already exists.";
-            return;
-        }
-        if (userViewModel.user.UsrEmail == null)
-        {
-            _errorMessage = "You must enter an Email address.";
-            return;
-        }
-        if (userViewModel.userSecurity.UssUsername == null)
-        {
-            _errorMessage = "You must enter a username.";
-            return;
-        }
-        if (userViewModel.userSecurity.UssPassword == null)
-        {
-            _errorMessage = "You must enter a password.";
-            return;
-        }
-        if (confirmPassword == null)
-        {
-            _errorMessage = "Please confirm password.";
-            return;
-        }
-        if (userViewModel.userSecurity.UssPassword != confirmPassword)
-        {
-            _errorMessage = "Passwords do not match.";
-            return;
-        }
-        #endregion
+            "name" => "Enter a name of 100 characters or fewer.",
+            "email" => "Enter a valid email address no longer than 256 characters.",
+            "country" => "Country must be 100 characters or fewer.",
+            "state" => "State or province must be 100 characters or fewer.",
+            "username" => "Enter a username of 256 characters or fewer using permitted characters.",
+            "password" => "Password must be 8–256 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.",
+            "confirm-password" => "The password and confirmation do not match.",
+            "account-details" => "Unable to register using those account details. Check the username/email and try different details.",
+            "form" => "Review the required fields and correct the indicated values.",
+            _ => null
+        })
+        .Where(message => message is not null)
+        .Select(message => message!)
+        .Distinct()
+        .ToArray();
 
-        var newUser = (UserDataContainer)editContext.Model;
-        newUser.user.UsrJoinedDate = DateTime.Now;
-        newUser.userSecurity.User = newUser.user;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
 
-        userService.AddUser(newUser.user, newUser.userSecurity);
-        userViewModel = new UserDataContainer();
-        navigationManager.NavigateTo("/");
+        _registrationFormModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/registration-form.js");
+        await _registrationFormModule.InvokeVoidAsync(
+            "initialize",
+            _registrationForm,
+            Status is not null,
+            RateLimitUntil ?? 0);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_registrationFormModule is not null)
+        {
+            try
+            {
+                await _registrationFormModule.InvokeVoidAsync("dispose", _registrationForm);
+                await _registrationFormModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }

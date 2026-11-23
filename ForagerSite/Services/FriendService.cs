@@ -10,12 +10,16 @@ namespace ForagerSite.Services
     public class FriendService : IFriendService
     {
         private readonly IDbContextFactory<ForagerDbContext> _db;
-
+        private readonly ICurrentUserService _currentUser;
         private readonly INotificationService _notificationService;
 
-        public FriendService(IDbContextFactory<ForagerDbContext> db, INotificationService notificationService)
+        public FriendService(
+            IDbContextFactory<ForagerDbContext> db,
+            ICurrentUserService currentUser,
+            INotificationService notificationService)
         {
             _db = db;
+            _currentUser = currentUser;
             _notificationService = notificationService;
         }
 
@@ -31,6 +35,7 @@ namespace ForagerSite.Services
 
         public async Task<FriendUiStatus> GetStatus(Guid me, Guid other)
         {
+            me = await RequireCallerAsync(me);
             if (me == other) return FriendUiStatus.None;
 
             using var ctx = _db.CreateDbContext();
@@ -75,6 +80,7 @@ namespace ForagerSite.Services
 
         public async Task SendRequest(Guid me, Guid other)
         {
+            me = await RequireCallerAsync(me);
             if (me == other) return;
 
             using var ctx = _db.CreateDbContext();
@@ -152,6 +158,7 @@ namespace ForagerSite.Services
 
         public async Task AcceptRequest(Guid me, Guid other)
         {
+            me = await RequireCallerAsync(me);
             if (me == other) return;
 
             using var ctx = _db.CreateDbContext();
@@ -196,6 +203,7 @@ namespace ForagerSite.Services
 
         public async Task DeclineRequest(Guid me, Guid other)
         {
+            me = await RequireCallerAsync(me);
             if (me == other) return;
 
             using var ctx = _db.CreateDbContext();
@@ -214,6 +222,7 @@ namespace ForagerSite.Services
 
         public async Task Unfriend(Guid me, Guid other)
         {
+            me = await RequireCallerAsync(me);
             if (me == other) return;
 
             using var ctx = _db.CreateDbContext();
@@ -249,6 +258,7 @@ namespace ForagerSite.Services
         }
         public async Task<List<FriendListItem>> GetFriends(Guid userId)
         {
+            userId = await RequireCallerAsync(userId);
             using var ctx = _db.CreateDbContext();
 
             // Get friend IDs
@@ -265,13 +275,13 @@ namespace ForagerSite.Services
                 return new();
 
             // Fetch usernames
-            var users = await ctx.Users
+            var users = await ctx.Profiles
                 .AsNoTracking()
                 .Where(u => friendIds.Contains(u.UsrId))
                 .Select(u => new
                 {
                     u.UsrId,
-                    UserName = u.UserSecurity.UssUsername
+                    UserName = u.Account.UserName
                 })
                 .ToListAsync();
 
@@ -297,6 +307,14 @@ namespace ForagerSite.Services
                 .ToList();
         }
 
+        private async Task<Guid> RequireCallerAsync(Guid suppliedUserId)
+        {
+            var currentUserId = await _currentUser.GetRequiredUserIdAsync();
+            if (suppliedUserId != currentUserId)
+                throw new UnauthorizedAccessException("You can only manage your own friend relationships.");
+
+            return currentUserId;
+        }
 
     }
 }

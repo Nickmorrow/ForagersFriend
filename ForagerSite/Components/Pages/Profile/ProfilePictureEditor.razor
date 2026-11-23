@@ -67,7 +67,7 @@ else
     [Parameter] public Guid UserId { get; set; }
     [Parameter] public bool CanEdit { get; set; }   
 
-    private UserDataContainer userVm = new();
+    private UserProfileDto userVm = new();
     private bool editProfilePic;
     private string profileImageUrl;
     private string previewUrl;
@@ -107,7 +107,7 @@ else
 
     private async Task<string> GetProfileImageUrl()
     {
-        var profilePicUrl = await userService.GetUserProfilePic(userVm.user); 
+        var profilePicUrl = await userService.GetUserProfilePic(userVm.UsrId);
         return !string.IsNullOrEmpty(profilePicUrl) ? profilePicUrl : PlaceholderImageUrl;
     }
 

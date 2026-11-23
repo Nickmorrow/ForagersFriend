@@ -11,14 +11,17 @@ namespace ForagerSite.Services;
 public class InboxService : IInboxService
 {
     private readonly IDbContextFactory<ForagerDbContext> _db;
+    private readonly ICurrentUserService _currentUser;
 
-    public InboxService(IDbContextFactory<ForagerDbContext> db)
+    public InboxService(IDbContextFactory<ForagerDbContext> db, ICurrentUserService currentUser)
     {
         _db = db;
+        _currentUser = currentUser;
     }
 
     public async Task<List<ThreadListItemDc>> GetThreads(Guid userId, MailboxFolder folder, string? search, int take = 50)
     {
+        userId = await RequireCallerAsync(userId);
         using var ctx = _db.CreateDbContext();
 
         // Threads where user participates
@@ -180,6 +183,7 @@ public class InboxService : IInboxService
 
     public async Task<ThreadDc> GetThread(Guid userId, Guid threadId)
     {
+        userId = await RequireCallerAsync(userId);
         using var ctx = _db.CreateDbContext();
 
         var thread = await ctx.UserMessageThreads
@@ -195,7 +199,7 @@ public class InboxService : IInboxService
 
         var messages =
             await (from m in ctx.UserMessages.AsNoTracking()
-                   join u in ctx.Users.AsNoTracking() on m.UsmSenderId equals u.UsrId
+                   join u in ctx.Profiles.AsNoTracking() on m.UsmSenderId equals u.UsrId
                    where m.UsmThreadId == threadId
                    orderby m.UsmSendDate
                    select new MessageItemDc
@@ -240,6 +244,7 @@ public class InboxService : IInboxService
     //}
     public async Task<List<UserPickItemDc>> SearchUsers(string term, Guid currentUserId, int take = 8)
     {
+        currentUserId = await RequireCallerAsync(currentUserId);
         using var ctx = _db.CreateDbContext();
         term = term.Trim();
 
@@ -248,16 +253,16 @@ public class InboxService : IInboxService
         // Search by username OR display name.
         // IMPORTANT: UserId must be Users.UsrId
         var results =
-            await (from us in ctx.UserSecurities.AsNoTracking()
-                   join u in ctx.Users.AsNoTracking() on us.UssUsrId equals u.UsrId
-                   where u.UsrId != currentUserId
-                   where us.UssUsername.Contains(term) || u.UsrName.Contains(term)
-                   orderby u.UsrName
+            await (from account in ctx.Users.AsNoTracking()
+                   join profile in ctx.Profiles.AsNoTracking() on account.Id equals profile.UsrId
+                   where profile.UsrId != currentUserId && account.UserName != null
+                   where account.UserName.Contains(term) || profile.UsrName!.Contains(term)
+                   orderby profile.UsrName
                    select new UserPickItemDc
                    {
-                       UserId = u.UsrId,          // ✅ this is what fixes your FK error
-                       DisplayName = u.UsrName,   // or whatever your display field is
-                       Username = us.UssUsername
+                       UserId = profile.UsrId,
+                       DisplayName = profile.UsrName,
+                       Username = account.UserName!
                    })
                   .Take(take)
                   .ToListAsync();
@@ -268,7 +273,9 @@ public class InboxService : IInboxService
 
     public async Task MarkRead(Guid userId, Guid threadId)
     {
+        userId = await RequireCallerAsync(userId);
         using var ctx = _db.CreateDbContext();
+        await EnsureThreadParticipantAsync(ctx, userId, threadId);
 
         var state = await ctx.UserThreadStates
             .FirstOrDefaultAsync(s => s.UtsUserId == userId && s.UtsThreadId == threadId);
@@ -299,7 +306,9 @@ public class InboxService : IInboxService
 
     private async Task SetState(Guid userId, Guid threadId, bool archived, bool trashed)
     {
+        userId = await RequireCallerAsync(userId);
         using var ctx = _db.CreateDbContext();
+        await EnsureThreadParticipantAsync(ctx, userId, threadId);
 
         var state = await ctx.UserThreadStates
             .FirstOrDefaultAsync(s => s.UtsUserId == userId && s.UtsThreadId == threadId);
@@ -323,13 +332,21 @@ public class InboxService : IInboxService
 
     public async Task<Guid> SendMessage(Guid senderId, Guid recipientId, string subject, string body, Guid? threadId = null)
     {
+        senderId = await RequireCallerAsync(senderId);
+        if (recipientId == senderId)
+            throw new InvalidOperationException("A message recipient must be another user.");
+
         using var ctx = _db.CreateDbContext();
 
         UserMessageThread thread;
 
         if (threadId is not null)
         {
-            thread = await ctx.UserMessageThreads.FirstAsync(t => t.UmtId == threadId.Value);
+            thread = await ctx.UserMessageThreads.FirstOrDefaultAsync(t =>
+                t.UmtId == threadId.Value &&
+                ((t.UmtUserAId == senderId && t.UmtUserBId == recipientId) ||
+                 (t.UmtUserBId == senderId && t.UmtUserAId == recipientId)))
+                ?? throw new UnauthorizedAccessException("The selected thread is not available to the signed-in user.");
         }
         else
         {
@@ -372,14 +389,15 @@ public class InboxService : IInboxService
     }
     public async Task SendReply(Guid senderId, Guid threadId, string body)
     {
+        senderId = await RequireCallerAsync(senderId);
         using var ctx = _db.CreateDbContext();
 
         var thread = await ctx.UserMessageThreads
             .AsNoTracking()
             .FirstOrDefaultAsync(t => t.UmtId == threadId);
 
-        if (thread is null)
-            throw new InvalidOperationException("Thread not found.");
+        if (thread is null || (thread.UmtUserAId != senderId && thread.UmtUserBId != senderId))
+            throw new UnauthorizedAccessException("The selected thread is not available to the signed-in user.");
 
         var recipientId =
             thread.UmtUserAId == senderId
@@ -424,5 +442,23 @@ public class InboxService : IInboxService
         {
             state.UtsUpdatedUtc = DateTime.UtcNow;
         }
+    }
+
+    private static async Task EnsureThreadParticipantAsync(ForagerDbContext ctx, Guid userId, Guid threadId)
+    {
+        var isParticipant = await ctx.UserMessageThreads.AnyAsync(thread =>
+            thread.UmtId == threadId &&
+            (thread.UmtUserAId == userId || thread.UmtUserBId == userId));
+        if (!isParticipant)
+            throw new UnauthorizedAccessException("The selected thread is not available to the signed-in user.");
+    }
+
+    private async Task<Guid> RequireCallerAsync(Guid suppliedUserId)
+    {
+        var currentUserId = await _currentUser.GetRequiredUserIdAsync();
+        if (suppliedUserId != currentUserId)
+            throw new UnauthorizedAccessException("You can only access your own inbox.");
+
+        return currentUserId;
     }
 }

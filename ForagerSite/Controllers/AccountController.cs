@@ -1,0 +1,538 @@
+using System.Text;
+using System.Text.Encodings.Web;
+using DataAccess.Data;
+using DataAccess.Models;
+using ForagerSite.DataContainer;
+using ForagerSite.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
+
+namespace ForagerSite.Controllers;
+
+[Route("account")]
+public sealed class AccountController : Controller
+{
+    private readonly SignInManager<ForagerAccount> _signInManager;
+    private readonly UserManager<ForagerAccount> _userManager;
+    private readonly ForagerDbContext _db;
+    private readonly IAccountEmailSender _emailSender;
+    private readonly IAntiforgery _antiforgery;
+    private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
+    private readonly IAccountEmailQueue _emailQueue;
+    private readonly AccountRecoveryRateLimiter _recoveryRateLimiter;
+    private readonly ILogger<AccountController> _logger;
+    private bool RequireConfirmedEmail => !_environment.IsDevelopment() ||
+        _configuration.GetValue<bool>("Authentication:RequireConfirmedEmail");
+
+    public AccountController(
+        SignInManager<ForagerAccount> signInManager,
+        UserManager<ForagerAccount> userManager,
+        ForagerDbContext db,
+        IAccountEmailSender emailSender,
+        IAntiforgery antiforgery,
+        IConfiguration configuration,
+        IWebHostEnvironment environment,
+        IAccountEmailQueue emailQueue,
+        AccountRecoveryRateLimiter recoveryRateLimiter,
+        ILogger<AccountController> logger)
+    {
+        _signInManager = signInManager;
+        _userManager = userManager;
+        _db = db;
+        _emailSender = emailSender;
+        _antiforgery = antiforgery;
+        _configuration = configuration;
+        _environment = environment;
+        _emailQueue = emailQueue;
+        _recoveryRateLimiter = recoveryRateLimiter;
+        _logger = logger;
+    }
+
+    [HttpPost("login")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-login")]
+    public async Task<IActionResult> Login([FromForm] LoginInputModel input, [FromForm] string? returnUrl)
+    {
+        if (!ModelState.IsValid)
+            return Redirect("/Login?status=invalid");
+
+        var result = await _signInManager.PasswordSignInAsync(
+            input.Username.Trim(), input.Password, isPersistent: false, lockoutOnFailure: false);
+
+        if (!result.Succeeded)
+            return Redirect("/Login?status=invalid");
+
+        return LocalRedirect(Url.IsLocalUrl(returnUrl) ? returnUrl! : "/");
+    }
+
+    [HttpPost("recover")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-recovery")]
+    public async Task<IActionResult> RequestRecovery(
+        [FromForm] AccountRecoveryInputModel input,
+        [FromForm] string? returnUrl)
+    {
+        if (ModelState.IsValid && _recoveryRateLimiter.TryAcquire(
+            HttpContext.Connection.RemoteIpAddress?.ToString(), input.Email))
+        {
+            var jobType = input.RequestType switch
+            {
+                "password" => AccountEmailJobType.PasswordReset,
+                "username" => AccountEmailJobType.UserNameRecovery,
+                "confirmation" => AccountEmailJobType.ConfirmationResend,
+                _ => (AccountEmailJobType?)null
+            };
+
+            if (jobType is not null)
+            {
+                try
+                {
+                    await _emailQueue.EnqueueAsync(jobType.Value, email: input.Email, cancellationToken: HttpContext.RequestAborted);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    _logger.LogWarning("Unable to enqueue an account recovery email.");
+                }
+            }
+        }
+
+        var destination = Url.IsLocalUrl(returnUrl)
+            ? returnUrl!
+            : "/RecoverLoginInfo?status=acknowledged";
+        return LocalRedirect(destination);
+    }
+
+    [HttpGet("reset-password")]
+    public IActionResult ResetPasswordForm(
+        [FromQuery] string? userId,
+        [FromQuery] string? token,
+        [FromQuery] string? status)
+    {
+        Response.Headers["Cache-Control"] = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+        if (!Guid.TryParse(userId, out _) || string.IsNullOrWhiteSpace(token))
+            return Content("<p>This password reset link is invalid or expired.</p>", "text/html; charset=utf-8");
+
+        var antiforgeryTokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        var htmlToken = HtmlEncoder.Default.Encode(token);
+        var htmlUserId = HtmlEncoder.Default.Encode(userId);
+        var htmlRequestToken = HtmlEncoder.Default.Encode(antiforgeryTokens.RequestToken ?? string.Empty);
+        var statusMessage = status switch
+        {
+            "password-policy" => "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.",
+            "password-mismatch" => "The password and confirmation do not match.",
+            _ => string.Empty
+        };
+        var html = $"""
+            <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Reset password</title></head>
+            <body><h1>Reset password</h1><p role="status">{statusMessage}</p>
+            <p>Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.</p>
+            <form id="resetPasswordForm" method="post" action="/account/reset-password">
+            <input type="hidden" name="__RequestVerificationToken" value="{htmlRequestToken}">
+            <input type="hidden" name="UserId" value="{htmlUserId}">
+            <input type="hidden" name="Token" value="{htmlToken}">
+            <label for="Password">New password</label><input id="Password" name="Password" type="password" minlength="8" maxlength="256" aria-describedby="password-error" required>
+            <p id="password-error" role="status" aria-live="polite"></p>
+            <label for="ConfirmPassword">Confirm new password</label><input id="ConfirmPassword" name="ConfirmPassword" type="password" maxlength="256" aria-describedby="confirm-password-error" required>
+            <p id="confirm-password-error" role="status" aria-live="polite"></p>
+            <button type="submit">Reset password</button></form>
+            <script type="module" src="/js/reset-password-validation.js"></script></body></html>
+            """;
+        return Content(html, "text/html; charset=utf-8");
+    }
+
+    [HttpPost("reset-password")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-recovery")]
+    public async Task<IActionResult> ResetPassword([FromForm] ResetPasswordInputModel input)
+    {
+        if (!Guid.TryParse(input.UserId, out var accountId) || string.IsNullOrWhiteSpace(input.Token))
+            return Redirect("/RecoverLoginInfo?status=reset-invalid");
+
+        if (!ModelState.IsValid)
+        {
+            var status = ModelState[nameof(input.ConfirmPassword)]?.Errors.Count > 0
+                ? "password-mismatch"
+                : "password-policy";
+            return RedirectToPasswordReset(input.UserId, input.Token, status);
+        }
+
+        var account = await _userManager.FindByIdAsync(accountId.ToString());
+        if (account is null || !await _userManager.IsEmailConfirmedAsync(account))
+            return Redirect("/RecoverLoginInfo?status=reset-invalid");
+
+        IdentityResult result;
+        try
+        {
+            var token = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(input.Token));
+            result = await _userManager.ResetPasswordAsync(account, token, input.Password);
+        }
+        catch (FormatException)
+        {
+            return Redirect("/RecoverLoginInfo?status=reset-invalid");
+        }
+
+        if (!result.Succeeded && result.Errors.Any(error =>
+            error.Code.StartsWith("Password", StringComparison.Ordinal)))
+            return RedirectToPasswordReset(input.UserId, input.Token, "password-policy");
+
+        if (!result.Succeeded)
+            return Redirect("/RecoverLoginInfo?status=reset-invalid");
+
+        try
+        {
+            await _emailQueue.EnqueueAsync(
+                AccountEmailJobType.PasswordChangedNotice,
+                accountId: account.Id,
+                cancellationToken: HttpContext.RequestAborted);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning("Unable to enqueue a password-change notification.");
+        }
+
+        return Redirect("/Login?status=password-reset");
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-recovery")]
+    public async Task<IActionResult> ChangePassword([FromForm] ChangePasswordInputModel input)
+    {
+        if (!ModelState.IsValid)
+        {
+            var status = ModelState[nameof(input.ConfirmPassword)]?.Errors.Count > 0
+                ? "password-mismatch"
+                : "password-invalid";
+            return Redirect($"/AccountSettings?status={status}");
+        }
+
+        var account = await _userManager.GetUserAsync(User);
+        if (account is null)
+            return Redirect("/Login");
+
+        var result = await _userManager.ChangePasswordAsync(account, input.CurrentPassword, input.NewPassword);
+        if (!result.Succeeded)
+        {
+            var status = result.Errors.Any(error => error.Code.StartsWith("Password", StringComparison.Ordinal))
+                ? "password-policy"
+                : "password-invalid";
+            return Redirect($"/AccountSettings?status={status}");
+        }
+
+        await _signInManager.RefreshSignInAsync(account);
+        try
+        {
+            await _emailQueue.EnqueueAsync(
+                AccountEmailJobType.PasswordChangedNotice,
+                accountId: account.Id,
+                cancellationToken: HttpContext.RequestAborted);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning("Unable to enqueue a password-change notification.");
+        }
+
+        return Redirect("/AccountSettings?status=password-changed");
+    }
+
+    [Authorize]
+    [HttpPost("change-email")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-recovery")]
+    public async Task<IActionResult> RequestEmailChange([FromForm] ChangeEmailInputModel input)
+    {
+        if (!ModelState.IsValid)
+            return Redirect("/AccountSettings?status=email-invalid");
+
+        var account = await _userManager.GetUserAsync(User);
+        if (account is null)
+            return Redirect("/Login");
+
+        if (!await _userManager.CheckPasswordAsync(account, input.CurrentPassword))
+            return Redirect("/AccountSettings?status=email-invalid");
+
+        try
+        {
+            await _emailQueue.EnqueueAsync(
+                AccountEmailJobType.EmailChangeConfirmation,
+                accountId: account.Id,
+                newEmail: input.NewEmail.Trim(),
+                cancellationToken: HttpContext.RequestAborted);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning("Unable to enqueue an email-change confirmation.");
+            return Redirect("/AccountSettings?status=email-unavailable");
+        }
+
+        return Redirect("/AccountSettings?status=email-requested");
+    }
+
+    private IActionResult RedirectToPasswordReset(string userId, string token, string status)
+    {
+        var url = QueryHelpers.AddQueryString("/account/reset-password", new Dictionary<string, string?>
+        {
+            ["userId"] = userId,
+            ["token"] = token,
+            ["status"] = status
+        });
+        return Redirect(url);
+    }
+
+    [HttpPost("register")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-registration")]
+    public async Task<IActionResult> Register([FromForm] RegistrationInputModel input)
+    {
+        if (!ModelState.IsValid)
+        {
+            var validationErrors = ModelState
+                .Where(entry => entry.Value?.Errors.Count > 0)
+                .Select(entry => entry.Key.Split('.').Last())
+                .Select(MapModelFieldError);
+            return RedirectWithRegistrationErrors(validationErrors);
+        }
+
+        var accountId = Guid.NewGuid();
+        var profile = new User
+        {
+            UsrId = accountId,
+            UsrName = input.Name.Trim(),
+            UsrEmail = input.Email.Trim(),
+            UsrCountry = input.Country?.Trim(),
+            UsrStateorProvince = input.StateOrProvince?.Trim(),
+            UsrJoinedDate = DateTime.UtcNow
+        };
+        var account = new ForagerAccount
+        {
+            Id = accountId,
+            UserName = input.Username.Trim(),
+            Email = input.Email.Trim(),
+            EmailConfirmed = false,
+            LockoutEnabled = false,
+            Profile = profile
+        };
+
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+        try
+        {
+            _db.Profiles.Add(profile);
+            var createResult = await _userManager.CreateAsync(account, input.Password);
+            if (!createResult.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                var errors = createResult.Errors.Any(error =>
+                    error.Code is "DuplicateEmail" or "DuplicateUserName")
+                    ? new[] { "account-details" }
+                    : createResult.Errors.Select(MapIdentityError);
+                return RedirectWithRegistrationErrors(errors);
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync();
+            return RedirectWithRegistrationErrors(new[] { "account-details" });
+        }
+
+        if (!RequireConfirmedEmail)
+            return Redirect("/Registration?status=development-created");
+
+        try
+        {
+            var confirmationUrl = await CreateConfirmationUrlAsync(account);
+            await _emailSender.SendConfirmationAsync(account.Email!, confirmationUrl, HttpContext.RequestAborted);
+            return Redirect("/Registration?status=confirmation-sent");
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.Net.Mail.SmtpException)
+        {
+            return Redirect("/Registration?status=confirmation-unavailable");
+        }
+    }
+
+    [HttpGet("confirm-email-change")]
+    public IActionResult ConfirmEmailChangeForm([FromQuery] int jobId, [FromQuery] string? token)
+    {
+        Response.Headers["Cache-Control"] = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+        if (jobId <= 0 || string.IsNullOrWhiteSpace(token))
+            return Content("<p>This email confirmation link is invalid or expired.</p>", "text/html; charset=utf-8");
+
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        var encodedToken = HtmlEncoder.Default.Encode(token);
+        var encodedRequestToken = HtmlEncoder.Default.Encode(tokens.RequestToken ?? string.Empty);
+        var html = $"""
+            <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Confirm email change</title></head>
+            <body><h1>Confirm email change</h1><p>Confirm that you want to use this email address for your account.</p>
+            <form method="post" action="/account/confirm-email-change">
+            <input type="hidden" name="__RequestVerificationToken" value="{encodedRequestToken}">
+            <input type="hidden" name="jobId" value="{jobId}">
+            <input type="hidden" name="token" value="{encodedToken}">
+            <button type="submit">Confirm email change</button></form></body></html>
+            """;
+        return Content(html, "text/html; charset=utf-8");
+    }
+
+    [HttpPost("confirm-email-change")]
+    [ValidateAntiForgeryToken]
+    [EnableRateLimiting("account-recovery")]
+    public async Task<IActionResult> ConfirmEmailChange([FromForm] int jobId, [FromForm] string token)
+    {
+        if (jobId <= 0 || string.IsNullOrWhiteSpace(token))
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+
+        await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+        var job = await _db.AccountEmailJobs.SingleOrDefaultAsync(item =>
+            item.Id == jobId && item.Type == AccountEmailJobType.EmailChangeConfirmation);
+        if (job?.AccountId is not Guid accountId || string.IsNullOrWhiteSpace(job.NewEmail))
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+
+        var account = await _userManager.FindByIdAsync(accountId.ToString());
+        if (account is null)
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+
+        string decodedToken;
+        try
+        {
+            decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
+        }
+        catch (FormatException)
+        {
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+        }
+
+        try
+        {
+            var result = await _userManager.ChangeEmailAsync(account, job.NewEmail, decodedToken);
+            if (!result.Succeeded)
+            {
+                await transaction.RollbackAsync();
+                return Redirect("/AccountSettings?status=email-confirmation-invalid");
+            }
+
+            var profile = await _db.Profiles.SingleOrDefaultAsync(item => item.UsrId == accountId);
+            if (profile is null)
+            {
+                await transaction.RollbackAsync();
+                return Redirect("/AccountSettings?status=email-confirmation-invalid");
+            }
+
+            profile.UsrEmail = account.Email!;
+            _db.AccountEmailJobs.Remove(job);
+            await _db.SaveChangesAsync(HttpContext.RequestAborted);
+            await transaction.CommitAsync(HttpContext.RequestAborted);
+        }
+        catch (DbUpdateException)
+        {
+            await transaction.RollbackAsync();
+            return Redirect("/AccountSettings?status=email-confirmation-invalid");
+        }
+
+        return User.Identity?.IsAuthenticated == true
+            ? Redirect("/AccountSettings?status=email-confirmed")
+            : Redirect("/Login?status=email-changed");
+    }
+
+    [HttpGet("confirm")]
+    public IActionResult ConfirmEmailForm([FromQuery] string? userId, [FromQuery] string? token)
+    {
+        Response.Headers["Cache-Control"] = "no-store";
+        Response.Headers["Referrer-Policy"] = "no-referrer";
+        if (!Guid.TryParse(userId, out _) || string.IsNullOrWhiteSpace(token))
+            return Content("<p>This confirmation link is invalid or expired.</p>", "text/html");
+
+        var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        var encodedUserId = HtmlEncoder.Default.Encode(userId);
+        var encodedToken = HtmlEncoder.Default.Encode(token);
+        var encodedRequestToken = HtmlEncoder.Default.Encode(tokens.RequestToken ?? string.Empty);
+        var html = $"""
+            <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Confirm account</title></head>
+            <body><h1>Confirm account</h1><form method="post" action="/account/confirm">
+            <input type="hidden" name="__RequestVerificationToken" value="{encodedRequestToken}">
+            <input type="hidden" name="userId" value="{encodedUserId}">
+            <input type="hidden" name="token" value="{encodedToken}">
+            <button type="submit">Confirm email</button></form></body></html>
+            """;
+        return Content(html, "text/html; charset=utf-8");
+    }
+
+    [HttpPost("confirm")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ConfirmEmail([FromForm] string userId, [FromForm] string token)
+    {
+        if (!Guid.TryParse(userId, out var accountId))
+            return Redirect("/Login?status=confirmation-invalid");
+
+        var account = await _userManager.FindByIdAsync(accountId.ToString());
+        if (account is null)
+            return Redirect("/Login?status=confirmation-invalid");
+
+        try
+        {
+            var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(token));
+            var result = await _userManager.ConfirmEmailAsync(account, decodedToken);
+            return Redirect(result.Succeeded ? "/Login?status=confirmed" : "/Login?status=confirmation-invalid");
+        }
+        catch (FormatException)
+        {
+            return Redirect("/Login?status=confirmation-invalid");
+        }
+    }
+
+    [HttpPost("logout")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Logout([FromForm] string? returnUrl)
+    {
+        await _signInManager.SignOutAsync();
+        return LocalRedirect(Url.IsLocalUrl(returnUrl) ? returnUrl! : "/");
+    }
+
+    private async Task<string> CreateConfirmationUrlAsync(ForagerAccount account)
+    {
+        var origin = _configuration["AccountEmail:PublicOrigin"];
+        if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidOperationException("A public HTTPS account origin must be configured.");
+
+        var token = await _userManager.GenerateEmailConfirmationTokenAsync(account);
+        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+        return $"{origin!.TrimEnd('/')}/account/confirm?userId={Uri.EscapeDataString(account.Id.ToString())}&token={Uri.EscapeDataString(encodedToken)}";
+    }
+
+    private IActionResult RedirectWithRegistrationErrors(IEnumerable<string> errors)
+    {
+        var errorCodes = errors.Distinct().ToArray();
+        if (errorCodes.Length == 0)
+            errorCodes = new[] { "form" };
+
+        return Redirect($"/Registration?errors={Uri.EscapeDataString(string.Join(',', errorCodes))}");
+    }
+
+    private static string MapModelFieldError(string field) => field switch
+    {
+        nameof(RegistrationInputModel.Name) => "name",
+        nameof(RegistrationInputModel.Email) => "email",
+        nameof(RegistrationInputModel.Country) => "country",
+        nameof(RegistrationInputModel.StateOrProvince) => "state",
+        nameof(RegistrationInputModel.Username) => "username",
+        nameof(RegistrationInputModel.Password) => "password",
+        nameof(RegistrationInputModel.ConfirmPassword) => "confirm-password",
+        _ => "form"
+    };
+
+    private static string MapIdentityError(IdentityError error) => error.Code switch
+    {
+        "InvalidEmail" => "email",
+        "InvalidUserName" => "username",
+        _ when error.Code.StartsWith("Password", StringComparison.Ordinal) => "password",
+        _ => "form"
+    };
+}

@@ -1,47 +1,38 @@
 ﻿@page "/RecoverLoginInfo"
-@using DataAccess.Models;
-@using ForagerSite.Services;
-@using ForagerSite.Services.Interfaces
-@using Microsoft.AspNetCore.Components.Routing
-@inject IUserService userService
-@rendermode InteractiveServer
-@inject NavigationManager navigationManager
-@inject HttpClient Http
-
 <PageTitle>RecoverLoginInfo</PageTitle>
 
-<h3>Recover Password</h3>
+<h3>Recover account access</h3>
 
-<div>
+<p>Enter the email address associated with your account. We will send instructions if it matches an eligible account.</p>
 
-    <div>
-        <label for="email">Enter your email address:</label>
-        <input type="email" @bind="email" required />
-        <button @onclick="Submit">Recover Password</button>
-    </div>
-    @if (_message != null)
-    {
-        <p>@_message</p>
-    }
+<form method="post" action="/account/recover">
+    <AntiforgeryToken />
+    <label for="password-email">Email address</label>
+    <input id="password-email" name="Email" type="email" maxlength="256" required />
+    <input type="hidden" name="RequestType" value="password" />
+    <button type="submit">Reset password</button>
+</form>
 
-</div>
+<form method="post" action="/account/recover">
+    <AntiforgeryToken />
+    <label for="username-email">Email address</label>
+    <input id="username-email" name="Email" type="email" maxlength="256" required />
+    <input type="hidden" name="RequestType" value="username" />
+    <button type="submit">Recover username</button>
+</form>
+
+@if (Status == "acknowledged")
+{
+    <p role="status">If an eligible account matches that email address, instructions will be sent.</p>
+}
+else if (Status == "reset-invalid")
+{
+    <p role="status">This password reset link is invalid or expired. Request a new one and try again.</p>
+}
+
+<NavLink href="/Login">Back to sign in</NavLink>
 
 @code {
-
-    private string email;
-    private string _message;
-
-    private async Task Submit()
-    {
-        var response = await Http.PostAsJsonAsync("api/recover-password", new { email });
-        if (response.IsSuccessStatusCode)
-        {
-            _message = "Password recovery email sent.";
-        }
-        else
-        {
-            _message = "Error sending recovery email.";
-        }
-    }
-
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? Status { get; set; }
 }

@@ -24,7 +24,7 @@ else
     <div id="containers" style="display: flex; gap: 20px;">
         <div id="profile-container">
 
-            <ProfilePictureEditor UserId="@userVm.user.UsrId" CanEdit="IsMyProfile" />
+            <ProfilePictureEditor UserId="@userVm.UsrId" CanEdit="IsMyProfile" />
             @if (!IsMyProfile)
             {
                 <div style="margin: 10px 0;">
@@ -63,13 +63,13 @@ else
             @if (!edit)
             {
                 <div id="profile-details-container">
-                    <p><strong>User Name:</strong> @userVm.userSecurity.UssUsername</p>
-                    <p><strong>Name:</strong> @userVm.user.UsrName</p>
-                    <p><strong>Rank:</strong> @GetUserRank(userVm.user.UsrExpScore)</p>
-                    <p><strong>Joined:</strong> @userVm.user.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
-                    <p><strong>Bio:</strong> @userVm.user.UsrBio</p>
-                    <p><strong>Country:</strong> @userVm.user.UsrCountry</p>
-                    <p><strong>State/Province:</strong> @userVm.user.UsrStateorProvince</p>
+                    <p><strong>User Name:</strong> @userVm.Username</p>
+                    <p><strong>Name:</strong> @userVm.UsrName</p>
+                    <p><strong>Rank:</strong> @GetUserRank(userVm.UsrExpScore)</p>
+                    <p><strong>Joined:</strong> @userVm.UsrJoinedDate.ToString("MMMM dd, yyyy")</p>
+                    <p><strong>Bio:</strong> @userVm.UsrBio</p>
+                    <p><strong>Country:</strong> @userVm.UsrCountry</p>
+                    <p><strong>State/Province:</strong> @userVm.UsrStateorProvince</p>
                     @if (IsMyProfile)
                     {
                         <button @onclick="EditProfile">Edit</button>
@@ -107,7 +107,7 @@ else
     private Guid? _lastLoadedViewingUserId;
 
     private bool IsMyProfile => viewingUserId == session.SessionUser.UserId;
-    private UserDataContainer userVm { get; set; } = new();
+    private UserProfileDto userVm { get; set; } = new();
     private IReadOnlyList<ProfileFindSummary> profileFinds = Array.Empty<ProfileFindSummary>();
     private bool Pf_loaded;
     private bool isLoading = false;

@@ -72,7 +72,7 @@ public sealed class MapFindQueries
             .Select(find => new MapPin(
                 find.UsfId,
                 find.UsfUsrId,
-                find.User.UserSecurity.UssUsername,
+                find.User.Account.UserName,
                 context.UserImages
                     .Where(image => image.UsiUsfId == find.UsfId)
                     .OrderBy(image => image.UsiId)

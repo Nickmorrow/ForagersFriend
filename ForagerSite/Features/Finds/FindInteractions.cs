@@ -9,14 +9,14 @@ namespace ForagerSite.Features.Finds;
 public sealed class FindInteractions
 {
     private readonly IDbContextFactory<ForagerDbContext> _dbContextFactory;
-    private readonly IUserSessionService _session;
+    private readonly ICurrentUserService _currentUser;
 
     public FindInteractions(
         IDbContextFactory<ForagerDbContext> dbContextFactory,
-        IUserSessionService session)
+        ICurrentUserService currentUser)
     {
         _dbContextFactory = dbContextFactory;
-        _session = session;
+        _currentUser = currentUser;
     }
 
     public async Task<Guid> AddCommentAsync(
@@ -25,7 +25,7 @@ public sealed class FindInteractions
         Guid? parentCommentId = null,
         CancellationToken cancellationToken = default)
     {
-        var viewerId = GetViewerId();
+        var viewerId = await GetViewerIdAsync();
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
 
@@ -67,7 +67,7 @@ public sealed class FindInteractions
         Guid commentXrefId,
         CancellationToken cancellationToken = default)
     {
-        var viewerId = GetViewerId();
+        var viewerId = await GetViewerIdAsync();
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
 
@@ -141,7 +141,7 @@ public sealed class FindInteractions
         if (voteValue is not (-1 or 1))
             throw new ArgumentOutOfRangeException(nameof(voteValue), "A vote must be -1 or 1.");
 
-        var viewerId = GetViewerId();
+        var viewerId = await GetViewerIdAsync();
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await context.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
@@ -252,12 +252,5 @@ public sealed class FindInteractions
         return findId;
     }
 
-    private Guid GetViewerId()
-    {
-        var sessionUser = _session.SessionUser;
-        if (!_session.IsAuthenticated || sessionUser is null || sessionUser.UserId == Guid.Empty)
-            throw new UnauthorizedAccessException("A signed-in user is required for find interactions.");
-
-        return sessionUser.UserId;
-    }
+    private Task<Guid> GetViewerIdAsync() => _currentUser.GetRequiredUserIdAsync();
 }

@@ -1,0 +1,93 @@
+@page "/AccountSettings"
+@using DataAccess.Models
+@using Microsoft.AspNetCore.Identity
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ForagerAccount> UserManager
+
+<PageTitle>Account settings</PageTitle>
+
+<h1>Account settings</h1>
+
+@if (StatusMessage is not null)
+{
+    <p role="status">@StatusMessage</p>
+}
+
+<details>
+    <summary>Security</summary>
+
+    <section aria-labelledby="change-password-heading">
+        <details>
+            <summary id="change-password-heading">Change password</summary>
+            <p>Use your current password to set a new password. A successful change signs out other active sessions.</p>
+            <form method="post" action="/account/change-password">
+                <AntiforgeryToken />
+                <label for="CurrentPassword">Current password</label>
+                <input id="CurrentPassword" name="CurrentPassword" type="password" maxlength="256" autocomplete="current-password" required />
+
+                <label for="NewPassword">New password</label>
+                <input id="NewPassword" name="NewPassword" type="password" minlength="8" maxlength="256" autocomplete="new-password" required />
+
+                <label for="ConfirmPassword">Confirm new password</label>
+                <input id="ConfirmPassword" name="ConfirmPassword" type="password" maxlength="256" autocomplete="new-password" required />
+
+                <button type="submit">Change password</button>
+            </form>
+        </details>
+    </section>
+
+    <section aria-label="Email">
+        <p>Email: <strong>@(_currentEmail ?? "No email address is set")</strong></p>
+        <button type="button" class="btn btn-link" aria-expanded="@_isEditingEmail" aria-controls="email-change-form" @onclick="ToggleEmailEdit">
+            @(_isEditingEmail ? "Cancel" : "Edit")
+        </button>
+
+        @if (_isEditingEmail)
+        {
+            <p>We will send a confirmation link to the new address. Your account email will not change until you confirm it.</p>
+            <form id="email-change-form" method="post" action="/account/change-email">
+                <AntiforgeryToken />
+                <label for="NewEmail">New email address</label>
+                <input id="NewEmail" name="NewEmail" type="email" maxlength="256" autocomplete="email" required />
+
+                <label for="EmailCurrentPassword">Current password</label>
+                <input id="EmailCurrentPassword" name="CurrentPassword" type="password" maxlength="256" autocomplete="current-password" required />
+
+                <button type="submit">Send confirmation link</button>
+            </form>
+        }
+    </section>
+</details>
+
+@code {
+    private string? _currentEmail;
+    private bool _isEditingEmail;
+
+    [SupplyParameterFromQuery(Name = "status")]
+    public string? Status { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var account = await UserManager.GetUserAsync(authenticationState.User);
+        _currentEmail = account?.Email;
+    }
+
+    private void ToggleEmailEdit() => _isEditingEmail = !_isEditingEmail;
+
+    private string? StatusMessage => Status switch
+    {
+        "password-changed" => "Your password has been changed. Other active sessions will be signed out.",
+        "password-invalid" => "The current password or confirmation was invalid. Please check the form and try again.",
+        "password-policy" => "The new password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.",
+        "password-mismatch" => "The new password and confirmation do not match.",
+        "email-requested" => "If the address can be used for your account, a confirmation link will be sent to it.",
+        "email-unavailable" => "We could not start the email change. Please try again later.",
+        "email-invalid" => "The current password is incorrect or the email address could not be used. Check the details and try again.",
+        "email-confirmed" => "Your email address has been updated.",
+        "email-confirmation-invalid" => "This email confirmation link is invalid or expired. Request a new link and try again.",
+        _ => null
+    };
+}

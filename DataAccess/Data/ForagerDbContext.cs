@@ -1,11 +1,12 @@
 ﻿using DataAccess.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace DataAccess.Data
 {
-    public class ForagerDbContext : DbContext
+    public class ForagerDbContext : IdentityUserContext<ForagerAccount, Guid>
     {
-        public DbSet<User> Users { get; set; }
+        public DbSet<User> Profiles { get; set; }
         public DbSet<UserSecurity> UserSecurities { get; set; }
         public DbSet<UserMessage> UserMessages { get; set; } = default!;
         public DbSet<UserThreadState> UserThreadStates { get; set; } = default!;
@@ -19,6 +20,7 @@ namespace DataAccess.Data
         public DbSet<FriendRequest> FriendRequests { get; set; } = default!;
         public DbSet<UserRelationship> UserRelationships { get; set; } = default!;
         public DbSet<Notification> Notifications { get; set; } = default!;
+        public DbSet<AccountEmailJob> AccountEmailJobs { get; set; } = default!;
 
 
         public ForagerDbContext(DbContextOptions<ForagerDbContext> options)
@@ -35,6 +37,18 @@ namespace DataAccess.Data
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<User>().ToTable("Users");
+            modelBuilder.Entity<ForagerAccount>(account =>
+            {
+                account.HasOne(identityAccount => identityAccount.Profile)
+                    .WithOne(profile => profile.Account)
+                    .HasForeignKey<User>(profile => profile.UsrId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                account.HasIndex(identityAccount => identityAccount.NormalizedEmail)
+                    .IsUnique()
+                    .HasFilter("[NormalizedEmail] IS NOT NULL")
+                    .HasDatabaseName("EmailIndex");
+            });
             modelBuilder.Entity<UserSecurity>().ToTable("UserSecurity");
             modelBuilder.Entity<UserMessage>().ToTable("UserMessages");
             modelBuilder.Entity<UserMessageThread>().ToTable("UserMessageThreads");
@@ -48,6 +62,14 @@ namespace DataAccess.Data
             modelBuilder.Entity<FriendRequest>().ToTable("FriendRequest");
             modelBuilder.Entity<UserRelationship>().ToTable("UserRelationship");
             modelBuilder.Entity<Notification>().ToTable("Notification");
+            modelBuilder.Entity<AccountEmailJob>(entity =>
+            {
+                entity.ToTable("AccountEmailJobs");
+                entity.HasKey(job => job.Id);
+                entity.Property(job => job.Email).HasMaxLength(256);
+                entity.Property(job => job.NewEmail).HasMaxLength(256);
+                entity.HasIndex(job => new { job.NextAttemptUtc, job.LockedUntilUtc });
+            });
 
             modelBuilder.Entity<User>()
                 .HasOne(u => u.UserSecurity)

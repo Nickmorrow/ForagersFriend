@@ -1,21 +1,13 @@
-﻿using DataAccess.Models;
-using ForagerSite;
-using ForagerSite.DataContainer;
-using ForagerSite.Services;
-using ForagerSite.Services.Interfaces;
+﻿using ForagerSite.DataContainer;
 namespace ForagerSite.Services.Interfaces
 {
     public interface IUserService
     {
         Task<bool> UsernameExists(string username);
-        Task<bool> EmailExists(string email, User? user = null);
-        void UpdateUserSecurity(UserSecurity userSecurity);
-        void AddUser(User user, UserSecurity userSecurity);
-        Task<User?> GetUser(Guid userId);
-        Task<List<User>> GetAllUsers();
+        Task<bool> EmailExists(string email);
         Task<List<string>> GetAllUserNames();
-        Task UpdateUser(User user);
-        Task<string> GetUserProfilePic(User user);
-        Task<UserDataContainer> GetUserViewModelById(Guid userId);
+        Task UpdateUser(UserProfileDto user);
+        Task<string> GetUserProfilePic(Guid userId);
+        Task<UserProfileDto> GetUserViewModelById(Guid userId);
     }
 }

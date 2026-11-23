@@ -24,6 +24,7 @@ namespace DataAccess.Models
         public string? UsrCountry { get; set; }
         public string? UsrStateorProvince { get; set; }
         public int? UsrZipCode { get; set; }       
+        public ForagerAccount Account { get; set; } = null!;
         public UserSecurity UserSecurity { get; set; }
         public ICollection<UserFind> UserFinds { get; set; }
         public ICollection<UserFindsCommentXref> UserFindsCommentXrefs { get; set; }

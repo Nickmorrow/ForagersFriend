@@ -42,18 +42,18 @@ public sealed record UpdateFindRequest(
 public sealed class FindCommands
 {
     private readonly IDbContextFactory<ForagerDbContext> _dbContextFactory;
-    private readonly IUserSessionService _session;
+    private readonly ICurrentUserService _currentUser;
     private readonly PhotoService _photoService;
     private readonly ILogger<FindCommands> _logger;
 
     public FindCommands(
         IDbContextFactory<ForagerDbContext> dbContextFactory,
-        IUserSessionService session,
+        ICurrentUserService currentUser,
         PhotoService photoService,
         ILogger<FindCommands> logger)
     {
         _dbContextFactory = dbContextFactory;
-        _session = session;
+        _currentUser = currentUser;
         _photoService = photoService;
         _logger = logger;
     }
@@ -63,7 +63,7 @@ public sealed class FindCommands
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var viewerId = GetViewerId();
+        var viewerId = await GetViewerIdAsync();
         var uploadedImages = await _photoService.UploadFindImagesAsync(request.ImageFiles, cancellationToken);
 
         try
@@ -124,7 +124,7 @@ public sealed class FindCommands
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        var viewerId = GetViewerId();
+        var viewerId = await GetViewerIdAsync();
         var imageUrlsToDelete = request.ImageUrlsToDelete?.ToHashSet(StringComparer.Ordinal) ?? new HashSet<string>();
 
         await using (var validationContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken))
@@ -222,7 +222,7 @@ public sealed class FindCommands
         Guid findId,
         CancellationToken cancellationToken = default)
     {
-        var viewerId = GetViewerId();
+        var viewerId = await GetViewerIdAsync();
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
 
@@ -307,17 +307,10 @@ public sealed class FindCommands
             .Where(find => find.UsfUsrId == userId)
             .Select(find => find.UsfAccuracyScore ?? 0)
             .ToListAsync(cancellationToken);
-        var user = await context.Users.FirstOrDefaultAsync(user => user.UsrId == userId, cancellationToken);
+        var user = await context.Profiles.FirstOrDefaultAsync(user => user.UsrId == userId, cancellationToken);
         if (user is not null)
             user.UsrExpScore = scores.Sum() * scores.Count;
     }
 
-    private Guid GetViewerId()
-    {
-        var sessionUser = _session.SessionUser;
-        if (!_session.IsAuthenticated || sessionUser is null || sessionUser.UserId == Guid.Empty)
-            throw new UnauthorizedAccessException("A signed-in user is required for find commands.");
-
-        return sessionUser.UserId;
-    }
+    private Task<Guid> GetViewerIdAsync() => _currentUser.GetRequiredUserIdAsync();
 }

@@ -1,5 +1,4 @@
 ﻿@namespace ForagerSite.Components.Profile
-@using DataAccess.Models
 @using ForagerSite.DataContainer;
 @using ForagerSite.Services
 @using ForagerSite.Services.Interfaces
@@ -7,20 +6,20 @@
 
 @inject IUserService userService
 
-<EditForm Model="UserVm.user" OnValidSubmit="SaveChanges">
+<EditForm Model="UserVm" OnValidSubmit="SaveChanges">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <div>
         <label for="name">Name:</label>
-        <InputText id="name" @bind-Value="UserVm.user.UsrName" />
+        <InputText id="name" @bind-Value="UserVm.UsrName" />
     </div>
 
     <div>
         <label for="bio">Bio:</label>
-        <InputTextArea id="bio" @bind-Value="UserVm.user.UsrBio" />
-        <ValidationMessage For="@(() => UserVm.user.UsrBio)" />
-        @if (UserVm.user.UsrBio?.Length > 250)
+        <InputTextArea id="bio" @bind-Value="UserVm.UsrBio" />
+        <ValidationMessage For="@(() => UserVm.UsrBio)" />
+        @if (UserVm.UsrBio?.Length > 250)
         {
             <p style="color: red;">Bio cannot exceed 250 characters.</p>
         }
@@ -28,40 +27,20 @@
 
     <div>
         <label for="country">Country:</label>
-        <InputText id="country" @bind-Value="UserVm.user.UsrCountry" />
+        <InputText id="country" @bind-Value="UserVm.UsrCountry" />
     </div>
 
     <div>
         <label for="state">State/Province:</label>
-        <InputText id="state" @bind-Value="UserVm.user.UsrStateorProvince" />
+        <InputText id="state" @bind-Value="UserVm.UsrStateorProvince" />
     </div>
 
     <div>
         <label for="zipcode">Zip Code:</label>
-        <InputNumber id="zipcode" @bind-Value="UserVm.user.UsrZipCode" />
-        @if (!IsValidZipCode(UserVm.user.UsrZipCode))
+        <InputNumber id="zipcode" @bind-Value="UserVm.UsrZipCode" />
+        @if (!IsValidZipCode(UserVm.UsrZipCode))
         {
             <p style="color: red;">Please enter a valid zip code.</p>
-        }
-    </div>
-
-    <div>
-        <label for="email">Email:</label>
-        <InputText id="email" @bind-Value="UserVm.user.UsrEmail" />
-        <ValidationMessage For="@(() => UserVm.user.UsrEmail)" />
-
-        @if (string.IsNullOrWhiteSpace(UserVm.user.UsrEmail))
-        {
-            <p style="color: red;">You must enter an Email address.</p>
-        }
-        @if (!IsValidEmail(UserVm.user.UsrEmail) &&
-                !string.IsNullOrWhiteSpace(UserVm.user.UsrEmail))
-        {
-            <p style="color: red;">Please enter a valid email address (e.g., example@domain.com).</p>
-        }
-        @if (userEmailExists)
-        {
-            <p style="color: red;">This email is already taken. Please choose a different one.</p>
         }
     </div>
 
@@ -72,38 +51,25 @@
 </EditForm>
 
 @code {
-    [Parameter] public UserDataContainer UserVm { get; set; } = new();
+    [Parameter] public UserProfileDto UserVm { get; set; } = new();
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public EventCallback OnCancelled { get; set; }
 
-    private User originalUser = new();
-    private bool userEmailExists;
+    private UserProfileDto originalUser = new();
 
     protected override void OnInitialized()
     {
         // Snapshot original values so Cancel can roll back
-        originalUser = new User
+        originalUser = new UserProfileDto
         {
-            UsrName = UserVm.user.UsrName,
-            UsrBio = UserVm.user.UsrBio,
-            UsrCountry = UserVm.user.UsrCountry,
-            UsrStateorProvince = UserVm.user.UsrStateorProvince,
-            UsrZipCode = UserVm.user.UsrZipCode,
-            UsrEmail = UserVm.user.UsrEmail
+            UsrId = UserVm.UsrId,
+            Username = UserVm.Username,
+            UsrName = UserVm.UsrName,
+            UsrBio = UserVm.UsrBio,
+            UsrCountry = UserVm.UsrCountry,
+            UsrStateorProvince = UserVm.UsrStateorProvince,
+            UsrZipCode = UserVm.UsrZipCode
         };
-    }
-
-    private bool IsValidEmail(string email)
-    {
-        try
-        {
-            var mailAddress = new System.Net.Mail.MailAddress(email);
-            return mailAddress.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private bool IsValidZipCode(int? zipCode)
@@ -114,20 +80,7 @@
 
     private async Task SaveChanges()
     {
-        userEmailExists = await userService.EmailExists(
-            UserVm.user.UsrEmail,
-            UserVm.user);
-
-        if (string.IsNullOrWhiteSpace(UserVm.user.UsrEmail))
-            return;
-
-        if (!IsValidEmail(UserVm.user.UsrEmail))
-            return;
-
-        if (userEmailExists)
-            return;
-
-        await userService.UpdateUser(UserVm.user);
+        await userService.UpdateUser(UserVm);
 
         if (OnSaved.HasDelegate)
         {
@@ -138,12 +91,11 @@
     private async Task CancelEdit()
     {
         // Restore from snapshot
-        UserVm.user.UsrName = originalUser.UsrName;
-        UserVm.user.UsrBio = originalUser.UsrBio;
-        UserVm.user.UsrCountry = originalUser.UsrCountry;
-        UserVm.user.UsrStateorProvince = originalUser.UsrStateorProvince;
-        UserVm.user.UsrZipCode = originalUser.UsrZipCode;
-        UserVm.user.UsrEmail = originalUser.UsrEmail;
+        UserVm.UsrName = originalUser.UsrName;
+        UserVm.UsrBio = originalUser.UsrBio;
+        UserVm.UsrCountry = originalUser.UsrCountry;
+        UserVm.UsrStateorProvince = originalUser.UsrStateorProvince;
+        UserVm.UsrZipCode = originalUser.UsrZipCode;
 
         if (OnCancelled.HasDelegate)
         {

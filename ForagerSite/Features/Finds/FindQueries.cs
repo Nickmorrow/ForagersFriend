@@ -89,13 +89,13 @@ public sealed class FindQueries
 
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        return await context.Users
+        return await context.Profiles
             .AsNoTracking()
-            .Where(user => ids.Contains(user.UsrId))
+            .Where(profile => ids.Contains(profile.UsrId))
             .Select(user => new
             {
                 user.UsrId,
-                Username = user.UserSecurity.UssUsername
+                Username = user.Account.UserName
             })
             .ToDictionaryAsync(row => row.UsrId, row => row.Username, cancellationToken);
     }
@@ -112,7 +112,7 @@ public sealed class FindQueries
             .Select(find => new
             {
                 OwnerId = find.UsfUsrId,
-                OwnerName = find.User.UserSecurity.UssUsername,
+                OwnerName = find.User.Account.UserName,
                 OwnerProfilePic = context.UserImages
                     .Where(image => image.UsiUsrId == find.UsfUsrId &&
                                     image.UsiUsfId == null &&
