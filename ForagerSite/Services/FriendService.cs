@@ -258,7 +258,7 @@ namespace ForagerSite.Services
         }
         public async Task<List<FriendListItem>> GetFriends(Guid userId)
         {
-            userId = await RequireCallerAsync(userId);
+            await _currentUser.GetRequiredUserIdAsync();
             using var ctx = _db.CreateDbContext();
 
             // Get friend IDs
